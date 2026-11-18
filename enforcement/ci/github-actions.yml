@@ -1,0 +1,45 @@
+# OPF CI floor: GitHub Actions template (enforcement pack, spec 1.3.0 (draft) 14.1: the pack MUST provide CI checks).
+#
+# Copy this file to .github/workflows/opf.yml in the adopting repository unmodified. It runs the portable
+# recipe opf/enforcement/ci/opf-ci.sh over the checked-out revision: `opf doctor --require-store` (a
+# repository with no OPF store fails, so a store that was removed cannot pass vacuously), then
+# `opf render --check`. The paths assume the OPF pack sits at opf/ in the repository. Do not change this
+# file: the adoption completion check proves the CI leg by byte identity with this shipped template, so
+# any change (one byte, an added comment, or an OPF_TOOL setting that points the recipe at an opf.py
+# elsewhere) makes that check CANNOT-EVALUATE in this release, and a pack at a path other than opf/ is
+# not supported. No step carries continue-on-error: a check that cannot fail is decorative.
+#
+# Inert until adoption installs it; the CI receipt-identity comparison is a later release (U25).
+name: OPF
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  opf:
+    name: OPF store integrity
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth 0 checks out the full commit history. Today's doctor observations read the
+      # checked-out revision, the index, repository config, remotes, and object presence; none reads
+      # history, so a shallow clone would already satisfy them. The full history is kept so a later
+      # history-reading check need not change the template. persist-credentials false keeps the job
+      # token out of the checkout's git config, so no later step can read it from there; nothing after
+      # the checkout fetches or pushes. Each action is pinned to a full commit SHA, because a tag is a
+      # label its owner can move; the trailing comment names the tag the SHA was resolved from.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.14'
+
+      - name: OPF CI floor (doctor --require-store, then render --check)
+        run: sh opf/enforcement/ci/opf-ci.sh .

@@ -1,0 +1,277 @@
+# The decision 35 carve-out for the public-export names scan (plan.md section 4 item 11).
+#
+# tools/check_public_export.py runs tools/check_names.py over the rebuilt public tree and reads
+# this record from HEAD (never from the work tree, so an uncommitted edit cannot change a
+# verdict). A denylist finding is covered only as the entry for its file records it. An entry
+# with a lines list of [line, sha256] pairs covers findings only on those exact lines, whatever
+# their number, and pins each listed line's content: the SHA-256 of the line's bytes at HEAD (the
+# lines split at each LF only, the LF not part of the line, as the scan splits them). The gate
+# compares every content pin with the committed bytes on every run that reaches the comparison, in
+# both modes and whether or not the scan reports a finding, and records each mismatch before the
+# names scan runs, so a run whose names scan cannot evaluate still names it above its CANNOT
+# EVALUATE error; a run that cannot evaluate earlier (a malformed record or skip list, an export
+# that does not build, or a git failure) compares nothing. No run passes unless every content pin
+# matches, so any edit to a listed line, and a listed line the file no longer has, keeps the gate
+# from passing until the line is deliberately re-pinned. An entry with a matches list of
+# [denylist entry, count] pairs covers findings anywhere in its file, and the gate fails unless
+# each pinned denylist entry is reported exactly its pinned number of times and no unpinned
+# denylist entry is reported in that file at all.
+#
+# Exactly this is caught: a finding in a file no entry names; a finding on a line a lines entry
+# does not list; any change to the bytes of a listed line (so a name added to a listed line fails,
+# whatever denylist entry it matches, and so does a same-line swap between denylist entries); a
+# per-denylist-entry count above or below a matches pin and any finding of an unpinned denylist
+# entry (so a single swap to an unpinned denylist entry, or one that changes a pinned entry's
+# count, fails); a path that matches the denylist; and the email and home-directory checks.
+# Exactly this is not caught. Under lines, nothing on a listed line can change without failing;
+# since a finding on a listed line is covered whatever its number, a change of the denylist
+# itself that changes the findings on an unchanged listed line passes. Under matches, the gate
+# does not catch any change that keeps every pinned denylist entry's count in the file and adds
+# no unpinned entry, including moving a finding to another line, replacing a name with other text
+# matching the same entry, and reciprocal swaps between pinned entries; since the scan reports one
+# finding per (line, denylist entry) however often an entry matches within one line, another
+# match of an entry already reported on that line keeps the count too. Those changes rest on
+# review of edits to covered files. The match count pins are compared only when the scan reports
+# a finding: a scan that reports no finding at all leaves every count pin unchecked (the content
+# pins are still compared); that residual is accepted, since it means nothing forbidden would be
+# published.
+#
+# Use lines where the file is hand-edited and its line numbers are stable; use matches for a
+# generated file whose line numbers churn (the d4-footer pages and the licence page source), and
+# re-pin deliberately when the functional content changes. Keep an entry only while every covered
+# match in its file is one of the recorded functional names, and record the class and the anchors
+# in its reason.
+#
+# Pin provenance: each line content pin below is the SHA-256 of that line's committed bytes,
+# computed from the commit that introduced the content pins, and the gate checks every one on
+# every run. The per-entry match pins carry denylist entry 1 with the previously recorded totals,
+# placeholders rather than observations, because no local denylist was available to observe the
+# real (line, denylist entry) findings when this format landed; whether they match the real
+# denylist is unknown. A wrong match pin fails the gate whenever the scan reports any finding, and
+# the gate's mismatch output names the file, the denylist entry, the observed count and the pin,
+# so the first full local gate run that reports a finding reports every mismatch, and the
+# maintainer re-pins the record from that output. On the maintainer's host the full gate run
+# reports no names-scan finding, so the match pins (and which listed lines carry a finding) are
+# not exercised there; only the content pins are. Re-pin from an observed local run that reports
+# findings before relying on the match pins.
+#
+# Classes: "d4-footer" (the footer tiles and signature every generated page carries,
+# inputs/decisions.md decision 32 D4), "security-contact" (the published security contact and the
+# policy links), "digest-anchor" (the release digest anchor the adopt tooling hard-codes),
+# "repository-link" (links to the maintainer's repositories, including the pinned source URLs that
+# plan.md section 4 item 14 retargets at the first release export), and "attribution" (the
+# authorship and trademark wording kept verbatim, the reasoning recorded in NOTICE).
+
+format-version = 1
+
+[[entry]]
+path = "NOTICE"
+class = "attribution"
+reason = "The authorship and trademark paragraph, kept verbatim as a functional attribution."
+lines = [
+    [38, "ffd23731f1de3549ace19870070f4a91dee14269d4239d6005fcd6984f9c733d"],
+    [40, "dc0759b722fcbe4b79c5c93e43b6e4ccb147763a5bb24d6760c2009297f1c35b"],
+]
+
+[[entry]]
+path = "prompt-pack/adopt/SKILL.md"
+class = "digest-anchor"
+reason = "The release digest anchor the adopt tooling hard-codes."
+lines = [
+    [61, "fef69f0427d0771ba0bc6a7177c90d7874aa5ffba99a57edc33c5ea1d18d313a"],
+]
+
+[[entry]]
+path = "site/.well-known/security.txt"
+class = "security-contact"
+reason = "The published site's security contact: the mailto, the PGP key and the policy link."
+lines = [
+    [1, "bade3a8cc54553f4169f0dc411987c9089cd958668d3ec94969031e209987673"],
+    [3, "e4b62876ed8b5f8a1abf2aa60b4d9b24249e75ed0e186b0e4d3bad8cb0cb4fe4"],
+    [4, "35d47d063d0181210503b75558a4d5f2a44b5080c877a0067c3fa4f1a4ab1065"],
+]
+
+[[entry]]
+path = "site/404.html"
+class = "d4-footer"
+reason = "Generated page: the D4 footer tiles and signature, the About links and the nav link."
+matches = [[1, 2]]
+
+[[entry]]
+path = "site/adopt.md"
+class = "digest-anchor"
+reason = "The digest anchor of the adopt guide, and its reference repository links."
+lines = [
+    [13, "df18c6948229fc8c4384a6790f7fae232fde2e9285e7255a703d330ec8e0cd1b"],
+    [19, "5a3acf55945ffdec1bbe7d615a75b211abfac5c27e2d2c9f5ec20cd37c48534b"],
+]
+
+[[entry]]
+path = "site/adopt/index.html"
+class = "d4-footer"
+reason = "Generated page: the D4 footer tiles and signature, the About links and the nav link."
+matches = [[1, 2]]
+
+[[entry]]
+path = "site/core-files/index.html"
+class = "d4-footer"
+reason = "Generated page: the D4 footer, the About links, the nav link and the digest anchor."
+matches = [[1, 3]]
+
+[[entry]]
+path = "site/disclosure/index.html"
+class = "d4-footer"
+reason = "Generated page: the D4 footer, the About links, the nav, evidence and policy links."
+matches = [[1, 7]]
+
+[[entry]]
+path = "site/draft-src/core-files.toml"
+class = "digest-anchor"
+reason = "The digest anchor in the core-files page source."
+lines = [
+    [334, "a403a4270dd752fa9d173671b548ea0567d3cc5e63c2c7ef1a13f034e5b33e96"],
+]
+
+[[entry]]
+path = "site/draft-src/disclosure.toml"
+class = "security-contact"
+reason = "The disclosure page source: the policy links and the spec and repository links."
+lines = [
+    [19, "7ebcc5a1efa8e641d897f92ae0fa55e9b8b69b46207e73f42a5df35aa8cedc7b"],
+    [79, "de23628e554622b1d89edf07a519748aed793da7cec689d6f9251ca01a93b905"],
+    [89, "1699504ea19fbb03229403749cfb58c3ba85256cb6afea5584a26344c98f8121"],
+    [99, "8f1d885e33b1f93130119fe7d05f6c2c55bd824dccc8d6882778efe09630da0c"],
+    [125, "7148fbb04d8033033bdd318b2d32ad2ddc8184f0720b6aed79ac47d27111a739"],
+]
+
+[[entry]]
+path = "site/draft-src/license.toml"
+class = "repository-link"
+reason = "The licence page source: the licence file, vendored material and repository links."
+matches = [[1, 5]]
+
+[[entry]]
+path = "site/draft-src/standard.toml"
+class = "repository-link"
+reason = "The standard page source: the specification and quickstart repository links."
+lines = [
+    [17, "6cfd9e34d13986b208d6ee750da294796ac511e87a115b7a175c5e8ac1a569c8"],
+]
+
+[[entry]]
+path = "site/draft/assets/baseline/NOTICE.md"
+class = "attribution"
+reason = "The pinned site template's own notice names its author; kept as the template ships it."
+lines = [
+    [3, "3fa3f1a79de27645c59f37b844d518d1e52a815cda44cfdca3e06299f40805dc"],
+]
+
+[[entry]]
+path = "site/draft/assets/baseline/baseline.css"
+class = "attribution"
+reason = "The pinned template stylesheet: the specification home in its header, and the footer."
+lines = [
+    [6, "b9243fea26f8fc7ffa781a625e0478f90255b8e68df7a01fe26e7f518b50713d"],
+    [478, "bb10e5a49d2337a06319a9c9582497da43bef634dca2a5eeb16c5180891dcff8"],
+]
+
+[[entry]]
+path = "site/draft/assets/baseline/marks/NOTICE.md"
+class = "attribution"
+reason = "The pinned template's marks notice names its author; kept as the template ships it."
+lines = [
+    [3, "cecd7a56c403654e82d1c52c19690640f6505047bc8fa11c248e3da1d2dd940d"],
+]
+
+[[entry]]
+path = "site/draft/index.html"
+class = "d4-footer"
+reason = "Generated page: the D4 footer tiles and signature, the About links and the nav link."
+matches = [[1, 2]]
+
+[[entry]]
+path = "site/index.html"
+class = "d4-footer"
+reason = "Generated page: the D4 footer, the About region's policy links and the nav link."
+matches = [[1, 3]]
+
+[[entry]]
+path = "site/license/index.html"
+class = "d4-footer"
+reason = "Generated page: the D4 footer, the About links, the nav link and the licence links."
+matches = [[1, 7]]
+
+[[entry]]
+path = "site/model/index.html"
+class = "d4-footer"
+reason = "Generated page: the D4 footer tiles and signature, the About links and the nav link."
+matches = [[1, 2]]
+
+[[entry]]
+path = "site/standard/index.html"
+class = "d4-footer"
+reason = "Generated page: the D4 footer, the About links, the nav link and the standard links."
+matches = [[1, 3]]
+
+[[entry]]
+path = "spec/OPF-IMPLEMENTATION-PROMPT.md"
+class = "repository-link"
+reason = "Pinned raw source URLs; section 4 item 14 retargets them at the first release export."
+lines = [
+    [15, "2079a47e9c3ea10ec0015432c06fa8488154669634c1fba4bf5c1b2f3acf6dd3"],
+    [44, "4a151c41b2f4a4a61ead576ce46dfa979e52d43d2af50801ecd992274336ef6e"],
+    [64, "a17a8d227505d536dc17866058d32ce3b8398ee2f9fae28dbca8b18e77e0e98e"],
+    [68, "1ad19571242ecb30fc04742e062c3c6837b5050977c4b2af63bcaf127c3f18bf"],
+    [2820, "5a6909bf861c209a576525417790a5a2d6d6ebaeb688d64f552968bc7a35a9b1"],
+]
+
+[[entry]]
+path = "tools/_opf_adopt_observe.py"
+class = "digest-anchor"
+reason = "The digest anchor, and release and codeload URLs with self-tests (item 14 retargets)."
+lines = [
+    [17, "ea4c066a8d4234e3c913614612ed0c3c4788c0c3f3173a09893102c0b67fb3ec"],
+    [188, "4a2681e6681c765aa1d36e00f6b3024f03132ef667bbfd794847029d66f0e9b8"],
+    [1306, "28bba0fa10a1a39969cfdcda7757f75e751fef032ee1f71ca10900a88fa2226e"],
+    [1307, "cb1adb2650e97d32d3f5f70f584c6724092284bbab239c243f3b7757aac9712a"],
+    [3433, "ad040a260c4e3f804ec93e7791ddb7674d4c603ec1414ee06bd00f76342452c4"],
+    [3920, "f3c4d8f3de16115796e8cfe0e670507ebe5722a777a94593f9f0c9d15a1a8c2c"],
+    [4740, "d598b40cfc2a70efa12a206ed5fa0f0648797f1d95607d81f4b7b12d09631460"],
+    [5767, "bbb76c8d95058d677779a82739c2f5c74384c3e3caa4da5ac78048239a3bb10f"],
+]
+
+[[entry]]
+path = "tools/gen_draft_site.py"
+class = "d4-footer"
+reason = "The footer and About builders, the repository nav link and its self-test expectation."
+lines = [
+    [186, "550b4ab58d52cbd6401c5c6cc2d3e68e13b823c75a90b535b5c358238f5b0498"],
+    [291, "8b0db11319e2ef24d8803342ac1a7b4b92c2ab7c584d32137e02c52d9fc12e16"],
+    [294, "1981778e9521dd37925e75b1372e07ece21a5f6b78347142d04d0c3cf3e0f28f"],
+    [300, "7e08ae59a9f5a1a514ede16d8d03b963e8a2bdedd2ec5f002138e462492793f4"],
+    [301, "734e6e66b78cee3d6d9a41b735d5349c458c4259b5b00c632a8f006f4f7b1207"],
+    [302, "889843ca4438656a0173b9b172e341a9f2be05831bd5f69bb4656f74735a51c2"],
+    [305, "fbeba2eefb887e70feb97740b1fd31ad8d246aa29589becc924e00fe920e60b2"],
+    [316, "0313989ae46d9fc5403de377ffcae157661afd92d53e6d3523d9915116d540c8"],
+    [317, "7ad9267f9c2a4318d173ccc11b28826691c33573ec189bdd72061e3924b2784d"],
+    [1808, "70ecf6d6ac02abcc42fd9b791b657940dd29fdfe1bcd429ae1d15d8b35c12c06"],
+    [1810, "01581d266e1b1aca99246be292ddf8ac4d9d7284674f8ca076d90aa5e40d0c05"],
+    [2220, "265d9bf3e8fcf1542c553ca74d24461e96db910d565dfd080a253c4a5d5be9d6"],
+]
+
+[[entry]]
+path = "tools/public_export/README.md"
+class = "repository-link"
+reason = "This directory ships: the public repository links in its own README."
+lines = [
+    [4, "2b91bc32aaf44cc511cc37710cba7cff7848ab3aeefa01e7761777c3a62c6544"],
+    [109, "6372a64576b3db8c7194dbd02775477f9702330ff8fdac85dd3537d714f39519"],
+]
+
+[[entry]]
+path = "tools/public_export/export_public.py"
+class = "repository-link"
+reason = "This directory ships: the public repository link in the exporter's docstring."
+lines = [
+    [8, "cf402f3dae5eb1a292e5e45471689e8cd7a43036fa542f002d94507fe67001e1"],
+]

@@ -1,0 +1,1889 @@
+#!/usr/bin/env python3
+"""opf observe: the caller-side, git-derived observations the store-integrity engine cannot read itself.
+
+U6's `_opf_check.validate_store` is offline and deterministic: it reads NO git, so the git-aware facts its
+across-time and topology checks need (is the store version-controlled, what remote does it actually ride,
+what did the prior committed snapshot hold) are supplied by an inert `observations` object. This module is
+that supplier for the `opf doctor` verb (and, later, `render --write` and `init`). Its public surface is:
+
+  gather(resolution) -> (observations, notes)
+  self_test()        -> 0/1/2
+
+`gather` returns an `observations` dict carrying ONLY the keys it could HONESTLY determine (a subset of
+`{"tracked", "actual_remote", "prior"}`, the exact `_opf_check._OBSERVATION_KEYS`) and a `notes` list of
+human-readable strings explaining every omission. It NEVER forges a value: when git cannot answer, the key
+is OMITTED and a note is added, and the engine then routes the affected check to a named cannot-evaluate,
+which is the honest outcome. A partial `prior` is never forged either: any parse failure, absent object, or
+read failure while reconstructing the prior snapshot omits `prior` ENTIRELY (a partial prior would falsely
+accuse the store), keeping only the honest empty prior for the unborn-HEAD (no-commits) case. The one
+exception is the prior's `held` table (every id the prior commit held, worklog and archive included): it can
+only withhold the reserved-number exemption, never accuse, so when it cannot be read it alone is omitted
+with a note and that exemption becomes a cannot-evaluate.
+
+Trust-boundary hardening of the git subprocess surface (this is a new external boundary,
+SECI-threat-model-boundaries; the git call is untrusted-context input, SECI-untrusted-content /
+guard-input-soundness): every git invocation runs `--no-replace-objects` (a replacement ref cannot
+substitute the bytes a read returns), binds explicitly to the store root with `-C` rather than inheriting a
+cwd, and runs under an ALLOWLIST-scrubbed environment (every ambient `GIT_*` variable dropped so an inherited
+GIT_DIR / GIT_WORK_TREE / GIT_CONFIG cannot rebind or reconfigure the call; only PATH and HOME are carried
+over, and the few config-neutralizing variables git genuinely needs are re-applied). Each call is bounded by
+a timeout; a timeout, an OS launch failure, or a read the scrub breaks all fail SAFE to omit-plus-note,
+never a silent allow. git is resolved via shutil.which and absolutized (os.path.abspath), so the launched
+child is pinned to an absolute path and cannot be re-resolved at exec time; when git is absent from PATH
+entirely the observations are all omitted (and `self_test` returns 2, cannot-evaluate, since every vector needs git).
+
+Stdlib only (`subprocess`, `tomllib`, `shutil`); imports `_opf_check` (for the per-record body digest) and
+`_opf_emit` (for its EmitError). Launched via opf.py under `-I -B`.
+"""
+import sys
+
+if tuple(sys.version_info[:2]) < (3, 14):
+    import os
+    try:
+        sys.stderr.write(
+            "error: _opf_observe.py requires Python 3.14 or newer; this is Python %d.%d.%d (%s). "
+            "Nothing was run (cannot evaluate).\n"
+            % (tuple(sys.version_info[:3]) + (sys.executable or "unknown interpreter",)))
+        sys.stderr.flush()
+    except BaseException:
+        pass
+    os._exit(2)
+
+import os
+import shutil
+import subprocess
+from collections import namedtuple
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # for the guarded sibling imports below
+
+import tomllib  # noqa: E402
+
+import _opf_check   # noqa: E402  the store-integrity engine: its _record_digest + observation-key roster
+import _opf_emit    # noqa: E402  the canonical emitter: EmitError, raised by an out-of-subset record body
+import _opf_store   # noqa: E402  the resolver: the fixed store-tree / machine-store directory-name constants
+
+# The fixed machine-store filenames, reused from the engine so this reader cannot drift from the layout the
+# validator enforces (single source of truth; guard-input-soundness).
+_MANIFEST_NAME = _opf_check.MANIFEST_NAME
+_VERSION_NAME = _opf_check.VERSION_NAME
+_COUNTERS_NAME = _opf_check.COUNTERS_NAME
+_WORKLOG_NAME = _opf_check.WORKLOG_NAME
+_INDEX_SUFFIX = _opf_check.INDEX_SUFFIX
+
+# The two store layouts (spec 4). Reused from the resolver so the reader recognizes exactly what the store
+# can declare; an unknown layout is a fail-closed omit, never a guess.
+_LAYOUTS = ("inline", "per-record")
+
+# A per-git-call runtime bound (SECA resource-bounds): a hung or pathological git read fails SAFE to an
+# omit-plus-note rather than blocking the doctor verb indefinitely. Generous relative to a local object read.
+_GIT_TIMEOUT_S = 30
+
+# The honest empty prior for an unborn HEAD (a repository with no commits): nothing was ever committed, so
+# every across-time baseline is genuinely empty. Shaped exactly as _opf_check._normalize_prior accepts.
+def _empty_prior():
+    return {"releases": [], "counters_high": {}, "records": {}, "digests": {}, "imported": {}, "held": {}}
+
+
+# The note suffix when only the ids the prior commit held cannot be enumerated: the rest of the prior stands.
+_HELD_OMITTED = ("the ids the prior commit held are omitted (the reserved-number exemption is then "
+                 "cannot-evaluate)")
+
+
+_GitOutcome = namedtuple("_GitOutcome", "completed rc out err")
+
+
+def _git_path():
+    """The absolute path to the git executable, or None when git is not on PATH. Resolved via shutil.which
+    and then made absolute with os.path.abspath (a relative which() result, from a relative PATH entry, is
+    anchored to the cwd at resolution time), so in ALL cases the launched child is pinned to an absolute path
+    rather than a bare `git` and cannot be re-resolved at exec time by a later PATH change or a relative-name
+    re-lookup. os.path.abspath (not realpath) is used so symlinks are preserved: git is often a symlink and
+    the symlink is what must run. One disclosed residual: PATH-based resolution at which()-time reads the
+    ambient PATH, so a PATH-shadowing binary can still be CHOSEN at lookup; the chosen binary is then pinned
+    absolute. This is consistent with the corpus's disclosed PATH-resolution residual."""
+    p = shutil.which("git")
+    return os.path.abspath(p) if p else None
+
+
+def _scrubbed_env():
+    """Build the minimal, allowlist environment every git call runs under. Every ambient `GIT_`-prefixed
+    variable is DROPPED (an inherited GIT_DIR/GIT_WORK_TREE/GIT_CONFIG/GIT_OBJECT_DIRECTORY could otherwise
+    rebind the call to a DIFFERENT repository, inject configuration, or redirect object lookup); only PATH
+    and HOME are carried over. The few variables git genuinely needs to run non-interactively and free of
+    ambient configuration are then RE-APPLIED: global and system config neutralized to os.devnull, the
+    system config search disabled, the terminal prompt disabled, optional locks turned off (read-only), and
+    the locale pinned so output is deterministic. Lazy-fetch suppression is NOT applied here: it is a
+    property of a read-only OBSERVATION, not of the scrubbed env itself (fixture setup builds real partial
+    clones and legitimately lazy-fetches), so _run_git applies GIT_NO_LAZY_FETCH per call instead."""
+    env = {}
+    for name in ("PATH", "HOME"):
+        val = os.environ.get(name)
+        if val is not None:
+            env[name] = val
+    # Re-apply only what git needs, config injection neutralized (allowlist stance).
+    env["GIT_CONFIG_GLOBAL"] = os.devnull
+    env["GIT_CONFIG_SYSTEM"] = os.devnull
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    env["GIT_OPTIONAL_LOCKS"] = "0"
+    env["LC_ALL"] = "C"
+    return env
+
+
+def _run_git(git, store_root, args, timeout=_GIT_TIMEOUT_S, allow_lazy_fetch=False, config_overrides=None,
+             max_output_bytes=8 << 20, input_bytes=None):
+    """Run `git --no-pager --no-replace-objects -c core.fsmonitor=false -C <store_root> <args>` under the
+    scrubbed environment, bounded by a
+    timeout. Returns a _GitOutcome: `completed` is True only when the process ran to completion (then `rc`,
+    `out` (bytes), and `err` (text) are meaningful); it is False on a timeout or an OS launch failure, with
+    `err` naming the reason -- the fail-safe omit-plus-note signal. `--no-replace-objects` is passed so a
+    replacement ref cannot substitute the bytes a read returns; `-C` binds the call explicitly to the store
+    root rather than inheriting a cwd (explicit-binding-over-ambient-context). core.fsmonitor is forced off
+    by a command-scope `-c` (which overrides file and runtime config for fsmonitor) so an fsmonitor program
+    configured in the observed repository cannot LAUNCH A PROCESS during any of these read-only observations
+    (the scrubbed env already neutralizes global/system config, but the repository's OWN .git/config is read
+    by design; every caller here is an observation -- rev-parse, ls-files, remote, show, status, check --
+    that never wants to start the monitor, so suppressing it changes no observed result). GIT_NO_LAZY_FETCH
+    is forced on for every observation (allow_lazy_fetch defaults False), so a read of an object ABSENT
+    locally in a partial clone fails closed to the omit-plus-note path (a `git show` of an absent blob
+    returns rc != 0, handled exactly as any other absent object) rather than triggering a promisor fetch,
+    which would EXECUTE the repository-configured core.sshCommand -- the same code-execution class as the
+    fsmonitor vector, reached through git's promisor machinery. This changes no result for a PRESENT object,
+    and (being an allowlist scrub) the env drops any ambient GIT_NO_LAZY_FETCH, so it is applied here rather
+    than relied on from the environment. allow_lazy_fetch=True is passed ONLY by self-test FIXTURE SETUP that
+    must reproduce the adopter's real git (a partial-clone checkout or a real `git add` that legitimately
+    lazy-fetches); no production observation passes it. --no-pager is
+    passed for parity with _run_git_config_discovery and defence in depth: the captured, non-TTY stdout
+    already suppresses the pager, so a pager configured for a subcommand cannot launch a process.
+
+    config_overrides, when given, is a list of (key, value) config pairs (from _filter_neutralizing_config)
+    injected through git's GIT_CONFIG_COUNT + GIT_CONFIG_KEY_<n> / GIT_CONFIG_VALUE_<n> ENVIRONMENT mechanism,
+    NOT as `-c key=value` argv. `-c` splits its argument at the FIRST `=`, so a config key whose subsection
+    name itself contains `=` (a `filter.<name>.clean` whose <name> holds `=`, reachable via `.gitattributes:
+    * filter=<name>`) would be mis-parsed by `-c` and leave the REAL driver executable
+    (F-OPF-STATUSFILTER-EQ-BYPASS); the env mechanism passes each key and value as its own separate string, so
+    ANY subsection name is neutralized correctly. These pairs are set on the POST-scrub env this function
+    itself builds (trusted), and the allowlist scrub already dropped every ambient GIT_* variable (the env
+    starts from PATH+HOME only), so a hostile environment can neither smuggle in its own GIT_CONFIG_* override
+    nor pre-set a conflicting GIT_CONFIG_COUNT to defeat the neutralization: the count and pairs written here
+    are the authoritative ones. An env override is command-level precedence, so (like `-c core.fsmonitor=false`
+    above) it overrides repository AND worktree config. Optional input_bytes is sent on stdin within
+    the same timeout while stdout/stderr are drained; callers supply bytes, never shell text."""
+    cmd = [git, "--no-pager", "--no-replace-objects", "-c", "core.fsmonitor=false",
+           "-c", "core.commitGraph=false", "-C", str(store_root)] + list(args)
+    env = _scrubbed_env()
+    if not allow_lazy_fetch:
+        env["GIT_NO_LAZY_FETCH"] = "1"   # no promisor fetch on a missing object (a fetch can reach core.sshCommand)
+    if config_overrides:
+        # Applied AFTER the scrub, so these are the authoritative GIT_CONFIG_* the child sees (the scrub
+        # dropped any ambient GIT_CONFIG_COUNT/KEY/VALUE). Separate key+value strings avoid the `-c` first-`=`
+        # split that a subsection name containing `=` would exploit (F-OPF-STATUSFILTER-EQ-BYPASS).
+        env["GIT_CONFIG_COUNT"] = str(len(config_overrides))
+        for i, (key, value) in enumerate(config_overrides):
+            env["GIT_CONFIG_KEY_{}".format(i)] = key
+            env["GIT_CONFIG_VALUE_{}".format(i)] = value
+    return _capture_bounded(cmd, env, timeout, max_output_bytes, input_bytes=input_bytes)
+
+
+def _capture_bounded(cmd, env, timeout, max_output_bytes, input_bytes=None):
+    """Capture stdout AND stderr incrementally; cap and timeout never return partial success."""
+    import math
+    import selectors
+    import time
+    if (type(max_output_bytes) is not int or not 0 < max_output_bytes <= (64 << 20)
+            or type(timeout) not in (int, float) or not math.isfinite(timeout)
+            or not 0 < timeout <= 300
+            or (input_bytes is not None and (not isinstance(input_bytes, bytes)
+                                              or len(input_bytes) > (64 << 20)))):
+        return _GitOutcome(False, None, b"", "invalid bounded-read control")
+    deadline = time.monotonic() + timeout
+    proc = None
+    selector = selectors.DefaultSelector()
+    chunks = [bytearray(), bytearray()]
+    total = 0
+    try:
+        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE if input_bytes else subprocess.DEVNULL,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, env=env)
+        sent = 0
+        if input_bytes:
+            os.set_blocking(proc.stdin.fileno(), False)
+            selector.register(proc.stdin, selectors.EVENT_WRITE, "stdin")
+        for i, stream in enumerate((proc.stdout, proc.stderr)):
+            os.set_blocking(stream.fileno(), False)
+            selector.register(stream, selectors.EVENT_READ, i)
+        while selector.get_map():
+            left = deadline - time.monotonic()
+            if left <= 0:
+                raise TimeoutError("git read timed out")
+            ready = selector.select(left)
+            if not ready:
+                raise TimeoutError("git read timed out")
+            for key, _event in ready:
+                if key.data == "stdin":
+                    sent += os.write(key.fileobj.fileno(), input_bytes[sent:sent + 65536])
+                    if sent == len(input_bytes):
+                        selector.unregister(key.fileobj)
+                        key.fileobj.close()
+                    continue
+                block = os.read(key.fileobj.fileno(), min(65536, max_output_bytes - total + 1))
+                if not block:
+                    selector.unregister(key.fileobj)
+                    continue
+                total += len(block)
+                if total > max_output_bytes:
+                    raise ValueError("git output exceeded streaming byte limit")
+                chunks[key.data].extend(block)
+        left = deadline - time.monotonic()
+        if left <= 0:
+            raise TimeoutError("git read timed out")
+        rc = proc.wait(timeout=left)
+        return _GitOutcome(True, rc, bytes(chunks[0]), bytes(chunks[1]).decode("utf-8", "replace"))
+    except (OSError, ValueError, TimeoutError, subprocess.TimeoutExpired) as exc:
+        return _GitOutcome(False, None, b"", str(exc))
+    finally:
+        selector.close()
+        if proc is not None:
+            if proc.poll() is None:
+                proc.kill()
+            try:
+                proc.wait(timeout=1)
+            except subprocess.TimeoutExpired:
+                pass  # No success is reported; an uninterruptible kernel wait is a platform residual.
+            for stream in (proc.stdin, proc.stdout, proc.stderr):
+                if stream is not None:
+                    stream.close()
+
+
+# --- OPF-STATUS-FILTER-SUPPRESS: neutralize repo/worktree clean-process filters on a worktree-content probe -
+# A `git status` that COMPARES WORKTREE CONTENT against the index runs any repository- or worktree-configured
+# `clean` / `process` filter driver for a matched path, EXECUTING that driver's external command during a
+# read-only observation (exec-on-observe; SECI-config-is-executable-trust-gate). This is the same
+# executable-config trust-gate class the fsmonitor and lazy-fetch->core.sshCommand suppressions in _run_git
+# already close, but those vectors never read worktree content, so `-c core.fsmonitor=false` + GIT_NO_LAZY_FETCH
+# cover them while a clean/process filter is reached ONLY through worktree-content comparison and needs the
+# targeted neutralization below. The scrubbed env already points global/system config at os.devnull, so the
+# only filter git can exec on such a probe is one defined in the repo's OWN .git/config or .git/config.worktree
+# -- exactly the set _filter_neutralizing_config enumerates and empties.
+
+def _filter_neutralizing_config(git, store_root, timeout=_GIT_TIMEOUT_S):
+    """Return the list of (key, value) config overrides that neutralize every repository/worktree-configured
+    clean/process filter driver reachable when git compares worktree content against the index at
+    `store_root`, so a
+    `git status` over that root cannot EXECUTE a repo-planted external filter command on a read-only
+    observation (exec-on-observe; SECI-config-is-executable-trust-gate, the class OPF-FSMON-SUPPRESS closed
+    for core.fsmonitor and the lazy-fetch->core.sshCommand vector). The caller passes these pairs to _run_git
+    as `config_overrides`, which injects them through git's GIT_CONFIG_COUNT + GIT_CONFIG_KEY_<n> /
+    GIT_CONFIG_VALUE_<n> ENVIRONMENT mechanism (each key and value a SEPARATE string).
+
+    Enumerates the exec-capable driver names through the SAME _run_git boundary and scrubbed env the status
+    probe uses (`config -z --name-only --list`), so the neutralized set provably EQUALS the set git could
+    exec on the probe (global/system config is neutralized to os.devnull for both; guard-input-soundness).
+    Using _run_git, NOT _run_git_config_discovery, is load-bearing for that equality: the config-discovery
+    variant would let global/system config in and enumerate keys git will not read on the scrubbed status.
+    `--name-only` returns keys WITHOUT values, so a malicious command BODY is never read or logged; reading
+    config runs no filter and no hook, so the enumeration is itself inert, and `-c core.fsmonitor=false`
+    (added by _run_git) keeps fsmonitor suppressed during it too.
+
+    For each distinct driver <name> whose `filter.<name>.clean` or `filter.<name>.process` key is configured
+    (git config section/subkey are case-insensitive, matched here case-insensitively; the subsection <name>
+    is case-sensitive and may itself contain dots, so exactly ONE fixed trailing component is stripped),
+    emits the pairs (`filter.<name>.clean`, ""), (`filter.<name>.process`, ""), (`filter.<name>.required`,
+    "false"). Injected as GIT_CONFIG_* env pairs (see _run_git), each is command-level precedence and so
+    overrides repo AND worktree config, the relationship `-c core.fsmonitor=false` already relies on; passing
+    key and value as SEPARATE strings is load-bearing where <name> contains `=` (e.g. a `[filter "pwn=bypass"]`
+    reached via `.gitattributes: * filter=pwn=bypass`): a `-c filter.pwn=bypass.clean=` argv would split at the
+    FIRST `=`, be parsed as key `filter.pwn` = value `bypass.clean=`, and leave the REAL
+    `filter.pwn=bypass.clean` driver EXECUTABLE (F-OPF-STATUSFILTER-EQ-BYPASS); the env mechanism has no such
+    split. An empty clean/process makes git treat the driver as identity
+    so NO external command is spawned; required=false stops an emptied-but-required driver from erroring and
+    masking the verdict. git's BUILT-IN text/eol/working-tree-encoding conversion is not a filter driver and
+    is untouched, so a text=auto / CRLF store is not falsely flagged dirty: that built-in conversion is
+    deliberately PRESERVED (the A-vs-B property a raw --no-filters reimplementation would regress).
+
+    RESIDUAL (disclose-guard-residuals): neutralizing an EXTERNAL NORMALIZING clean/process driver (the
+    git-lfs shape: the index holds the cleaned/pointer blob and the worktree holds the smudged body, with
+    required=true) means git can no longer reproduce the cleaned blob, so in the racy-clean mtime window
+    (normal post-add / checkout / clone state) `git status` re-hashes the RAW worktree bytes, which differ
+    from the index blob, and reports a genuinely-CLEAN store as DIRTY. This is inherent to driver
+    neutralization (the mirror of why a raw --no-filters reimplementation was rejected for its text=auto
+    regression) and is FAIL-CLOSED (it over-refuses the in-place write; it is NEVER a false-clean and NEVER a
+    filter exec). _opf_write_guard.probe_dirty / check_clean surface this to the operator with clear guidance
+    to settle the worktree before re-running the operation (F-OPF-STATUSFILTER-LFS-FALSEPOS).
+
+    FAIL-CLOSED (guard-input-soundness, check-fails-closed-on-unreadable): neutralization completeness rests
+    entirely on this enumeration, so any state where the exec-able set cannot be proven is a cannot-evaluate
+    that RAISES RuntimeError (the caller turns it into a fail-closed refusal), never a silent empty list read
+    as "no filters". Raises when the enumeration could not run (timeout / launch failure), returned a nonzero
+    rc (a corrupt .git/config makes --list fail; unreadable input is not "no filters"), was not
+    NUL-terminated as `-z` promises, carried a filter clean/process key with a non-UTF-8 driver name that
+    cannot be safely re-emitted as a matching GIT_CONFIG_* override key (emitting a replacement-mangled name
+    would leave the REAL driver exec-able -- a fail-OPEN, so it fails closed, mirroring _is_partial_clone), or
+    carried a filter clean/process key that does not parse into a well-formed (non-empty) driver name.
+
+    FUTURE CALLERS (disclose-guard-residuals): any NEW observation that reads WORKTREE CONTENT through git (a
+    non-`--cached` diff, `diff-files`, `ls-files -m`, `update-index --refresh`, or a `status` elsewhere) runs
+    clean/process filters and MUST pass these overrides to _run_git too; a verb that never compares worktree content
+    (rev-parse, ls-files, config, cat-file, remote, show HEAD:<blob>) does not and must not pay the cost. A
+    residual TOCTOU remains: enumeration and the status are two calls, so a driver ADDED to .git/config
+    between them could exec on the status. A writer's dirty-probe runs as a read-only gate BEFORE the
+    single-writer lease is claimed (opf record's step 6 probes, then acquires), so the lease does NOT
+    bound this window;
+    the mitigation is that adding a driver between the two calls requires an adversary with concurrent write
+    access to the store's .git/config, who could already rewrite HEAD (or the driver) directly, so only a raw
+    filter-free reimplementation (rejected for its text/eol regression) would close it fully."""
+    listing = _run_git(git, store_root, ["config", "-z", "--name-only", "--list"], timeout=timeout)
+    if not listing.completed:
+        raise RuntimeError("could not enumerate the store's git filter configuration ({})".format(
+            listing.err.strip()))
+    if listing.rc != 0:
+        raise RuntimeError("git config --list failed (rc {}); the store's filter configuration is unreadable, "
+                           "so its exec-capable filters cannot be neutralized".format(listing.rc))
+    raw = listing.out
+    if raw and not raw.endswith(b"\x00"):
+        raise RuntimeError("git config --list returned a payload that is not NUL-terminated; the store's "
+                           "filter configuration cannot be trusted (fail-closed)")
+    names = []
+    seen = set()
+    for kb in raw.split(b"\x00"):
+        if not kb:
+            continue
+        low = kb.lower()   # git section/subkey are case-insensitive; ASCII lower on the raw bytes suffices
+        if not low.startswith(b"filter."):
+            continue
+        if not (low.endswith(b".clean") or low.endswith(b".process")):
+            continue   # a filter.<name>.smudge / .required (etc.) is not exec-able on status: not neutralized
+        # A filter clean/process key: its <name> must round-trip cleanly to emit a MATCHING config override.
+        # A non-UTF-8 subsection name cannot, and emitting a replacement-mangled name would leave the REAL
+        # driver exec-able (a fail-OPEN), so a non-UTF-8 name is a cannot-evaluate -> fail-closed (mirrors
+        # _is_partial_clone's non-UTF-8 handling).
+        try:
+            key = kb.decode("utf-8")
+        except UnicodeDecodeError:
+            raise RuntimeError("git config carries a filter driver key with a non-UTF-8 name; it cannot be "
+                               "safely neutralized, so the store's filter configuration is refused "
+                               "(fail-closed)")
+        # <name> is everything between the fixed `filter.` prefix and the fixed trailing `.clean`/`.process`
+        # component. The subsection may itself contain dots, so strip exactly ONE trailing component (rfind).
+        name = key[len("filter."):key.rfind(".")]
+        if not name:
+            raise RuntimeError("git config carries a malformed filter key {!r} with no driver name; the "
+                               "store's filter configuration cannot be trusted (fail-closed)".format(key))
+        if name not in seen:
+            seen.add(name)
+            names.append(name)
+    overrides = []
+    for name in names:
+        overrides.append(("filter.{}.clean".format(name), ""))
+        overrides.append(("filter.{}.process".format(name), ""))
+        overrides.append(("filter.{}.required".format(name), "false"))
+    return overrides
+
+
+# --- OPF-D2B: the config-discovery ignore probe --------------------------------------------------------
+# The default _scrubbed_env above NEUTRALIZES global/system git configuration so an observation reads only
+# the repository. The `opf init` ignore preflight (opf.py:_init_unignored) needs the OPPOSITE for one
+# read-only question: whether the adopter's REAL `git add` would ignore the planned store, which depends on
+# the adopter's global and system core.excludesFile. This variant lets git DISCOVER that real configuration
+# through its DEFAULT locations (HOME and XDG_CONFIG_HOME reach ~/.gitconfig and ~/.config/git/{config,ignore},
+# and the system config is read normally), while every other ambient GIT_* variable is dropped by
+# construction (allowlist), so an inherited GIT_DIR / GIT_WORK_TREE / GIT_OBJECT_DIRECTORY / GIT_INDEX_FILE /
+# pathspec variable cannot rebind the repository or redirect object lookup.
+#
+# The env-based CONFIG OVERRIDES (GIT_CONFIG_GLOBAL / GIT_CONFIG_SYSTEM, the runtime
+# GIT_CONFIG_COUNT + its indexed GIT_CONFIG_KEY_<n> / GIT_CONFIG_VALUE_<n> pairs, and the legacy GIT_CONFIG /
+# GIT_CONFIG_PARAMETERS) are deliberately DROPPED, not honoured: they can set ANY config key (trace2.* to
+# make the read-only probe write or append an outside file, core.fsmonitor to launch a process; a file-based
+# core.worktree does NOT rebind a -C-bound check-ignore, only --work-tree does and it is never passed, so
+# core.worktree is not among the reasons these are dropped), so carrying them would re-open exactly the
+# redirect/trace surface the scrub exists to close (SECI-threat-model-boundaries, prefer-removing-a-path).
+# GIT_CONFIG_NOSYSTEM is NOT among the dropped
+# overrides: it is instead CARRIED as a safe on/off toggle (it only enables/disables the system config and
+# cannot set a key). DISCLOSED RESIDUAL: because the env-based
+# overrides are dropped, an adopter who runs `opf init` with GIT_CONFIG_GLOBAL or GIT_CONFIG_* set (a wrapper,
+# or an explicit `git -c ...`) may see this check diverge from what that same environment's `git add` would
+# do; the common case (a real ~/.gitconfig, no env override) is honoured exactly.
+#
+# Even the adopter's REAL config files can carry trace2 or fsmonitor settings, so the probe FORCES trace off
+# through the GIT_TRACE2* / GIT_TRACE* environment (which git honours ahead of any config; a command-line
+# `-c trace2.*` cannot, because trace2 reads its config before `-c` is applied) and disables core.fsmonitor
+# through a command-scope `-c` at the call site. So no configuration reachable by the probe can turn a
+# read-only check-ignore into a file write or a launched process. (One benign exception: reading a SPLIT
+# INDEX refreshes the shared index file's mtime, a pre-existing git metadata touch on the adopter's own .git
+# that GIT_OPTIONAL_LOCKS does not suppress; this is not a content write, an outside write, or command
+# execution.)
+
+# The ambient names carried over so git can discover the adopter's real config through its default paths.
+# GIT_CONFIG_NOSYSTEM is a SAFE toggle (it only enables/disables the system config, it cannot set a key), so
+# carrying it lets an adopter (or the self-test) opt out of /etc/gitconfig without any injection surface.
+_CONFIG_DISCOVERY_KEEP = ("PATH", "HOME", "XDG_CONFIG_HOME", "GIT_CONFIG_NOSYSTEM")
+
+# Trace toggles FORCED to a disabling value in the probe environment. The GIT_TRACE2* settings take
+# precedence over trace2.* CONFIG (a command-line `-c` cannot, since trace2 reads its config early); the
+# legacy GIT_TRACE* have no config form and are dropped by the allowlist anyway, but are pinned off too.
+_TRACE_OFF = {
+    "GIT_TRACE": "0", "GIT_TRACE_PACKET": "0", "GIT_TRACE_PERFORMANCE": "0", "GIT_TRACE_SETUP": "0",
+    "GIT_TRACE2": "0", "GIT_TRACE2_EVENT": "0", "GIT_TRACE2_PERF": "0",
+}
+
+
+def _config_discovery_env():
+    """Build the environment for the config-discovery ignore probe (OPF-D2B). Carry only PATH, HOME,
+    XDG_CONFIG_HOME, and the safe GIT_CONFIG_NOSYSTEM toggle, so git DISCOVERS the adopter's real global and
+    system configuration through its default
+    locations (honouring a global or system core.excludesFile the same way `git add` would), and DROP every
+    other ambient GIT_* variable by construction (allowlist), so no inherited redirect, object, pathspec, or
+    config-override variable survives. The env-based config overrides (GIT_CONFIG_GLOBAL/SYSTEM, the runtime
+    GIT_CONFIG_COUNT/KEY/VALUE pairs, GIT_CONFIG, GIT_CONFIG_PARAMETERS) are dropped, not honoured, because
+    they can set any key (core.worktree, trace2.*, core.fsmonitor) and would re-open the redirect/trace
+    surface. Trace is FORCED off through the GIT_TRACE2* / GIT_TRACE* env (which outranks trace2.* config),
+    and the call is forced non-interactive and deterministic; core.fsmonitor is disabled by command-scope
+    config at the call site. Lazy fetching is forced off (GIT_NO_LAZY_FETCH), so a missing indexed .gitignore
+    blob cannot trigger a promisor fetch that would reach core.sshCommand."""
+    env = {}
+    for name in _CONFIG_DISCOVERY_KEEP:
+        val = os.environ.get(name)
+        if val is not None:
+            env[name] = val
+    env.update(_TRACE_OFF)
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    env["GIT_OPTIONAL_LOCKS"] = "0"
+    env["GIT_NO_LAZY_FETCH"] = "1"   # no promisor fetch during the read-only probe (a fetch can reach core.sshCommand)
+    env["LC_ALL"] = "C"
+    return env
+
+
+def _run_git_config_discovery(git, store_root, args, timeout=_GIT_TIMEOUT_S, input_bytes=None, logical=False):
+    """Like _run_git, but under the config-discovery environment (OPF-D2B), and with core.fsmonitor forced
+    off by a command-scope `-c` so an adopter fsmonitor config cannot launch a monitor process during the
+    read-only probe (a command-line `-c` overrides file and runtime config for fsmonitor; trace2 is instead
+    forced off through the environment in _config_discovery_env, since its early config read ignores `-c`).
+    The probe also passes --no-pager, so a pager configured for check-ignore cannot launch a process (defence
+    in depth: the captured, non-TTY stdout already suppresses the pager). Optional input_bytes is sent on
+    stdin; callers supply bytes, never shell text. `logical` runs the probe with its working directory and
+    PWD at store_root as given, verbatim (a path through a symlink, or a spelling such as `R/.` or `R//`,
+    never resolved or normalized; the caller passes a str, which pathlib would normalize), PWD being the
+    one name added to that environment: git then names the repository by PWD's exact spelling, as the
+    adopter's git at that directory does, so an includeIf "gitdir:" rule matching only that spelling
+    applies (git 2.53.0).
+    Returns a _GitOutcome shaped exactly as _run_git's."""
+    cmd = [git, "--no-pager", "--no-replace-objects", "-c", "core.fsmonitor=false", "-C", str(store_root)] + list(args)
+    env = _config_discovery_env()
+    if logical:
+        env["PWD"] = str(store_root)
+    try:
+        proc = subprocess.run(cmd, input=input_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              env=env, cwd=str(store_root) if logical else None, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return _GitOutcome(False, None, b"", "git timed out after {}s".format(timeout))
+    except OSError as exc:
+        return _GitOutcome(False, None, b"", "could not launch git ({})".format(exc))
+    err = (proc.stderr or b"").decode("utf-8", "replace")
+    return _GitOutcome(True, proc.returncode, proc.stdout or b"", err)
+
+
+def _worktree_open_succeeds(worktree_path):
+    """Replicate git's own worktree-file open for a skip-worktree ignore entry (dir.c add_patterns ->
+    read_skip_worktree_file_from_index, git 2.53.0): git opens the worktree path with O_RDONLY | O_NOFOLLOW
+    and falls back to reading the INDEX BLOB ONLY when that open, or the fstat that follows it, is
+    UNSUCCESSFUL. This returns True exactly when git's open+fstat would succeed -- so git reads from the
+    descriptor and NEVER index-reads (a readable regular file is read from disk, matching the probe; a
+    readable directory opens but its read then fails with no index fallback), meaning an unavailable blob
+    cannot change what `git add` ignores. It returns False when git's open fails (an absent path, a symlink
+    under O_NOFOLLOW, an unreadable regular file, or an UNREADABLE directory whose O_RDONLY open is denied),
+    the cases where git falls back to the index blob. O_NONBLOCK is added purely so a worktree path that is
+    a FIFO or device cannot BLOCK this read-only probe (git would itself block on such a path, which is not
+    a fetch-and-ignore case); it does not change the open outcome for a regular file, directory, symlink, or
+    absent path, the arrangements git's fallback decision actually turns on."""
+    try:
+        fd = os.open(str(worktree_path), os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except OSError:
+        return False   # git's O_NOFOLLOW open fails -> it falls back to the index blob
+    try:
+        os.fstat(fd)   # git falls back too if the post-open fstat fails (near-impossible on a live fd)
+    except OSError:
+        return False
+    finally:
+        _opf_store._close_fd_exc_safe(fd)
+    return True
+
+
+def _is_partial_clone(git, store_root, run=None, strict=False):
+    """True when the repository at store_root is a PARTIAL clone -- one with a promisor remote git can
+    lazy-fetch from -- OR when partial-clone-ness cannot be determined. Returns False ONLY when all three
+    probes complete cleanly and find no promisor filter, no boolean-true promisor remote, and no
+    partialClone extension, i.e. a definite full (or otherwise non-promisor) clone.
+
+    This gates the whole indexed-ignore availability check: the silent-fetch-and-ignore hazard that check
+    guards against can arise ONLY in a partial clone, because only there can `git add` lazy-fetch an absent
+    indexed .gitignore blob and then ignore the store. In a FULL clone an absent OID never causes a silent
+    fetch-and-ignore -- git either stages (an absent submodule COMMIT is not a blob, so do_read_blob rejects
+    it and nothing is ignored) or fails LOUDLY (a genuinely-needed absent object aborts `git add`) -- so a
+    full-clone availability refusal would be a pure over-refusal (see indexed_ignore_availability's docstring).
+
+    The predicate is git 2.53.0's OWN registration test, repo_has_promisor_remote (promisor-remote.c
+    promisor_remote_config / promisor_remote_init, reached by odb.c's missing-object fallback): git will
+    lazy-fetch a missing object iff its promisor-remote list is non-empty, which any ONE of these populates
+    (each empirically confirmed against a real `git add` on a blobless clone with an absent skip-worktree
+    .gitignore blob, git 2.53.0):
+      (a) any `remote.<name>.partialclonefilter` is PRESENT with ANY value -- including the empty string and
+          the literal `false`. Presence alone unconditionally registers the promisor and OVERRIDES a
+          sibling `remote.<name>.promisor=false`, so this is tested by PRESENCE, never by value.
+      (b) any `remote.<name>.promisor` that evaluates BOOLEAN-TRUE under git's own bool parser
+          (true/yes/on/1/nonzero-int; false/no/off/empty/0 do NOT register). A `promisor=false` does NOT
+          remove a registration made by (a) or (c). Because value semantics decide this, each occurrence is
+          re-evaluated with git's own `--type=bool` rather than hand-parsed, and a garbage/unparseable bool
+          (a git error) fails closed to partial. The re-query addresses the ENUMERATED key by name, so a
+          promisor remote whose name does not cleanly UTF-8 round-trip (e.g. a non-UTF-8 remote name like
+          `[remote "up\xffstream"]`) cannot be re-queried -- a lossy decode would ask for a different,
+          nonexistent key and read rc 1 (not found). An enumerated key that cannot be cleanly re-queried
+          (a non-UTF-8 name, or any re-query rc other than 0) is a cannot-determine that fails closed to
+          partial: it is NEVER read as boolean-false / full, because the key demonstrably exists (it was just
+          enumerated) and git would still lazy-fetch through the real promisor remote it names.
+      (c) `extensions.partialClone` is PRESENT (its value names the default promisor remote, so it is tested
+          by presence, and a `false` value merely names a remote called "false"). The stated predicate
+          gated this on `core.repositoryformatversion >= 1`; that gate is DROPPED. Empirically (isolated
+          /dev/shm repro, git 2.53.0: extension-only + format 0 vs an identical control without the
+          extension), git HONOURS the extension at format version 0 -- the format-0 control staged the store
+          while the extension case lazy-fetched and ignored it -- matching git's handle_extension_v0
+          historical-compatibility handling for `partialclone`. Reading the extension by presence with NO
+          format gate is therefore both the git-faithful direction AND the fail-closed one (a stray format
+          version can never turn a real extension into a false pass), so no format read is needed.
+
+    Round 10's promisor-only probe missed (a) (a filter with promisor unset read as a FULL clone: a false
+    pass) and over-refused on (b) (a `promisor=false` LINE read as present-therefore-partial: an
+    over-refusal); both are corrected here. The probes run under _run_git_config_discovery (same
+    allowlist / GIT_NO_LAZY_FETCH env the availability probe uses). ALTERNATES do not share promisor config,
+    so reading this LOCAL repository's config is correct (a repo whose only promisor config lives in an
+    alternate does not lazy-fetch). A probe that cannot RUN, or returns an rc other than 0 (found) or 1 (not
+    found), is a cannot-determine that resolves to partial = keep checking -- the safe, fail-closed direction
+    (guard-input-soundness, check-fails-closed-on-unreadable). A `strict` caller gets a RuntimeError for
+    each such probe failure instead (the enumerated-key re-query below included, and an enumerated key
+    whose non-UTF-8 name cannot be re-queried at all): the homes gitignore
+    inspection sets it, since there a failed probe is cannot-evaluate, never a partial fallback whose
+    availability check can still end clean; the default keeps the fallback for opf.py's init preflight.
+    `run` is the git runner (default, resolved at call time: _run_git_config_discovery); the homes
+    gitignore inspection passes its allowlisted wrapper."""
+    run = run or _run_git_config_discovery
+
+    def undetermined(out):
+        # A probe that cannot run or answers outside its rc contract: partial, or raised when strict.
+        if strict:
+            raise RuntimeError("a partial-clone config probe failed (rc {}: {}); partial-clone-ness cannot "
+                               "be determined".format(out.rc, out.err.strip() or "no diagnostic"))
+        return True
+
+    # (a) A partialclonefilter on ANY remote registers the promisor by presence (value-blind), overriding a
+    # sibling promisor=false; --get-regexp rc 0 means at least one such key exists.
+    filt = run(
+        git, store_root, ["config", "--get-regexp", r"^remote\..*\.partialclonefilter$"])
+    if not filt.completed or filt.rc not in (0, 1):
+        return undetermined(filt)    # cannot determine -> partial (fail-closed)
+    if filt.rc == 0:
+        return True    # a partialclonefilter is present: a promisor is registered
+    # (c) The partialClone extension registers the named default promisor remote by presence (no format gate,
+    # per the empirical resolution above).
+    ext = run(git, store_root, ["config", "--get", "extensions.partialClone"])
+    if not ext.completed or ext.rc not in (0, 1):
+        return undetermined(ext)    # cannot determine -> partial (fail-closed)
+    if ext.rc == 0:
+        return True    # the partialClone extension is declared: a partial clone
+    # (b) A promisor remote registers only when its value is boolean-TRUE. Enumerate the promisor keys, then
+    # re-evaluate EACH with git's own bool parser (--type=bool), so promisor=false does not register and a
+    # garbage bool (a git error) fails closed to partial.
+    prom = run(
+        git, store_root, ["config", "-z", "--name-only", "--get-regexp", r"^remote\..*\.promisor$"])
+    if not prom.completed or prom.rc not in (0, 1):
+        return undetermined(prom)    # cannot determine -> partial (fail-closed)
+    if prom.rc == 1:
+        return False   # no promisor filter, no extension, and no promisor key at all: a full clone
+    for kb in prom.out.split(b"\0"):
+        if not kb:
+            continue
+        # The enumerated key name must round-trip cleanly to re-query it. A remote name carrying non-UTF-8
+        # bytes (e.g. `[remote "up\xffstream"]`) enumerates fine as raw bytes, but a lossy decode would mangle
+        # it, so the --type=bool re-query below would ask for a DIFFERENT (nonexistent) key and read rc 1
+        # (not found) -- which must NOT be mistaken for boolean-false / full. The key demonstrably EXISTS (it
+        # was just enumerated), so a name that cannot be re-queried is a cannot-determine -> partial, or
+        # raised when strict (git itself may reject its value, as for any other failed re-query).
+        try:
+            key = kb.decode("utf-8")
+        except UnicodeDecodeError:
+            if strict:
+                raise RuntimeError("a partial-clone config probe failed (the enumerated promisor key {!r} is "
+                                   "not UTF-8, so it cannot be re-queried); partial-clone-ness cannot be "
+                                   "determined".format(kb))
+            return True    # a non-UTF-8 promisor key name cannot be cleanly re-queried: fail-closed to partial
+        val = run(git, store_root, ["config", "--type=bool", "--get-all", key])
+        if not val.completed or val.rc != 0:
+            # An ENUMERATED key that does not cleanly re-query -- rc 1 (not found: the name did not
+            # round-trip), a garbage/unparseable bool (rc 128), or a probe that cannot run -- is a
+            # cannot-determine -> partial (fail-closed), NEVER read as boolean-false/full.
+            return undetermined(val)
+        if any(line.strip() == "true" for line in val.out.decode("utf-8", "replace").splitlines()):
+            return True    # a boolean-true promisor remote: a partial clone
+    return False   # every enumerated promisor key cleanly re-queried (rc 0) AND evaluated boolean-false, and
+                   # no filter or extension: a full clone
+
+
+def indexed_ignore_availability(git, store_root, gitignore_relpaths, run=None, strict=False):
+    """Repo-relative candidate .gitignore paths whose ignore rule the adopter's own `git add` would read
+    from the INDEX but whose blob is NOT available locally without a promisor fetch. The config-discovery
+    ignore probe forces GIT_NO_LAZY_FETCH, so it reads such a blob as no-rule (destination not-ignored),
+    while `git add` fetches it and can then silently ignore the store: a cannot-evaluate the caller must
+    fail closed on, not pass (guard-input-soundness, check-fails-closed-on-unreadable). A blob that IS
+    available is read identically by this probe and by `git add` (parity, confirmed empirically), and a
+    .gitignore with a readable regular working-tree file is read from disk by both, so neither is returned.
+
+    The whole check is GATED on partial-clone-ness (_is_partial_clone): the silent-fetch-and-ignore hazard
+    exists ONLY in a partial clone, because only a promisor remote lets `git add` lazy-fetch an absent OID. In
+    a full (non-promisor) clone git CANNOT lazy-fetch, so an absent OID never causes a silent ignore -- `git
+    add` either stages (an absent submodule COMMIT is not a blob) or aborts LOUDLY on a genuinely-needed absent
+    object -- and this function returns [] immediately (no availability refusal), the only git-faithful answer.
+    Only in a partial clone is the per-entry logic below reached.
+
+    git index-reads a .gitignore ONLY for a stage-0 skip-worktree entry whose worktree path its own
+    O_NOFOLLOW open cannot use (add_patterns -> read_skip_worktree_file_from_index -> do_read_blob):
+    confirmed against git 2.53.0. That fallback is MODE-BLIND -- do_read_blob reads the entry's OID and
+    applies the object as ignore patterns whenever it is a blob, NEVER consulting the index mode -- so this
+    guard is mode-blind too: it refuses on an unavailable OID regardless of the entry's mode. An entry is
+    returned only when ALL hold -- (1) its returned path is EXACTLY one of the requested candidate paths (a
+    --literal-pathspecs listing still matches DESCENDANTS of a candidate directory, e.g. ".gitignore/data"
+    under a candidate ".gitignore", and a tree / sparse-dir entry, whose ls-files path carries a trailing
+    "/"; neither is a file git reads as ignore patterns, so exact membership drops both); (2) stage 0 with
+    the skip-worktree flag set (`ls-files -t`/`-v` tags it "S"); (3) a worktree path where git's own
+    O_RDONLY|O_NOFOLLOW open is UNSUCCESSFUL, so git falls back to the index OID (see _worktree_open_succeeds:
+    this covers an absent path, a symlink, an unreadable regular file, and an UNREADABLE directory, while a
+    readable regular file -- read from disk, parity with the probe -- and a readable directory -- opened, its
+    read then fails with no fallback -- both PROCEED); and (4) an unavailable OID. Any other entry -- not an
+    exact candidate, not stage 0, not skip-worktree, or one whose worktree open succeeds -- is one git never
+    index-reads, so an absent object for it cannot change what `git add` ignores and it is not returned (no
+    over-refusal).
+
+    The mode allowlist that earlier gated this (regular file / symlink only) is deliberately GONE, because
+    it was a FALSE PASS of the guarded class: a fabricated stage-0 skip-worktree GITLINK-mode (160000) entry
+    whose OID is a promisor-fetchable BLOB slips a mode check, yet git's mode-blind do_read_blob fetches that
+    blob and silently ignores the store, so refusing on the unavailable OID regardless of mode is what
+    matches `git add`. An AVAILABLE OID is not evaluated here at all: the sibling layer-1 check-ignore probe
+    in opf.py reads it mode-blind, and with the object present that probe itself refuses a matching store, so
+    this availability check is reached only for an unavailable OID. A VALID submodule (gitlink 160000) has a
+    directory at its worktree path, so its worktree open SUCCEEDS and it proceeds (no over-refusal).
+    DISCLOSED CONSERVATIVE RESIDUAL (disclose-guard-residuals): the per-entry check above engages ONLY inside
+    a partial clone (the _is_partial_clone gate). In a FULL clone an absent indexed OID -- a real submodule
+    whose commit is sparse-omitted or lives at a `.gitignore` worktree path git's open cannot use (absent,
+    unreadable directory, symlink) -- PROCEEDS, matching `git add`, which stages the store there because git
+    cannot lazy-fetch and do_read_blob rejects the non-blob commit. WITHIN a partial clone the one remaining
+    conservative residual is an absent submodule COMMIT OID: it is refused here even though `git add` would
+    stage it (do_read_blob rejects the non-blob object) and even though the fetch it would attempt fails
+    LOUDLY (exit 128) rather than silently ignoring -- a rare fail-closed over-refusal confined to the
+    partial-clone case (commit objects are usually present, since a blob:none filter omits only blobs) and the
+    safe direction, where the discarded mode allowlist was instead a false pass of the guarded class. A second
+    conservative residual, unchanged: an unavailable applicable ignore
+    OID is refused even though its (unfetchable) rules might not in fact match the store. Candidate
+    paths are matched as LITERAL pathspecs (--literal-pathspecs) so a pathspec-magic sigil (a leading colon)
+    is not read as magic (an empty listing that would MISS the ignoring blob) and a glob metacharacter (a
+    bracketed class) is not expanded onto an unrelated indexed path (a false refusal); this mirrors the
+    literal-"./"-prefix trick the sibling check-ignore call in opf.py uses for the same reason.
+
+    Returns a sorted list of the unavailable repo-relative .gitignore paths; an empty list means every
+    applicable ignore OID is answerable without a fetch. Raises RuntimeError only when git could not be RUN
+    to list the index or to probe an OID (the call did not complete), when `ls-files` itself failed, or when
+    a `strict` caller's partial-clone probe failed (_is_partial_clone) -- a cannot-evaluate the caller
+    fails closed on. A nonzero `cat-file -e` rc, whether the object is genuinely
+    absent or its pack is unreadable, is not raised: it is treated as an unavailable OID and REFUSED
+    (appended to the returned list). Both paths are fail-closed. `run` is the git runner for every call
+    here and in _is_partial_clone (default, resolved at call time: _run_git_config_discovery); the homes
+    gitignore inspection passes its verb-allowlisted wrapper (whose refusal propagates unchanged) and `strict`."""
+    run = run or _run_git_config_discovery
+    if not gitignore_relpaths:
+        return []
+    if not _is_partial_clone(git, store_root, run=run, strict=strict):
+        return []   # a full (non-promisor) clone: git cannot lazy-fetch, so an absent indexed OID can never
+                    # cause a silent fetch-and-ignore -- `git add` either stages or fails loudly -- and a
+                    # refusal here would be a pure over-refusal. The hazard exists only in a partial clone.
+    listing = run(
+        git, store_root,
+        ["--literal-pathspecs", "ls-files", "-s", "-t", "-z", "--"] + list(gitignore_relpaths))
+    if not listing.completed:
+        raise RuntimeError("could not list indexed ignore files ({})".format(listing.err))
+    if listing.rc != 0:
+        raise RuntimeError("git ls-files failed (rc={}): {}".format(listing.rc, listing.err))
+    requested = set(gitignore_relpaths)
+    unavailable = []
+    for entry in os.fsdecode(listing.out).split("\0"):
+        if not entry:
+            continue
+        meta, tab, path = entry.partition("\t")
+        fields = meta.split()
+        if not tab or len(fields) != 4:
+            raise RuntimeError("unparseable ls-files entry: {!r}".format(entry))
+        tag, _mode, oid, stage = fields
+        if path not in requested:
+            continue  # a --literal-pathspecs listing still matches DESCENDANTS of a candidate directory
+                      # (e.g. ".gitignore/data" under candidate ".gitignore"), and a tree / sparse-dir entry
+                      # (trailing "/"); only an entry whose path IS a requested candidate is a .gitignore git
+                      # reads, so exact membership drops both (no false refusal)
+        # No mode gate: git's read_skip_worktree_file_from_index -> do_read_blob is MODE-BLIND (it reads the
+        # entry's OID and applies the object as ignore patterns whenever it is a blob, never consulting the
+        # index mode), so a mode allowlist would false-pass a fabricated gitlink-mode (160000) entry whose
+        # OID is a promisor-fetchable blob that `git add` fetches and ignores the store with. Refusing on an
+        # unavailable OID regardless of mode is git-faithful; see the docstring for the disclosed residual.
+        if stage != "0" or tag != "S":
+            continue  # git index-reads only a stage-0 skip-worktree entry; nothing else can fall back
+        if _worktree_open_succeeds(store_root / path):
+            continue  # git's O_RDONLY|O_NOFOLLOW open succeeds, so git reads from the descriptor (or its
+                      # read fails, for a directory) and never index-reads: an absent OID cannot change
+                      # what `git add` ignores (a readable regular file is parity with the probe)
+        # git's open is unsuccessful (absent, symlink, unreadable regular file, or unreadable directory), so
+        # git falls back to the index OID (mode-blind); an unavailable OID is a cannot-evaluate the caller
+        # refuses. cat-file -e forces no lazy fetch via _run_git_config_discovery, so it never fetches here.
+        avail = run(git, store_root, ["cat-file", "-e", oid])
+        if not avail.completed:
+            raise RuntimeError("could not probe ignore-OID availability ({})".format(avail.err))
+        if avail.rc != 0:  # genuinely absent OR an unreadable pack: both refuse (not raise), fail-closed
+            unavailable.append(path)
+    return sorted(set(unavailable))
+
+
+def _is_no_repo(outcome):
+    """True when a completed git call failed specifically because there is no repository (git's own
+    `fatal: not a git repository` on stderr), the CLEAN not-a-repo case the caller maps to `untracked`,
+    distinct from a genuine git error the caller must omit-plus-note."""
+    return "not a git repository" in outcome.err.lower()
+
+
+def _observe_tracked(git, store_root, machine_rel, notes):
+    """`tracked`: whether the store manifest is under version control. Returns "tracked", "untracked", or
+    None (omit + note). A repository with the manifest in the index is "tracked"; a repository without it,
+    or no repository at all (the clean not-a-repo case), is "untracked"; any OTHER git error omits the key
+    and records a note, so an unverifiable state is never reported as a definite "untracked"."""
+    out = _run_git(git, store_root, ["rev-parse", "--is-inside-work-tree"])
+    if not out.completed:
+        notes.append("tracked: could not run git to determine version-control tracking ({}); "
+                     "the tracked observation is omitted".format(out.err.strip()))
+        return None
+    if out.rc != 0:
+        if _is_no_repo(out):
+            return "untracked"     # no repository at all: the manifest is not version-controlled here
+        notes.append("tracked: git could not determine whether the store is a work tree (rc {}); "
+                     "the tracked observation is omitted".format(out.rc))
+        return None
+    if out.out.strip() != b"true":
+        # A bare repository or a path inside the git directory has no work tree here: nothing tracked.
+        return "untracked"
+    pathspec = "{}/{}".format(machine_rel, _MANIFEST_NAME)
+    ls = _run_git(git, store_root, ["ls-files", "--", pathspec])
+    if not ls.completed:
+        notes.append("tracked: could not run git ls-files ({}); the tracked observation is omitted".format(
+            ls.err.strip()))
+        return None
+    if ls.rc != 0:
+        notes.append("tracked: git ls-files failed (rc {}); the tracked observation is omitted".format(ls.rc))
+        return None
+    return "tracked" if ls.out.strip() else "untracked"
+
+
+def _observe_remote(git, store_root, notes):
+    """`actual_remote`: the store repository's real push URL. Returns the URL string, "" (an OBSERVED
+    no-remote, which C-SYNC-AGREE needs as a present empty string), or None (omit + note). Zero remotes is
+    the empty string; exactly one remote is its push URL; MORE than one omits the key (which remote is
+    authoritative is not git's to guess); any git error omits the key with a note. The push URL is kept as
+    git prints it less the one line ending: whitespace is significant in a filesystem path, so it is never
+    trimmed here (C-SYNC-AGREE refuses a path with leading or trailing whitespace as ambiguous)."""
+    listing = _run_git(git, store_root, ["remote"])
+    if not listing.completed:
+        notes.append("actual_remote: could not run git remote ({}); the remote observation is omitted".format(
+            listing.err.strip()))
+        return None
+    if listing.rc != 0:
+        notes.append("actual_remote: git remote failed (rc {}); the remote observation is omitted".format(
+            listing.rc))
+        return None
+    names = [ln.strip() for ln in listing.out.decode("utf-8", "replace").splitlines() if ln.strip()]
+    if not names:
+        return ""     # observed no-remote: a present empty string, not an omission
+    if len(names) > 1:
+        notes.append("actual_remote: the store repository declares {} remotes ({}); the remote observation "
+                     "is omitted (which remote is authoritative is not git's to determine)".format(
+                         len(names), ", ".join(sorted(names))))
+        return None
+    url = _run_git(git, store_root, ["remote", "get-url", "--push", names[0]])
+    if not url.completed:
+        notes.append("actual_remote: could not read the push URL of remote {!r} ({}); the remote "
+                     "observation is omitted".format(names[0], url.err.strip()))
+        return None
+    if url.rc != 0:
+        notes.append("actual_remote: git could not read the push URL of remote {!r} (rc {}); the remote "
+                     "observation is omitted".format(names[0], url.rc))
+        return None
+    out = url.out.decode("utf-8", "replace")
+    return out[:-1] if out.endswith("\n") else out
+
+
+def _show_toml(git, store_root, prefix, relpath, disp, notes, omitted="the prior committed snapshot is omitted"):
+    """Read and parse one committed TOML file from HEAD via `git show HEAD:<prefix><relpath>`. `prefix` is
+    the store root's path from the repository toplevel (from `git rev-parse --show-prefix`), so the object
+    path is unambiguous whether or not the store sits at the toplevel. Returns the parsed dict, or None (omit
+    prior + note) on any git error, absent object, or parse failure. A bare ValueError from tomllib (an
+    oversized base-10 integer literal, which is not a TOMLDecodeError) is caught too, so a hostile committed
+    file fails SAFE rather than escaping (guard-input-soundness). `omitted` names what the caller omits."""
+    out = _run_git(git, store_root, ["show", "HEAD:{}{}".format(prefix, relpath)])
+    if not out.completed:
+        notes.append("prior: could not read {} at HEAD ({}); {}".format(disp, out.err.strip(), omitted))
+        return None
+    if out.rc != 0:
+        notes.append("prior: {} is absent or unreadable at HEAD (git show rc {}); {}".format(disp, out.rc, omitted))
+        return None
+    try:
+        data = tomllib.loads(out.out.decode("utf-8"))
+    # RecursionError too: tomllib raises it (a RuntimeError, not a ValueError) on a deeply nested
+    # array or inline table (F-TOML-BARE-VALUEERROR-CLASS).
+    except (tomllib.TOMLDecodeError, ValueError, UnicodeDecodeError, RecursionError, MemoryError) as exc:
+        notes.append("prior: {} at HEAD is not valid TOML ({}); {}".format(disp, exc, omitted))
+        return None
+    if not isinstance(data, dict):
+        notes.append("prior: {} at HEAD is not a table; {}".format(disp, omitted))
+        return None
+    return data
+
+
+def _ls_tree(git, store_root, treeish, notes, recursive=False):
+    """The entries of one committed tree, `git ls-tree -z [-r] <treeish>`, as (object type, name) pairs; a
+    recursive listing names each blob by its path within the tree. Returns None (+ note) on any git error or
+    an entry that does not parse. `-z` names each entry unquoted, NUL-terminated."""
+    out = _run_git(git, store_root, ["ls-tree", "-z"] + (["-r"] if recursive else []) + [treeish])
+    if not out.completed or out.rc != 0:
+        notes.append("prior: could not list {} ({}); {}".format(
+            treeish, out.err.strip() if not out.completed else "git ls-tree rc {}".format(out.rc), _HELD_OMITTED))
+        return None
+    entries = []
+    for row in out.out.split(b"\0"):
+        if not row:
+            continue
+        meta, tab, name = row.partition(b"\t")
+        fields = meta.split(b" ")
+        try:
+            name = name.decode("utf-8")
+            otype = fields[1].decode("ascii") if len(fields) == 3 else ""
+        except UnicodeDecodeError:
+            name = otype = ""
+        if not tab or not otype or not name:
+            notes.append("prior: an entry of {} does not parse; {}".format(treeish, _HELD_OMITTED))
+            return None
+        entries.append((otype, name))
+    return entries
+
+
+def _held_ids(git, store_root, machine_rel, prefix, manifest, records, notes):
+    """`held`: every clean-series id the prior commit held, active or archived, worklog included, as
+    {namespace: [[lo, hi], ...]} sorted, merged inclusive intervals, for the reserved-number exemption (a
+    reserved number is skipped as an orphaned reservation's only where the prior commit held no record with
+    that id). The active type-index ids come from `records`; the active worklog is read in the shape the
+    HEAD manifest selects (worklog.toml, or the worklog/ entry names); the archive is every file of every
+    archive/<bucket>/ at HEAD: the archive.toml moved ids and worklog_moved spans, the bucket worklog
+    entries and the type-index rows. An id outside the clean grammar, the roster namespaces or TOML's
+    integer range is no clean number a reservation can hold, so it is left out. Returns the table, or None
+    (+ note) when any of these cannot be read, is committed as another entry type (a worklog/ or archive/
+    that is a file, a worklog.toml that is a directory) or an archive entry is not a bucket file; only
+    `held` is then omitted, so the exemption is cannot-evaluate and the rest of the prior stands. A source
+    absent at HEAD holds nothing. A span is kept as an interval, never expanded (F15)."""
+    import _opf_worklog
+    ceiling = (1 << 63) - 1
+    spans = []
+
+    def add(ns, lo, hi):
+        if ns in _opf_check._ROSTER_NS_SET and lo <= ceiling:
+            spans.append((ns, lo, min(hi, ceiling)))
+
+    def add_id(value):
+        shape = _opf_check._valid_id_shape(value)
+        if shape is not None:
+            add(shape[0], shape[1], shape[1])
+
+    def add_wl(value):
+        ref = _opf_worklog._valid_wl_ref(value)
+        if ref is not None:
+            add("WL", ref[0], ref[0])
+
+    def rows(data, key, disp):
+        value = data.get(key, [])
+        if not isinstance(value, list):
+            notes.append("prior: HEAD {} [[{}]] is not an array; {}".format(disp, key, _HELD_OMITTED))
+            return None
+        return [row for row in value if isinstance(row, dict)]
+
+    for rid in records:
+        add_id(rid)
+    base = "HEAD:{}{}".format(prefix, machine_rel)
+    top = _ls_tree(git, store_root, base, notes)
+    if top is None:
+        return None
+
+    # A source committed as another entry type (a worklog/ or archive/ that is a file, a worklog.toml that
+    # is a directory) is not absent: skipping it would leave `held` partial, so it omits `held` (+ note).
+    def mistyped(name, expected):
+        found = sorted({otype for otype, entry in top if entry == name and otype != expected})
+        if found:
+            notes.append("prior: HEAD {} is a {}, not a {}; {}".format(
+                name, " and a ".join(found), expected, _HELD_OMITTED))
+        return bool(found)
+
+    try:
+        generation = _opf_worklog.generation(manifest)
+    except _opf_worklog.WorklogError as exc:
+        notes.append("prior: the HEAD manifest's worklog generation is unreadable ({}); {}".format(
+            exc, _HELD_OMITTED))
+        return None
+    if generation == 2:
+        if mistyped(_opf_worklog.DIRECTORY_NAME, "tree"):
+            return None
+        if ("tree", _opf_worklog.DIRECTORY_NAME) in top:
+            listing = _ls_tree(git, store_root, base + "/" + _opf_worklog.DIRECTORY_NAME, notes)
+            if listing is None:
+                return None
+            for otype, name in listing:
+                ref = _opf_worklog.parse_worklog_filename(name)
+                if otype != "blob" or ref is None:
+                    notes.append("prior: HEAD worklog/ holds {!r}, not a worklog entry; {}".format(
+                        name, _HELD_OMITTED))
+                    return None
+                add("WL", ref[0], ref[0])
+    elif mistyped(_WORKLOG_NAME, "blob"):
+        return None
+    elif ("blob", _WORKLOG_NAME) in top:
+        data = _show_toml(git, store_root, prefix, "{}/{}".format(machine_rel, _WORKLOG_NAME), _WORKLOG_NAME,
+                          notes, _HELD_OMITTED)
+        entries = None if data is None else rows(data, "entry", _WORKLOG_NAME)
+        if entries is None:
+            return None
+        for entry in entries:
+            add_wl(entry.get("id"))
+    if mistyped(_opf_check.ARCHIVE_DIRNAME, "tree"):
+        return None
+    if ("tree", _opf_check.ARCHIVE_DIRNAME) in top:
+        listing = _ls_tree(git, store_root, base + "/" + _opf_check.ARCHIVE_DIRNAME, notes, recursive=True)
+        if listing is None:
+            return None
+        bucket_files = (_opf_check.ARCHIVE_MANIFEST_NAME, _WORKLOG_NAME)
+        for otype, path in listing:
+            parts = path.split("/")
+            disp = "{}/{}".format(_opf_check.ARCHIVE_DIRNAME, path)
+            if otype != "blob" or len(parts) != 2 or not (
+                    parts[1] in bucket_files or parts[1].endswith(_INDEX_SUFFIX)):
+                notes.append("prior: HEAD {} is not an archive bucket file; {}".format(disp, _HELD_OMITTED))
+                return None
+            data = _show_toml(git, store_root, prefix, "{}/{}".format(machine_rel, disp), disp, notes, _HELD_OMITTED)
+            if data is None:
+                return None
+            if parts[1] == _opf_check.ARCHIVE_MANIFEST_NAME:
+                moved, wl_moved = rows(data, "moved", disp), rows(data, "worklog_moved", disp)
+                if moved is None or wl_moved is None:
+                    return None
+                for row in moved:
+                    add_id(row.get("id"))
+                for row in wl_moved:
+                    span = row.get("span")
+                    ends = [_opf_worklog._valid_wl_ref(v) for v in span] if isinstance(span, list) else []
+                    if len(ends) == 2 and None not in ends and ends[0][0] <= ends[1][0]:
+                        add("WL", ends[0][0], ends[1][0])
+            elif parts[1] == _WORKLOG_NAME:
+                entries = rows(data, "entry", disp)
+                if entries is None:
+                    return None
+                for entry in entries:
+                    add_wl(entry.get("id"))
+            else:
+                recs = rows(data, "record", disp)
+                if recs is None:
+                    return None
+                for row in recs:
+                    add_id(row.get("id"))
+    held = {}
+    for ns, lo, hi in spans:
+        held.setdefault(ns, []).append((lo, hi))
+    return {ns: [[lo, hi] for lo, hi in _opf_check._merge_spans(rows_)] for ns, rows_ in sorted(held.items())}
+
+
+def _reconstruct_prior(git, store_root, machine_rel, prefix, notes):
+    """Reconstruct the prior committed snapshot from HEAD, shaped exactly as _opf_check._normalize_prior
+    accepts: {releases, counters_high, records, digests, held} plus, only where the HEAD manifest activates
+    the imported series, the `imported` baseline member. Reads the HEAD manifest to learn the layout and the
+    declared types, then the version and counters ledgers and each declared non-worklog type index. Records
+    and digests are built per layout: an INLINE index row IS the record body, so its status is the body's and
+    its digest is _opf_check._record_digest(body); a PER-RECORD index row already carries {id, state, digest},
+    so the row supplies both directly. ANY absent object or malformed shape omits the WHOLE prior (a partial
+    prior would falsely accuse the store); the note names what could not be read. `held` (_held_ids) is the
+    one exception: it only narrows the reserved-number exemption, so when it cannot be read it alone is
+    omitted (+ note), which makes that exemption cannot-evaluate and leaves the rest of the prior whole.
+    Returns the dict or None."""
+    manifest = _show_toml(git, store_root, prefix, "{}/{}".format(machine_rel, _MANIFEST_NAME),
+                         _MANIFEST_NAME, notes)
+    if manifest is None:
+        return None
+    base = manifest.get(_opf_store.STANDARD_TOKEN)
+    layout = base.get("layout") if isinstance(base, dict) else None
+    if layout not in _LAYOUTS:
+        notes.append("prior: HEAD manifest declares layout {!r}, which is not a recognized store layout; "
+                     "the prior committed snapshot is omitted".format(layout))
+        return None
+    types_tbl = manifest.get("types")
+    if not isinstance(types_tbl, dict):
+        notes.append("prior: HEAD manifest carries no [types] table; the prior committed snapshot is omitted")
+        return None
+
+    version = _show_toml(git, store_root, prefix, "{}/{}".format(machine_rel, _VERSION_NAME),
+                        _VERSION_NAME, notes)
+    if version is None:
+        return None
+    releases = version.get("release", [])
+    if not isinstance(releases, list):
+        notes.append("prior: HEAD version.toml [[release]] is not an array; the prior committed snapshot is "
+                     "omitted")
+        return None
+
+    counters = _show_toml(git, store_root, prefix, "{}/{}".format(machine_rel, _COUNTERS_NAME),
+                         _COUNTERS_NAME, notes)
+    if counters is None:
+        return None
+    counters_high = counters.get("counters", {})
+    if not isinstance(counters_high, dict):
+        notes.append("prior: HEAD counters.toml [counters] is not a table; the prior committed snapshot is "
+                     "omitted")
+        return None
+
+    records = {}
+    digests = {}
+    for tname in sorted(types_tbl):
+        if tname == "worklog":
+            continue      # the worklog is a ledger (worklog.toml), never a type index; it carries no records
+        idx_name = "{}{}".format(tname, _INDEX_SUFFIX)
+        idx = _show_toml(git, store_root, prefix, "{}/{}".format(machine_rel, idx_name), idx_name, notes)
+        if idx is None:
+            return None
+        rows = idx.get("record", [])
+        if not isinstance(rows, list):
+            notes.append("prior: HEAD {} [[record]] is not an array; the prior committed snapshot is "
+                         "omitted".format(idx_name))
+            return None
+        for row in rows:
+            if not isinstance(row, dict):
+                notes.append("prior: HEAD {} carries a non-table record row; the prior committed snapshot "
+                             "is omitted".format(idx_name))
+                return None
+            if layout == "inline":
+                rid = row.get("id")
+                status = row.get("status")
+                if not (isinstance(rid, str) and isinstance(status, str)):
+                    notes.append("prior: HEAD {} carries an inline record with no string id/status; the "
+                                 "prior committed snapshot is omitted".format(idx_name))
+                    return None
+                try:
+                    digest = _opf_check._record_digest(row)
+                except _opf_emit.EmitError as exc:
+                    notes.append("prior: cannot canonicalize the body of record {!r} to compute its digest "
+                                 "({}); the prior committed snapshot is omitted".format(rid, exc))
+                    return None
+                records[rid] = (tname, status)
+                digests[rid] = digest
+            else:   # per-record: the registry row itself carries {id, state, path, digest}
+                rid = row.get("id")
+                state = row.get("state")
+                digest = row.get("digest")
+                if not (isinstance(rid, str) and isinstance(state, str) and isinstance(digest, str)):
+                    notes.append("prior: HEAD {} carries a per-record row with no string id/state/digest; "
+                                 "the prior committed snapshot is omitted".format(idx_name))
+                    return None
+                records[rid] = (tname, state)
+                digests[rid] = digest
+    prior = {"releases": releases, "counters_high": counters_high, "records": records, "digests": digests}
+    held = _held_ids(git, store_root, machine_rel, prefix, {"opf": base}, records, notes)
+    if held is not None:
+        prior["held"] = held
+    # The imported baseline joins the prior only where the HEAD manifest ACTIVATES the series
+    # (_opf_check.imported_series_active, the flag the doctor's imported grading reads: the graded
+    # 2.0.0 / homes = 2 declaration under this tooling's imported-series support). An inactive HEAD
+    # carries NO baseline member rather than an empty one: its imported-leaf bytes, if any, were
+    # never read under series rules, so an empty claim would let an edit pass append-only where the
+    # working tree has since activated; with the member absent the doctor discloses the named
+    # no-baseline CANNOT-EVALUATE instead. (An unborn HEAD keeps the empty-prior {} member: nothing
+    # was committed at all, so the empty baseline is exact.)
+    if _opf_check.imported_series_active(manifest):
+        imported = _reconstruct_imported(git, store_root, machine_rel, prefix, manifest, types_tbl, notes)
+        if imported is None:
+            return None
+        prior["imported"] = imported
+    return prior
+
+
+def _reconstruct_imported(git, store_root, machine_rel, prefix, manifest, types_tbl, notes):
+    """The prior imported baseline {imported id: canonical body digest} for the across-time immutability of
+    the imported leaves (spec 8.3). The caller gates it on the HEAD manifest's activation flag. The leaf
+    roster derives from the SAME authoritative type set the doctor grades (_opf_check._authoritative_types
+    over the enabled modules and the declared [types]), so a HEAD manifest that omits a baseline type or
+    lists a disabled module type cannot shrink the baseline below the doctor's managed set. A leaf absent
+    from the HEAD machine-store tree contributes no
+    rows; a listed leaf that cannot be read or parsed, a non-array row list, or a row with no string id omits
+    the WHOLE prior, as for the clean files. Returns the dict, or None (omit + note)."""
+    listing = _run_git(git, store_root, ["ls-tree", "--name-only", "HEAD:{}{}".format(prefix, machine_rel)])
+    if not listing.completed or listing.rc != 0:
+        notes.append("prior: the machine store tree {} cannot be listed at HEAD; the prior committed snapshot "
+                     "is omitted".format(machine_rel))
+        return None
+    present = set(listing.out.decode("utf-8", "replace").splitlines())
+    enabled = _opf_check._authoritative_types(_opf_check._enabled_modules(manifest), types_tbl)
+    imported = {}
+    for name in sorted(_opf_store.imported_leaf_names(enabled)):
+        if name not in present:
+            continue
+        data = _show_toml(git, store_root, prefix, "{}/{}".format(machine_rel, name), name, notes)
+        if data is None:
+            return None
+        member = "entry" if name == _opf_store.IMPORTED_WORKLOG_NAME else "record"
+        rows = data.get(member, [])
+        if not isinstance(rows, list):
+            notes.append("prior: HEAD {} [[{}]] is not an array; the prior committed snapshot is "
+                         "omitted".format(name, member))
+            return None
+        for row in rows:
+            rid = row.get("id") if isinstance(row, dict) else None
+            if not isinstance(rid, str):
+                notes.append("prior: HEAD {} carries a row with no string id; the prior committed snapshot "
+                             "is omitted".format(name))
+                return None
+            try:
+                imported[rid] = _opf_check._record_digest(row)
+            except _opf_emit.EmitError as exc:
+                notes.append("prior: cannot canonicalize the body of imported record {!r} to compute its "
+                             "digest ({}); the prior committed snapshot is omitted".format(rid, exc))
+                return None
+    return imported
+
+
+def _observe_prior(git, store_root, machine_rel, notes):
+    """`prior`: the prior committed snapshot, reconstructed from HEAD. Returns the snapshot dict, the honest
+    empty prior for an unborn HEAD (a repository with no commits), or None (omit + note) when the store root
+    is not a work tree, HEAD cannot be resolved, or any part of the reconstruction fails."""
+    tree = _run_git(git, store_root, ["rev-parse", "--is-inside-work-tree"])
+    if not tree.completed:
+        notes.append("prior: could not run git ({}); the prior committed snapshot is omitted".format(
+            tree.err.strip()))
+        return None
+    if tree.rc != 0 or tree.out.strip() != b"true":
+        notes.append("prior: the store root is not a git work tree; the prior committed snapshot is omitted")
+        return None
+    head = _run_git(git, store_root, ["rev-parse", "--verify", "--quiet", "HEAD"])
+    if not head.completed:
+        notes.append("prior: could not resolve HEAD ({}); the prior committed snapshot is omitted".format(
+            head.err.strip()))
+        return None
+    if head.rc == 1:
+        # --verify --quiet returns 1 when HEAD names no commit: an unborn HEAD. The honest empty prior.
+        return _empty_prior()
+    if head.rc != 0:
+        notes.append("prior: git could not verify HEAD (rc {}); the prior committed snapshot is "
+                     "omitted".format(head.rc))
+        return None
+    pfx = _run_git(git, store_root, ["rev-parse", "--show-prefix"])
+    if not pfx.completed or pfx.rc != 0:
+        notes.append("prior: could not determine the store's path within the repository; the prior "
+                     "committed snapshot is omitted")
+        return None
+    prefix = pfx.out.decode("utf-8", "replace").strip()   # "" at the toplevel, else "<dir>/" with a trailing /
+    return _reconstruct_prior(git, store_root, machine_rel, prefix, notes)
+
+
+def gather(resolution):
+    """Gather the inert, git-derived observations for a RESOLVED store. Returns `(observations, notes)`:
+    `observations` is a dict carrying ONLY the keys honestly determined (a subset of
+    _opf_check._OBSERVATION_KEYS: "tracked", "actual_remote", "prior"), suitable to pass straight to
+    `_opf_check.validate_store(..., observations=...)`; `notes` explains every omission. Never forges a value:
+    when git cannot answer, the key is omitted and a note is added, and the engine routes the affected check
+    to a named cannot-evaluate."""
+    observations = {}
+    notes = []
+    store_root = getattr(resolution, "store_root", None)
+    machine_rel = getattr(resolution, "machine_rel", None)
+    if store_root is None or not isinstance(machine_rel, str) or not machine_rel:
+        notes.append("observations: the resolution carries no store root or machine-store path; no "
+                     "git-derived observation could be gathered")
+        return observations, notes
+    git = _git_path()
+    if git is None:
+        notes.append("observations: git was not found on PATH; the tracked, remote, and prior-snapshot "
+                     "observations are all omitted (each affected check routes to a named cannot-evaluate)")
+        return observations, notes
+    store_root = str(store_root)
+    tracked = _observe_tracked(git, store_root, machine_rel, notes)
+    if tracked is not None:
+        observations["tracked"] = tracked
+    remote = _observe_remote(git, store_root, notes)
+    if remote is not None:
+        observations["actual_remote"] = remote
+    prior = _observe_prior(git, store_root, machine_rel, notes)
+    if prior is not None:
+        observations["prior"] = prior
+    return observations, notes
+
+
+# --- self-test ---------------------------------------------------------------------------------------
+
+class _Res:
+    """A minimal stand-in for a resolver Resolution: gather reads only store_root and machine_rel."""
+    __slots__ = ("store_root", "machine_rel")
+
+    def __init__(self, store_root, machine_rel):
+        self.store_root = store_root
+        self.machine_rel = machine_rel
+
+
+def self_test():
+    """Isolate fixture configuration and restore the caller even on failure."""
+    import tempfile
+    from unittest.mock import patch
+    with tempfile.TemporaryDirectory(prefix="opf-selftest-home-") as home:
+        with patch.dict(os.environ, HOME=home, XDG_CONFIG_HOME=home,
+                        GIT_CONFIG_NOSYSTEM="1"):
+            return self_test_isolated()
+
+
+def self_test_isolated():
+    """Exercise gather over synthetic git repositories built in a tempdir (removed in a finally, for
+    test-hermeticity). Covered: tracked vs untracked manifest; zero / one / multiple remotes, and a
+    local-path remote whose trailing whitespace is kept; a prior
+    extracted from a committed HEAD (records and the immutable-body digest matching the engine's own
+    _record_digest over the same committed content); a HEAD manifest whose base table is named [devprocess]
+    rather than [opf] -> the whole prior OMITTED with a note; an unborn HEAD -> the honest empty prior; a
+    non-repository directory -> the remote and prior fields OMITTED with a note while tracked reads
+    "untracked"; the imported baseline of a homes-2 HEAD that ACTIVATES the series under the homes-2 test
+    toggle (the member absent while the series is inactive, the committed leaf rows, worklog entries
+    included, under the engine's digest once it is active, every authoritative type's leaf read even where
+    the HEAD manifest omits the type, and the whole prior omitted on a row with no id, a leaf that does not
+    read or parse, a row list that is not an array, a row that cannot be canonicalized, or a machine tree
+    that cannot be listed); and the prior's
+    `held` ids, the active worklog (both generations) and every archive bucket
+    file included, omitted alone with a note when an archive entry is not a bucket file, when a bucket file
+    or the active worklog.toml does not parse or holds a row table that is not an array, when the active
+    worklog.toml or the archive/ listing cannot be read, when the HEAD manifest's worklog generation is
+    unreadable, when the archive/, the active worklog.toml or, at generation 2, the worklog/ is committed as
+    another entry type, and, at generation 2, when the worklog/ listing cannot be read or holds a file or a
+    directory that is not a worklog entry; and the bounded capture feeding 128 KiB of stdin to a child that
+    first writes 128 KiB, without deadlock, run in a separate interpreter under a 30 s deadline so a
+    deadlocking transport is red rather than a hang. Judged ONLY on gather's RETURNED structure (never by
+    grepping git's stdout for verdicts).
+    Returns 0 clean, 1 on a failed check, 2 on a harness error or when git is not on PATH: every vector
+    gathers from a git fixture, so without git none of them runs, which is cannot-evaluate, never a
+    clean exit a gate would read as the vectors having passed."""
+    import contextlib as _contextlib
+    import io as _io
+    import shutil as _shutil
+    import tempfile as _tempfile
+
+    git = _git_path()
+    if git is None:
+        print("opf observe self-test: CANNOT-EVALUATE (git not found on PATH; no gather vector ran)",
+              file=sys.stderr)
+        return 2
+
+    failures = []
+
+    def check(name, cond):
+        if not cond:
+            failures.append(name)
+
+    # The git-absent path: with _git_path substituted to find no git, self_test returns 2 and names the
+    # cannot-evaluate at once, running no vector (red when that path exits clean). Restored in finally.
+    # It enters through self_test, the isolating wrapper that __main__ and the opf.py roster call, so the
+    # vector pins the exit code those callers read; this function is reached only through that wrapper.
+    _saved_git_path = globals()["_git_path"]
+    globals()["_git_path"] = lambda: None
+    try:
+        with _contextlib.redirect_stderr(_io.StringIO()) as _absent_err:
+            _absent_rc = self_test()
+    finally:
+        globals()["_git_path"] = _saved_git_path
+    check("git-absent-cannot-evaluate",
+          _absent_rc == 2 and "CANNOT-EVALUATE (git not found on PATH" in _absent_err.getvalue())
+
+    # F-TOML-BARE-VALUEERROR-CLASS: a committed prior TOML whose parse overflows (tomllib raises RecursionError,
+    # not a ValueError) or carrying an over-long integer literal (a BARE ValueError) is OMITTED with a note
+    # naming the parse failure, never an escape. _run_git is substituted for the one call so the case needs no
+    # repository; the digit limit is pinned to the CPython default (test-hermeticity); both restored.
+    # The overflow is INJECTED (tomllib.loads and tomllib.load raise RecursionError on a marked, otherwise valid
+    # input) rather than provoked by a deeply nested body: the depth at which tomllib overflows is an
+    # interpreter limit, so a fixed body overflows under one recursion limit and parses (or trips an unrelated
+    # refusal) under another.
+    _saved_run_git = globals()["_run_git"]
+    _prev_digits = sys.get_int_max_str_digits()
+    sys.set_int_max_str_digits(4300)
+    real_loads, real_load = tomllib.loads, tomllib.load
+
+    def overflowing_loads(text, **kwargs):
+        if "injected-overflow" in text:
+            raise RecursionError("injected parser overflow")
+        return real_loads(text, **kwargs)
+
+    tomllib.loads = overflowing_loads
+    tomllib.load = lambda fp, **kwargs: overflowing_loads(fp.read().decode("utf-8"), **kwargs)
+    try:
+        for tc_label, tc_body, tc_needle in (("parser-overflow", "deep = 1  # injected-overflow\n",
+                                              "not valid TOML (injected parser overflow)"),
+                                             ("over-long-int", "big = " + "9" * 4400 + "\n", "not valid TOML")):
+            globals()["_run_git"] = lambda *_a, _b=tc_body, **_k: _GitOutcome(True, 0, _b.encode("utf-8"), "")
+            tc_notes = []
+            try:
+                tc_got = _show_toml(git, ".", "", "x.toml", "x.toml", tc_notes)
+            except (ValueError, RecursionError) as exc:
+                tc_got = "escaped " + type(exc).__name__
+            check("toml-class/{}-omitted-with-note".format(tc_label),
+                  tc_got is None and any(tc_needle in n for n in tc_notes))
+    finally:
+        globals()["_run_git"] = _saved_run_git
+        tomllib.loads, tomllib.load = real_loads, real_load
+        sys.set_int_max_str_digits(_prev_digits)
+
+    # The bounded capture feeds stdin while it drains stdout and stderr (check_ignored's NUL-framed
+    # transport): a child that writes 128 KiB, more than a pipe buffer, before it reads its own 128 KiB of
+    # input completes within the bound rather than deadlocking against a blocked stdin write. The capture
+    # runs in a separate interpreter under its own deadline, which also covers the stdin write: a transport
+    # that writes all of stdin before it drains blocks outside the capture's own bound, so without this
+    # deadline the self-test would hang rather than report the check red.
+    probe = "\n".join((
+        "import sys",
+        "sys.path.insert(0, sys.argv[1])",
+        "import _opf_observe as observe",
+        "body = (\"import sys; sys.stdout.buffer.write(b'o' * 131072); sys.stdout.buffer.flush(); \"",
+        "        \"sys.stdout.buffer.write(sys.stdin.buffer.read())\")",
+        "got = observe._capture_bounded([sys.executable, '-I', '-B', '-c', body], observe._scrubbed_env(), 10,",
+        "                               524288, input_bytes=b'i' * 131072)",
+        "drained = got.completed and got.rc == 0 and got.out == b'o' * 131072 + b'i' * 131072",
+        "sys.stdout.write('drained' if drained else 'not drained')",
+    ))
+    # 30 s covers the interpreter's start, its imports and the capture's own 10 s bound.
+    here = str(Path(__file__).resolve().parent)
+    try:
+        transport = subprocess.run([sys.executable, "-I", "-B", "-c", probe, here],
+                                   stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                   env=_scrubbed_env(), timeout=30)
+        drained = transport.returncode == 0 and transport.stdout == b"drained"
+    except subprocess.TimeoutExpired:
+        drained = False
+    check("bounded-stdin-transport-drains", drained)
+
+    machine_rel = "{}/{}".format(_opf_store.WORKING_DIRNAME, _opf_store.DEFAULT_MACHINE_SUBDIR)
+
+    # A git environment for the FIXTURE setup calls: config-neutralized (no host identity or hooks), with a
+    # committer identity supplied per-call via -c so a commit needs no ambient config.
+    def _setup_env(home):
+        env = _scrubbed_env()
+        env["HOME"] = str(home)
+        return env
+
+    def _git_setup(cwd, home, *args):
+        """Run a git FIXTURE command, raising OSError (mapped to a harness error, exit 2) on failure or
+        timeout. --no-replace-objects so a replacement ref cannot substitute the bytes a git data command
+        reads; a bounded timeout so a hung fixture call fails SAFE rather than hangs (mirrors _run_git)."""
+        cmd = [git, "--no-replace-objects", "-C", str(cwd),
+               "-c", "user.email=opf@example.invalid", "-c", "user.name=OPF Self Test",
+               "-c", "commit.gpgsign=false", "-c", "init.defaultBranch=main",
+               # F-367: no DETACHED auto-gc/auto-maintenance may outlive a fixture commit and
+               # churn .git while a later read or the teardown rmtree traverses it.
+               "-c", "gc.auto=0", "-c", "gc.autoDetach=false", "-c", "maintenance.auto=false"] + list(args)
+        try:
+            proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                  env=_setup_env(home), timeout=_GIT_TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            raise OSError("git {} timed out after {}s".format(" ".join(args), _GIT_TIMEOUT_S))
+        if proc.returncode != 0:
+            raise OSError("git {} failed (rc {}): {}".format(
+                " ".join(args), proc.returncode, (proc.stderr or b"").decode("utf-8", "replace").strip()))
+
+    def _write(root, relpath, text):
+        p = Path(root) / relpath
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(text, encoding="utf-8")
+
+    # A minimal-but-shaped inline machine store: enough for the prior reconstruction to populate records,
+    # digests, releases, and counters. It need not be validate_store-VALID; the reconstruction is what is
+    # under test. Types are the three the fixtures reference; each declared non-worklog type has an index.
+    def _write_store(root):
+        base = "{}/".format(machine_rel)
+        _write(root, base + _MANIFEST_NAME,
+               '[opf]\n'
+               'standard = "opf"\n'
+               'spec_version = "1.0.0"\n'
+               'layout = "inline"\n'
+               'posture = "required"\n'
+               'import_status = "none"\n\n'
+               '[store]\n'
+               'sync_target = ""\n\n'
+               '[types.backlog_item]\nnamespace = "BI"\n'
+               '[types.done]\nnamespace = "DN"\n'
+               '[types.worklog]\nnamespace = "WL"\n\n'
+               '[vendors]\nregistered = []\n')
+        _write(root, base + _VERSION_NAME,
+               'schema = 1\n\n[[release]]\n'
+               'version = "0.1.0"\n'
+               'date = "2026-01-01T00:00:00Z"\n'
+               'worklog_span = []\n'
+               'coverage_digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"\n')
+        _write(root, base + _COUNTERS_NAME,
+               'schema = 1\n\n[counters]\nBI = 1\nDN = 1\nWL = 0\n')
+        _write(root, base + "backlog_item" + _INDEX_SUFFIX,
+               'schema = 1\n\n[[record]]\n'
+               'id = "BI-1"\n'
+               'type = "backlog_item"\n'
+               'status = "open"\n'
+               'title = "t"\n'
+               'created_at = "2026-01-01T00:00:00Z"\n'
+               'updated_at = "2026-01-01T00:00:00Z"\n'
+               '[record.actor]\nkind = "maintainer"\n')
+        _write(root, base + "done" + _INDEX_SUFFIX,
+               'schema = 1\n\n[[record]]\n'
+               'id = "DN-1"\n'
+               'type = "done"\n'
+               'status = "recorded"\n'
+               'title = "t"\n'
+               'created_at = "2026-01-01T00:00:00Z"\n'
+               'updated_at = "2026-01-01T00:00:00Z"\n'
+               '[record.actor]\nkind = "maintainer"\n')
+        _write(root, base + _WORKLOG_NAME, 'schema = 1\n')
+
+    base = Path(_tempfile.mkdtemp(prefix="opf-observe-selftest-")).resolve()
+    try:
+        home = base / "home"
+        home.mkdir()
+
+        # 1. A committed store: manifest tracked, zero remotes -> "", and a reconstructable prior.
+        tracked_repo = base / "tracked"
+        tracked_repo.mkdir()
+        _git_setup(tracked_repo, home, "init")
+        _write_store(tracked_repo)
+        _git_setup(tracked_repo, home, "add", "-A")
+        _git_setup(tracked_repo, home, "commit", "-m", "seed store")
+        obs, notes = gather(_Res(tracked_repo, machine_rel))
+        check("tracked-manifest", obs.get("tracked") == "tracked")
+        check("no-remote-empty-string", obs.get("actual_remote") == "")
+        prior = obs.get("prior")
+        check("prior-present", isinstance(prior, dict))
+        if isinstance(prior, dict):
+            check("prior-records", prior.get("records", {}).get("BI-1") == ("backlog_item", "open")
+                  and prior.get("records", {}).get("DN-1") == ("done", "recorded"))
+            check("prior-releases", isinstance(prior.get("releases"), list) and len(prior["releases"]) == 1)
+            check("prior-counters", prior.get("counters_high", {}).get("BI") == 1)
+            # A HEAD whose store does not activate the imported series carries no baseline member at
+            # all (never an empty claim over bytes nothing read under series rules).
+            check("prior-imported-member-absent-when-inactive", "imported" not in prior)
+            # Digest honesty: gather's digest for the immutable done record must equal the engine's own
+            # _record_digest over the SAME committed body (parsed here independently from the working tree).
+            with open(str(tracked_repo / machine_rel / ("done" + _INDEX_SUFFIX)), "rb") as fh:
+                done_idx = tomllib.loads(fh.read().decode("utf-8"))
+            expected = _opf_check._record_digest(done_idx["record"][0])
+            check("prior-digest-matches-engine", prior.get("digests", {}).get("DN-1") == expected)
+
+        # 1b. The prior reads its layout from the [opf] base table alone: a HEAD manifest whose base table is
+        # named [devprocess] instead, the store otherwise reconstructable, declares no layout there, so the
+        # WHOLE prior is omitted with its note rather than read from that other table.
+        devprocess_repo = base / "devprocess-head"
+        devprocess_repo.mkdir()
+        _git_setup(devprocess_repo, home, "init")
+        _write_store(devprocess_repo)
+        devprocess_manifest = devprocess_repo / machine_rel / _MANIFEST_NAME
+        devprocess_manifest.write_text(devprocess_manifest.read_text(encoding="utf-8").replace(
+            '[opf]\nstandard = "opf"\n', '[devprocess]\nstandard = "devprocess"\n'), encoding="utf-8")
+        _git_setup(devprocess_repo, home, "add", "-A")
+        _git_setup(devprocess_repo, home, "commit", "-m", "a [devprocess] base table at HEAD")
+        obs, notes = gather(_Res(devprocess_repo, machine_rel))
+        check("prior-devprocess-base-table-omitted",
+              "prior" not in obs and any("declares layout None, which is not a recognized store layout" in n
+                                         for n in notes))
+
+        # 2. A repository with the manifest present on disk but NOT committed -> "untracked".
+        untracked_repo = base / "untracked"
+        untracked_repo.mkdir()
+        _git_setup(untracked_repo, home, "init")
+        _write(untracked_repo, "README", "seed\n")
+        _git_setup(untracked_repo, home, "add", "README")
+        _git_setup(untracked_repo, home, "commit", "-m", "seed")
+        _write_store(untracked_repo)     # written but never added: not under version control
+        obs, notes = gather(_Res(untracked_repo, machine_rel))
+        check("untracked-manifest", obs.get("tracked") == "untracked")
+
+        # 3. Exactly one remote -> its push URL.
+        one_remote = base / "one-remote"
+        one_remote.mkdir()
+        _git_setup(one_remote, home, "init")
+        _git_setup(one_remote, home, "remote", "add", "origin", "https://example.invalid/store.git")
+        obs, notes = gather(_Res(one_remote, machine_rel))
+        check("one-remote-url", obs.get("actual_remote") == "https://example.invalid/store.git")
+        # A local-path remote keeps a trailing space: whitespace is significant in a path, so only git's
+        # line ending is removed and C-SYNC-AGREE sees the spelling git pushes to.
+        padded_remote = base / "padded-remote"
+        padded_remote.mkdir()
+        _git_setup(padded_remote, home, "init")
+        _git_setup(padded_remote, home, "remote", "add", "origin", "/srv/opf-store ")
+        obs, notes = gather(_Res(padded_remote, machine_rel))
+        check("one-remote-path-whitespace-kept", obs.get("actual_remote") == "/srv/opf-store ")
+
+        # 4. Multiple remotes -> the remote field OMITTED with a note.
+        multi_remote = base / "multi-remote"
+        multi_remote.mkdir()
+        _git_setup(multi_remote, home, "init")
+        _git_setup(multi_remote, home, "remote", "add", "origin", "https://example.invalid/a.git")
+        _git_setup(multi_remote, home, "remote", "add", "mirror", "https://example.invalid/b.git")
+        obs, notes = gather(_Res(multi_remote, machine_rel))
+        check("multi-remote-omitted", "actual_remote" not in obs)
+        check("multi-remote-note", any("remote" in n and "omitted" in n for n in notes))
+
+        # 5. An unborn HEAD (init, no commit) -> the honest empty prior.
+        unborn = base / "unborn"
+        unborn.mkdir()
+        _git_setup(unborn, home, "init")
+        _write_store(unborn)     # on disk, uncommitted
+        obs, notes = gather(_Res(unborn, machine_rel))
+        check("unborn-empty-prior", obs.get("prior") == _empty_prior())
+        check("unborn-untracked", obs.get("tracked") == "untracked")
+
+        # 6. A non-repository directory -> remote and prior OMITTED with a note; tracked reads "untracked".
+        non_repo = base / "non-repo"
+        non_repo.mkdir()
+        _write_store(non_repo)
+        obs, notes = gather(_Res(non_repo, machine_rel))
+        check("non-repo-tracked-untracked", obs.get("tracked") == "untracked")
+        check("non-repo-remote-omitted", "actual_remote" not in obs)
+        check("non-repo-prior-omitted", "prior" not in obs)
+        check("non-repo-notes", any("omitted" in n for n in notes))
+
+        # 7. The imported baseline of a homes-2 HEAD (spec 8.3): a committed 2.0.0 / homes = 2 store whose
+        # only imported leaf is backlog_item's. At the shipped constants the imported series is inactive, so
+        # the prior carries NO imported member even with the leaf committed, never an empty claim over
+        # unread bytes (red when the branch reads the declaration without tooling support, or when an
+        # inactive HEAD supplies an empty baseline); with homes 2 supported but not the imported series
+        # the member stays absent. Under the homes-2 test toggle (SUPPORTED_HOMES at 2 and
+        # SUPPORTED_SPEC_VERSION at IMPORTED_SPEC_VERSION, both restored in finally), the baseline holds
+        # exactly the leaf's row under the engine's own _record_digest, and the leaves absent from HEAD
+        # (done, worklog) contribute nothing (red when the branch is dropped, or an absent leaf is read). A
+        # committed leaf row with no string id omits the WHOLE prior with a note, as for the clean files
+        # (red when that refusal is removed).
+        homes2_repo = base / "homes2"
+        homes2_repo.mkdir()
+        _git_setup(homes2_repo, home, "init")
+        _write_store(homes2_repo)
+        manifest_path = homes2_repo / machine_rel / _MANIFEST_NAME
+        manifest_path.write_text(manifest_path.read_text(encoding="utf-8").replace(
+            'spec_version = "1.0.0"\n', 'spec_version = "{}"\nhomes = 2\n'.format(
+                _opf_store.HOMES2_SPEC_VERSION)), encoding="utf-8")
+        leaf_rel = "{}/backlog_item{}".format(machine_rel, _opf_store.IMPORTED_INDEX_SUFFIX)
+        leaf_row = ('[[record]]\n'
+                    'type = "backlog_item"\n'
+                    'status = "done"\n'
+                    'title = "t"\n'
+                    '[record.actor]\nkind = "importer"\nid = "assistant"\n')
+        _write(homes2_repo, leaf_rel, 'schema = 1\n\n' + leaf_row.replace(
+            '[[record]]\n', '[[record]]\nid = "imported:BI-1"\n'))
+        _git_setup(homes2_repo, home, "add", "-A")
+        _git_setup(homes2_repo, home, "commit", "-m", "seed homes-2 store")
+        with open(str(homes2_repo / leaf_rel), "rb") as fh:
+            leaf_digest = _opf_check._record_digest(tomllib.loads(fh.read().decode("utf-8"))["record"][0])
+        prev_homes = _opf_store.SUPPORTED_HOMES
+        prev_ssv = _opf_store.SUPPORTED_SPEC_VERSION
+        try:
+            obs, notes = gather(_Res(homes2_repo, machine_rel))
+            check("homes2-prior-imported-inert-at-shipped-support",
+                  isinstance(obs.get("prior"), dict) and "imported" not in obs["prior"])
+            _opf_store.SUPPORTED_HOMES = 2
+            obs, notes = gather(_Res(homes2_repo, machine_rel))
+            check("homes2-prior-imported-inert-without-imported-support",
+                  isinstance(obs.get("prior"), dict) and "imported" not in obs["prior"])
+            _opf_store.SUPPORTED_SPEC_VERSION = _opf_store.IMPORTED_SPEC_VERSION
+            obs, notes = gather(_Res(homes2_repo, machine_rel))
+            check("homes2-prior-imported-baseline",
+                  isinstance(obs.get("prior"), dict)
+                  and obs["prior"].get("imported") == {"imported:BI-1": leaf_digest})
+            # The imported WORKLOG leaf joins the baseline through its [[entry]] rows (worklog.imported.toml
+            # is a ledger, not an index): its committed entries carry the same engine digest beside the
+            # index-leaf rows (red when the ledger leaf is skipped or read under the [[record]] member).
+            wl_rel = "{}/{}".format(machine_rel, _opf_store.IMPORTED_WORKLOG_NAME)
+            _write(homes2_repo, wl_rel,
+                   'schema = 1\n\n[[entry]]\n'
+                   'id = "imported:WL-1"\n'
+                   'type = "worklog"\n'
+                   'status = "recorded"\n'
+                   'kind = "added"\n'
+                   'summary = "i1"\n'
+                   '[entry.actor]\nkind = "importer"\nid = "assistant"\n')
+            _git_setup(homes2_repo, home, "add", "-A")
+            _git_setup(homes2_repo, home, "commit", "-m", "an imported worklog entry")
+            with open(str(homes2_repo / wl_rel), "rb") as fh:
+                wl_digest = _opf_check._record_digest(tomllib.loads(fh.read().decode("utf-8"))["entry"][0])
+            obs, notes = gather(_Res(homes2_repo, machine_rel))
+            check("homes2-prior-imported-worklog-entries",
+                  isinstance(obs.get("prior"), dict)
+                  and obs["prior"].get("imported") == {"imported:BI-1": leaf_digest,
+                                                       "imported:WL-1": wl_digest})
+            _write(homes2_repo, leaf_rel, 'schema = 1\n\n' + leaf_row)
+            _git_setup(homes2_repo, home, "commit", "-am", "an imported row with no id")
+            obs, notes = gather(_Res(homes2_repo, machine_rel))
+            check("homes2-prior-imported-row-without-id-omitted",
+                  "prior" not in obs and any("carries a row with no string id" in n for n in notes))
+            # An imported-baseline read failure PROPAGATES: a listed leaf that does not parse, one whose
+            # row list is not an array, and a row that cannot be canonicalized each omit the WHOLE prior
+            # with a note naming the failed input. The valid imported worklog leaf stays committed beside
+            # the broken index leaf throughout, so a dropped propagation would keep a PARTIAL prior whose
+            # baseline carries the worklog entry alone (red when a failed leaf read is skipped and the
+            # other leaves still supply a baseline).
+            _write(homes2_repo, leaf_rel, "record = [ not toml")
+            _git_setup(homes2_repo, home, "commit", "-am", "an unparseable imported leaf")
+            obs, notes = gather(_Res(homes2_repo, machine_rel))
+            check("homes2-prior-imported-unparseable-leaf-omitted",
+                  "prior" not in obs
+                  and any("backlog_item.imported.index.toml" in n and "not valid TOML" in n for n in notes))
+            _write(homes2_repo, leaf_rel, 'schema = 1\nrecord = "x"\n')
+            _git_setup(homes2_repo, home, "commit", "-am", "an imported leaf whose rows are not an array")
+            obs, notes = gather(_Res(homes2_repo, machine_rel))
+            check("homes2-prior-imported-non-array-leaf-omitted",
+                  "prior" not in obs
+                  and any("backlog_item.imported.index.toml [[record]] is not an array" in n for n in notes))
+            _write(homes2_repo, leaf_rel,
+                   'schema = 1\n\n[[record]]\nid = "imported:BI-1"\nweight = nan\n')
+            _git_setup(homes2_repo, home, "commit", "-am", "an imported row that cannot canonicalize")
+            obs, notes = gather(_Res(homes2_repo, machine_rel))
+            check("homes2-prior-imported-uncanonicalizable-row-omitted",
+                  "prior" not in obs
+                  and any("cannot canonicalize the body of imported record" in n for n in notes))
+            # The restored store is the success control: the baseline carries BOTH leaves' rows again and
+            # the prior's held intervals stand beside it (the reserved-number exemption and the imported
+            # baseline come from the one reconstruction; red when either member is lost).
+            _write(homes2_repo, leaf_rel, 'schema = 1\n\n' + leaf_row.replace(
+                '[[record]]\n', '[[record]]\nid = "imported:BI-1"\n'))
+            _git_setup(homes2_repo, home, "commit", "-am", "restore the valid imported leaf")
+            obs, notes = gather(_Res(homes2_repo, machine_rel))
+            check("homes2-prior-imported-and-held-together",
+                  isinstance(obs.get("prior"), dict)
+                  and obs["prior"].get("imported") == {"imported:BI-1": leaf_digest,
+                                                       "imported:WL-1": wl_digest}
+                  and obs["prior"].get("held", {}).get("BI") == [[1, 1]])
+            # A failed imported-tree ENUMERATION omits the whole prior too, never reads as an empty tree:
+            # only the baseline's --name-only listing is forced to fail (every other git read, the held
+            # ids' ls-tree -z included, still succeeds), so the omission is attributable to that one leg
+            # (red when a failed listing leaves the committed leaves silently out of the baseline).
+            _saved_run_git = globals()["_run_git"]
+
+            def _fail_name_listing(git_bin, store_root, args, **kwargs):
+                if args[:2] == ["ls-tree", "--name-only"]:
+                    return _saved_run_git(git_bin, store_root,
+                                          ["ls-tree", "--name-only", "HEAD:no-such-tree"], **kwargs)
+                return _saved_run_git(git_bin, store_root, args, **kwargs)
+
+            globals()["_run_git"] = _fail_name_listing
+            try:
+                obs, notes = gather(_Res(homes2_repo, machine_rel))
+            finally:
+                globals()["_run_git"] = _saved_run_git
+            check("homes2-prior-imported-unlistable-tree-omitted",
+                  "prior" not in obs and any("cannot be listed at HEAD" in n for n in notes))
+            # The imported leaf roster derives from the SAME authoritative type set the doctor
+            # grades, never the raw [types] table alone: a HEAD manifest that (non-conformingly) omits
+            # the baseline backlog_item type still contributes its committed imported leaf to the
+            # baseline (red when the reconstruction reads the declared [types] directly and the
+            # committed rows silently leave the baseline).
+            manifest_path.write_text(manifest_path.read_text(encoding="utf-8").replace(
+                '[types.backlog_item]\nnamespace = "BI"\n', ''), encoding="utf-8")
+            _git_setup(homes2_repo, home, "commit", "-am", "drop the backlog_item type declaration")
+            obs, notes = gather(_Res(homes2_repo, machine_rel))
+            check("imported-baseline-covers-authoritative-types",
+                  "[types.backlog_item]" not in manifest_path.read_text(encoding="utf-8")
+                  and isinstance(obs.get("prior"), dict)
+                  and obs["prior"].get("imported") == {"imported:BI-1": leaf_digest,
+                                                       "imported:WL-1": wl_digest})
+        finally:
+            _opf_store.SUPPORTED_HOMES = prev_homes
+            _opf_store.SUPPORTED_SPEC_VERSION = prev_ssv
+
+        # 8. `held`: every id HEAD held, as merged intervals: the type-index ids, the active worklog, and
+        # each archive bucket's archive.toml moved ids and worklog spans, worklog entries and index rows.
+        held_files = (
+            (_WORKLOG_NAME, 'schema = 1\n\n[[entry]]\nid = "WL-3"\n\n[[entry]]\nid = "WL-4"\n'),
+            ("archive/2026/archive.toml",
+             'schema = 1\n\n[[moved]]\nid = "BI-7"\ntype = "backlog_item"\n'
+             'destination = "archive/2026/backlog_item.index.toml"\n\n'
+             '[[worklog_moved]]\nspan = ["WL-1", "WL-2"]\ndestination = "archive/2026/worklog.toml"\n'),
+            ("archive/2026/backlog_item.index.toml", 'schema = 1\n\n[[record]]\nid = "BI-9"\n'),
+            ("archive/2026/worklog.toml", 'schema = 1\n\n[[entry]]\nid = "WL-6"\n'))
+        held_repo = base / "held"
+        held_repo.mkdir()
+        _git_setup(held_repo, home, "init")
+        _write_store(held_repo)
+        for relpath, text in held_files:
+            _write(held_repo, machine_rel + "/" + relpath, text)
+        _git_setup(held_repo, home, "add", "-A")
+        _git_setup(held_repo, home, "commit", "-m", "store with an archive")
+        obs, notes = gather(_Res(held_repo, machine_rel))
+        prior = obs.get("prior") or {}
+        check("prior-held", prior.get("held") == {"BI": [[1, 1], [7, 7], [9, 9]], "DN": [[1, 1]],
+                                                  "WL": [[1, 4], [6, 6]]})
+        check("prior-held-normalizes", (_opf_check._normalize_prior(prior) or {}).get("held") == {
+            "BI": [(1, 1), (7, 7), (9, 9)], "DN": [(1, 1)], "WL": [(1, 4), (6, 6)]})
+
+        # 9. An archive entry that is not a bucket file omits `held` alone, with a note; the prior stands.
+        _write(held_repo, machine_rel + "/archive/stray.txt", "x\n")
+        _git_setup(held_repo, home, "add", "-A")
+        _git_setup(held_repo, home, "commit", "-m", "a stray archive file")
+        obs, notes = gather(_Res(held_repo, machine_rel))
+        prior = obs.get("prior")
+        check("prior-held-omitted-alone", isinstance(prior, dict) and "held" not in prior
+              and prior.get("records", {}).get("BI-1") == ("backlog_item", "open")
+              and any("archive/stray.txt" in n and _HELD_OMITTED in n for n in notes))
+
+        # 10. A generation-2 worklog at HEAD is read from its worklog/ entry names (the generation enabled
+        # for this case only).
+        gen2_repo = base / "held-gen2"
+        gen2_repo.mkdir()
+        _git_setup(gen2_repo, home, "init")
+        _write_store(gen2_repo)
+        manifest_path = gen2_repo / machine_rel / _MANIFEST_NAME
+        manifest_path.write_text(manifest_path.read_text(encoding="utf-8").replace(
+            'layout = "inline"\n', 'layout = "inline"\nworklog = 2\n'), encoding="utf-8")
+        (gen2_repo / machine_rel / _WORKLOG_NAME).unlink()
+        _write(gen2_repo, machine_rel + "/worklog/WL-1.toml", 'id = "WL-1"\n')
+        _write(gen2_repo, machine_rel + "/worklog/WL-2.abcd.toml", 'id = "WL-2.abcd"\n')
+        _git_setup(gen2_repo, home, "add", "-A")
+        _git_setup(gen2_repo, home, "commit", "-m", "a generation-2 worklog")
+        from unittest.mock import patch
+        with patch.object(_opf_store, "SUPPORTED_WORKLOG", 2):
+            obs, notes = gather(_Res(gen2_repo, machine_rel))
+        check("prior-held-worklog-generation-2", (obs.get("prior") or {}).get("held", {}).get("WL") == [[1, 2]])
+
+        # 11. Every other read of `held` that fails omits it alone, with a note naming the file, and the rest
+        # of the prior stands: an unparseable bucket file of each kind, a row table that is not an array in
+        # each, an unparseable, non-array or unreadable active worklog.toml (its blob removed from the
+        # object store, so git show fails), an archive/ that cannot be listed (its tree removed), a worklog
+        # generation the HEAD manifest does not declare readably, an archive, a worklog.toml or, at
+        # generation 2, a worklog committed as another entry type (the source removed and the other type
+        # written at its name), and, at generation 2, a worklog/ that cannot be listed or that holds a file,
+        # or a directory named as an entry, that is not a worklog entry. Each case is the case-8 store
+        # (at generation 2, with worklog/ entries for WL-3 and WL-4 in place of worklog.toml) with that one
+        # source changed; the unchanged store is the control, so a source skipped or read as empty instead of
+        # omitted leaves a partial `held`.
+        gen2_files = tuple((rel, body) for rel, body in held_files if rel != _WORKLOG_NAME) + (
+            ("worklog/WL-3.toml", 'id = "WL-3"\n'), ("worklog/WL-4.toml", 'id = "WL-4"\n'))
+
+        def held_case(label, relpath=None, text=None, worklog=None, remove=None):
+            repo = base / ("held-" + label)
+            repo.mkdir()
+            _git_setup(repo, home, "init")
+            _write_store(repo)
+            if worklog is not None:
+                manifest = repo / machine_rel / _MANIFEST_NAME
+                manifest.write_text(manifest.read_text(encoding="utf-8").replace(
+                    'layout = "inline"\n', 'layout = "inline"\nworklog = {}\n'.format(worklog)), encoding="utf-8")
+            if worklog == 2:
+                (repo / machine_rel / _WORKLOG_NAME).unlink()
+            for rel, body in gen2_files if worklog == 2 else held_files:
+                _write(repo, machine_rel + "/" + rel, body)
+            if remove is not None:
+                gone = repo / machine_rel / remove
+                if gone.is_dir():
+                    _shutil.rmtree(str(gone))
+                else:
+                    gone.unlink()
+            if relpath is not None and text is not None:
+                _write(repo, machine_rel + "/" + relpath, text)
+            _git_setup(repo, home, "add", "-A")
+            _git_setup(repo, home, "commit", "-m", "store with one held source changed")
+            if relpath is not None and text is None:
+                oid = _run_git(git, str(repo), ["rev-parse", "HEAD:{}/{}".format(machine_rel, relpath)])
+                if not oid.completed or oid.rc != 0:
+                    raise OSError("could not resolve the HEAD object of {}".format(relpath))
+                name = oid.out.decode("ascii").strip()
+                os.unlink(str(repo / ".git" / "objects" / name[:2] / name[2:]))
+            if worklog != 2:
+                return gather(_Res(repo, machine_rel))
+            with patch.object(_opf_store, "SUPPORTED_WORKLOG", 2):
+                return gather(_Res(repo, machine_rel))
+
+        held_all = {"BI": [[1, 1], [7, 7], [9, 9]], "DN": [[1, 1]], "WL": [[1, 4], [6, 6]]}
+        obs, notes = held_case("control")
+        check("prior-held-case-control", (obs.get("prior") or {}).get("held") == held_all)
+        obs, notes = held_case("control-generation-2", worklog=2)
+        check("prior-held-case-control-generation-2", (obs.get("prior") or {}).get("held") == held_all)
+        bucket = "archive/2026/"
+        unlisted = "prior: could not list HEAD:{}/".format(machine_rel)
+        for label, relpath, text, worklog, needle in (
+                ("unlistable-archive", "archive", None, None, unlisted + "archive (git ls-tree rc"),
+                ("unreadable-worklog-generation", None, None, 3,
+                 "prior: the HEAD manifest's worklog generation is unreadable"),
+                ("unlistable-worklog-directory", "worklog", None, 2, unlisted + "worklog (git ls-tree rc"),
+                ("non-entry-in-worklog-directory", "worklog/notes.txt", "x\n", 2,
+                 "prior: HEAD worklog/ holds 'notes.txt', not a worklog entry"),
+                ("entry-directory-in-worklog-directory", "worklog/WL-5.toml/WL-5.toml", 'id = "WL-5"\n', 2,
+                 "prior: HEAD worklog/ holds 'WL-5.toml', not a worklog entry")):
+            obs, notes = held_case(label, relpath, text, worklog)
+            prior = obs.get("prior")
+            check("prior-held-omitted-" + label, isinstance(prior, dict) and "held" not in prior
+                  and prior.get("records", {}).get("BI-1") == ("backlog_item", "open")
+                  and any(needle in n and _HELD_OMITTED in n for n in notes))
+        for label, remove, relpath, text, worklog, needle in (
+                ("mistyped-archive", "archive", "archive", "x\n", None,
+                 "prior: HEAD archive is a blob, not a tree"),
+                ("mistyped-active-worklog", _WORKLOG_NAME, _WORKLOG_NAME + "/WL-3.toml", 'id = "WL-3"\n', None,
+                 "prior: HEAD worklog.toml is a tree, not a blob"),
+                ("mistyped-worklog-directory", "worklog", "worklog", "x\n", 2,
+                 "prior: HEAD worklog is a blob, not a tree")):
+            obs, notes = held_case(label, relpath, text, worklog, remove)
+            prior = obs.get("prior")
+            check("prior-held-omitted-" + label, isinstance(prior, dict) and "held" not in prior
+                  and prior.get("records", {}).get("BI-1") == ("backlog_item", "open")
+                  and any(needle in n and _HELD_OMITTED in n for n in notes))
+        for label, relpath, text, needle in (
+                ("unparseable-bucket-archive", bucket + "archive.toml", "not toml [\n",
+                 "prior: archive/2026/archive.toml at HEAD is not valid TOML"),
+                ("unparseable-bucket-worklog", bucket + "worklog.toml", "not toml [\n",
+                 "prior: archive/2026/worklog.toml at HEAD is not valid TOML"),
+                ("unparseable-bucket-index", bucket + "backlog_item.index.toml", "not toml [\n",
+                 "prior: archive/2026/backlog_item.index.toml at HEAD is not valid TOML"),
+                ("non-array-moved", bucket + "archive.toml", 'schema = 1\nmoved = "BI-7"\n',
+                 "prior: HEAD archive/2026/archive.toml [[moved]] is not an array"),
+                ("non-array-worklog-moved", bucket + "archive.toml", 'schema = 1\nworklog_moved = 1\n',
+                 "prior: HEAD archive/2026/archive.toml [[worklog_moved]] is not an array"),
+                ("non-array-bucket-entry", bucket + "worklog.toml", 'schema = 1\nentry = "WL-6"\n',
+                 "prior: HEAD archive/2026/worklog.toml [[entry]] is not an array"),
+                ("non-array-bucket-record", bucket + "backlog_item.index.toml", 'schema = 1\n\n[record]\nid = "BI-9"\n',
+                 "prior: HEAD archive/2026/backlog_item.index.toml [[record]] is not an array"),
+                ("unparseable-active-worklog", _WORKLOG_NAME, "not toml [\n",
+                 "prior: worklog.toml at HEAD is not valid TOML"),
+                ("non-array-active-entry", _WORKLOG_NAME, 'schema = 1\nentry = "WL-3"\n',
+                 "prior: HEAD worklog.toml [[entry]] is not an array"),
+                ("unreadable-active-worklog", _WORKLOG_NAME, None,
+                 "prior: worklog.toml is absent or unreadable at HEAD")):
+            obs, notes = held_case(label, relpath, text)
+            prior = obs.get("prior")
+            check("prior-held-omitted-" + label, isinstance(prior, dict) and "held" not in prior
+                  and prior.get("records", {}).get("BI-1") == ("backlog_item", "open")
+                  and any(needle in n and _HELD_OMITTED in n for n in notes))
+    except OSError as exc:
+        print("opf observe self-test: harness error: could not build a git fixture ({}); fail-closed".format(
+            exc), file=sys.stderr)
+        return 2
+    finally:
+        _shutil.rmtree(str(base), ignore_errors=True)
+
+    if failures:
+        for f in failures:
+            print("opf observe self-test: FAIL: {}".format(f), file=sys.stderr)
+        return 1
+    print("opf observe self-test: PASS (tracked/untracked; 0/1/multiple remotes; prior from a committed "
+          "HEAD with an engine-matching immutable-body digest; a [devprocess] HEAD manifest omits the whole "
+          "prior; unborn HEAD -> empty prior; a non-repo dir "
+          "omits remote and prior with a note; a homes-2 HEAD's imported baseline, worklog entries "
+          "included, and an unreadable leaf or tree omitting the whole prior; an inactive HEAD carries no "
+          "baseline member; the ids HEAD held, worklog "
+          "and archive included, and an unreadable or malformed archive or worklog omitting them alone; "
+          "bounded stdin transport)")
+    return 0
+
+
+if __name__ == "__main__":
+    if sys.argv[1:] == ["--self-test"]:
+        sys.exit(self_test())
+    sys.exit(self_test())

@@ -1,0 +1,16 @@
+# Digests of vendored files whose names contain "secrets" are not credentials.
+# The one allowlist below applies only to 64-character lowercase hex SHA-256
+# values in .aiqt/pin.toml. Nothing else in that file, and no other file, is exempted.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "SHA-256 pin digests in .aiqt/pin.toml"
+condition = "AND"
+paths = ['''(^|/)\.aiqt/pin\.toml$''']
+regexTarget = "secret"
+regexes = ['''^[0-9a-f]{64}$''']

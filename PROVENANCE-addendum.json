@@ -1,0 +1,82 @@
+{
+ "files": [
+  {
+   "disposition": "landed",
+   "landed_path": ".baseline/check_palette.py",
+   "landed_sha256": "cae71e9a43e87c5687bc50dc75784e83b3a5b643a4e9a07298294b9d270971a4",
+   "source_path": ".baseline/check_palette.py",
+   "source_sha256": "cae71e9a43e87c5687bc50dc75784e83b3a5b643a4e9a07298294b9d270971a4"
+  },
+  {
+   "disposition": "landed-adapted",
+   "landed_path": ".baseline/opfiles-pin.toml",
+   "landed_sha256": "a147d16651d912bcbeebe72ea7c5be7a2208fc9171b5ad762e9d640a92a784b2",
+   "source_path": ".baseline/opfiles-pin.toml",
+   "source_sha256": "ca2004fe16d4adf88d28892b1aec7ec1026533a1beebf92d07245557fb4e4f21"
+  },
+  {
+   "disposition": "landed-adapted",
+   "landed_path": "RELEASING.md",
+   "landed_sha256": "5b6a1211ca6738f2cd8171e5e4d792a19b3aef64ae90c595bc8d6a9bdf1c9290",
+   "source_path": "RELEASING-opf-declaration-section.md",
+   "source_sha256": "f06e7eebc117cd53baf3fc9c7666f9df5058ea78858af43c9ce72eb8222e931e"
+  },
+  {
+   "disposition": "landed",
+   "landed_path": "tools/_child_status.py",
+   "landed_sha256": "3e7a5a19787859b036f33232b9a5163ab642907e616c87d13f2945dd7beb3955",
+   "source_path": "opf/tools/_child_status.py",
+   "source_sha256": "3e7a5a19787859b036f33232b9a5163ab642907e616c87d13f2945dd7beb3955"
+  },
+  {
+   "disposition": "landed-adapted",
+   "landed_path": "tools/selftest_checks.toml",
+   "landed_sha256": "396cfc14fe243bea5bbcef70b02c912c532366624a874748155fecad7c21a7b7",
+   "source_path": "selftest_checks-opf-declaration-selftest.toml",
+   "source_sha256": "14ce4c20a6df6eea8240163bf41dec30e5e07f6ea40340942ba6166266369a32"
+  },
+  {
+   "disposition": "already-present",
+   "landed_path": "tools/_selftest_exit_report.py",
+   "landed_sha256": "7abce74077b68f9509982f7f111db120faf6048ceb806909e0c3e62fd476655e",
+   "source_path": "tools/_selftest_exit_report.py",
+   "source_sha256": "50ba7641dfc3dcdae1618dbfc7398ce8402f57574ed7279081d5e041be28abbd"
+  },
+  {
+   "disposition": "landed-adapted",
+   "landed_path": "tools/check_baseline_pin.py",
+   "landed_sha256": "db70ac15803b19af641fc34dedbbf1319d0f678c93a5043309cc03913d256919",
+   "source_path": "tools/check_baseline_pin.py",
+   "source_sha256": "3702fb354574ee887f1357e48b9f1557140ce465f2560824aca0098a75cbc744"
+  },
+  {
+   "disposition": "landed-adapted",
+   "landed_path": "tools/check_opf_declaration.py",
+   "landed_sha256": "02fbde95261429967ca74c05552a5fca87afe55bf8fe5037d38105c1d4c97eb5",
+   "source_path": "tools/check_opf_declaration.py",
+   "source_sha256": "bc536adb18d9e2c2bb4d1b9dd2bdc941a201d227614920ff83d7917dc0e2245b"
+  },
+  {
+   "decline_reason": "Its rules read the source project's AIQT adapter generators (tools/gen_hooks.py, tools/gen_agents.py, tools/gen_adapters.py and tools/gen_cursor.py) as their vocabulary, and none of them is in this repository, so the gate cannot evaluate here.",
+   "disposition": "declined",
+   "source_path": "tools/check_opf_enforce_platforms.py",
+   "source_sha256": "c1bfcfd49e043c76dabc8e5aa4a946e0dd0231899174cc581eebdecb8b627316"
+  },
+  {
+   "disposition": "landed-adapted",
+   "landed_path": "tools/check_opf_enforce_residuals.py",
+   "landed_sha256": "31d13622a9a9d6cf056d9bb7ac76de4d5b2399f921b8bde5d79bb30f34e68a2e",
+   "source_path": "tools/check_opf_enforce_residuals.py",
+   "source_sha256": "e77c1875e2792a260b893816e5798a0ed19fdc7c49668c2a14f2258ca40a37ae"
+  },
+  {
+   "decline_reason": "It needs a card stylesheet (card.css) that was not handed over and a renderer that this repository does not have, so it can be neither rendered nor checked here; the card image site/assets/opfiles-og.png is already in the tree.",
+   "disposition": "declined",
+   "source_path": "tools/og-cards/opfiles-og.html",
+   "source_sha256": "dc7eb73acfadf2638d7cb9b630ea67ece9cf9575567811b062d12d1cc71be2b2"
+  }
+ ],
+ "source_commit": "504f422d",
+ "source_commit_note": "The handover names its source commit, on the source repository's main branch, only by this 8-hex prefix; neither the handover nor the earlier draft of this record gives the full 40-hex id, so the prefix is recorded as given.",
+ "source_repository": "the maintainer's private guardrails repository"
+}

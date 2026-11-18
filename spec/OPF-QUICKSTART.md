@@ -1,0 +1,399 @@
+# OPFiles at a glance
+
+Date: 2026-10-24 (UTC). The two-minute version of the OPFiles standard; the full specification
+lives in OPF-SPEC.md beside this file.
+
+## What it is
+
+OPFiles is a neutral operational-files standard; AIQT layers its own requirements as one optional
+`[profiles.aiqt]` profile, and a project can adopt OPFiles without adopting AIQT.
+
+OPF standardizes a project's operational files: backlog, worklog, findings, decisions, blocks,
+handoffs, references. Machines write versioned TOML in one store; humans read generated views. The
+store is the source of truth; nothing hand-edits a generated file.
+
+## The three release artifacts
+
+- **`version.toml`**: the machine ledger of versions, dates, and release boundaries. It generates
+  the root `VERSION` file. Numbers and digests only, never prose.
+- **`worklog.toml`**: the detailed record, one entry per change, mutable-until-release and never
+  deleted. An unreleased entry may be corrected in place; a released entry is immutable; entries
+  are never rolled away or deleted. It generates `.working/WORKLOG.md`, and it survives every store
+  move byte for byte.
+- **`CHANGELOG.md`** (product repo root): the public story. Machine-drafted, human-curated
+  summaries of the worklog, each declaring the version range it covers
+  (`covers = "1.0.0..1.2.3"`). Old summaries roll up into range summaries; the details always
+  survive in the worklog, so re-rolling or re-wording is safe. Two gates protect it: coverage (the
+  ranges tile every released version, no gap, no overlap) and freeze (a published summary changes
+  only through a recorded re-publish).
+
+## The layout
+
+```
+.opf.toml             # pointer to wherever the store lives (default: right here)
+CHANGELOG.md          # public, curated
+VERSION               # generated from version.toml
+.working/
+  BACKLOG.md  TODO.md  FINDINGS.md  WORKLOG.md  ...   # generated views (UPPERCASE)
+  toml/
+    manifest.toml  counters.toml
+    version.toml  worklog.toml
+    backlog_item.index.toml  finding.index.toml  ...  # machine records (lowercase)
+```
+
+One rule of thumb carries the whole convention: lowercase files are machine source you change
+through tooling or review; UPPERCASE files are generated or published deliverables you read and
+never hand-edit (the curated `CHANGELOG.md` being the one you edit through its publish flow).
+
+## Where the store lives
+
+By default: `.working/` in your own repository, zero configuration, and your development process is
+public along with your code. The store is always a git repository, wherever it lives; an untracked
+store is a hard failure, not a warning.
+
+And it can live anywhere: `opf migrate --store <target>` moves the whole store, git history and
+worklog intact, to any git location (a private companion repository if you want a private process,
+a local-only directory you back up yourself, a per-project `.working/` in a monorepo, any path or
+git URL) while `CHANGELOG.md` and `VERSION` stay in your product repository, identical for every
+reader whatever you chose. The target is just a path or git URL; `github:owner/repo` and
+`gitlab:owner/repo` exist only as conveniences for creating a new remote.
+
+## Getting started
+
+1. Create `.working/toml/` by hand with `manifest.toml` declaring `standard = "opf"`,
+   `spec_version = "2.0.0"` and `homes = 2` in its `[opf]` table, plus `counters.toml` (with the
+   imported counter row of each enabled type beside its clean row), `version.toml`,
+   `worklog.toml`, the eleven baseline `<type>.index.toml` files (worklog is the
+   exempt ledger listed above, not an index), the eleven `<type>.imported.index.toml` leaves, and
+   `worklog.imported.toml`, and create the root `CHANGELOG.md` (a required public deliverable,
+   specification section 5.8), each holding exactly the starting contents under "Hand-start file
+   contents" below, never a zero-byte file; specification sections 4, 8 and 9 give the full file
+   baseline. This release's tooling grades every store under specification 1.2.0, so a 2.0.0 hand
+   start does not yet reach VALID: once those files are committed, its
+   `opf doctor --require-store` grades the store CANNOT-EVALUATE (exit 2), with C-COUNTERS
+   findings for the imported counter rows in `counters.toml`, C-CONTAINMENT findings for the
+   imported leaves as unregistered paths, and its three history checks (C-HISTORY-APPEND-ONLY,
+   C-HISTORY-COUNTERS and C-HISTORY-RESURRECTION) not evaluated, and its `opf render --write`
+   refuses the store; without the root `CHANGELOG.md` it adds a C-CHANGELOG-GATES finding. Until
+   the tooling implements 2.0.0, `opf init` in a new repository is the route that this release's
+   1.2.0 tooling grades VALID: commit the paths it creates (its root `CHANGELOG.md` included), run
+   `opf render --write`, and commit the rendered views. That VALID is this release's 1.2.0 grade,
+   not conformance to the specification. The reference tooling's `opf init` does not scaffold this
+   store yet: its scaffold still writes a 1.2.0 store, a format the specification's validation
+   refuses (specification section 9.2). Neither the specification nor the reference tooling
+   defines an upgrade of such a store into 2.0.0 (specification section 9.2; the reference
+   tooling's `opf upgrade` refuses every invocation), so what an adopter on this route must do
+   later to hold a conforming 2.0.0 store is not yet defined. A `[profiles.aiqt]` table is
+   optional and is ignored by base-only tooling.
+   Anything already sitting in `.working/` takes a per-file disposition in the adoption plan
+   (`opf adopt`; a fresh `opf init` refuses an existing `.working/` directory and an existing root
+   `CHANGELOG.md` or `VERSION`): keep it, migrate it for a later post-adoption import, move it, or
+   retire it; nothing is absorbed or overwritten silently. `opf init` writes the store under the
+   shared init operation lock (in the git directory's `opf-oplock/`, the lock adoption takes too),
+   holding the specification section 5.7 lease (`.working/toml/lease.toml`) while it writes, and
+   removes the lease and releases the lock before it reports success; while another OPF run holds
+   the lock, `opf init` refuses. A run that stopped partway can leave a partial `.working/` and
+   its lock record behind: once that `.working/` is moved aside, `opf init --recover` clears a
+   record whose holder is confirmed dead and that plain `opf init` left (recorded operation
+   `opf-init-plain`). It refuses a record whose holder may still be live, and it refuses and keeps
+   a record that another operation left, even when that holder is confirmed dead, the init an
+   `opf adopt` run performs (`opf-init`) included; the refusal names the next step.
+   `opf init` also refuses when the git
+   history of HEAD's first-parent line shows a prior store (specification section 8.2: counters
+   never restart, so record ids are never reissued). That scan follows the first-parent line only: a store that never reached a tree on
+   HEAD's first-parent line (for example one created and deleted on a side branch, merged or not)
+   is not detected. The scan also has a path limit: the scan checks the root's current path only
+   (a store committed under another directory, for example before a rename, is not detected).
+   `opf adopt` is the path for re-adopting any prior ancestry. When the scan does find a prior
+   store, the refusal also prints a `git checkout` command for restoring the store paths the
+   named commit holds, under `--no-replace-objects` (so a replacement ref cannot substitute
+   other bytes for that commit's) and `--literal-pathspecs`; when the store was deleted across
+   more than one commit, that commit holds only part of the store, so the first command is
+   labelled as restoring only the store paths its commit holds, and an additional command
+   restores the other named store path from its own commit. No printed command is ever
+   labelled as restoring the whole store: each restores the named paths as git checks them
+   out from that commit (the adopter's own attribute and filter configuration applies to a
+   checkout, so the written bytes need not equal the committed blob's). The scan treats a
+   first-level `.working` subdirectory as a machine store only when it directly holds
+   `manifest.toml` or `counters.toml`, in the restored tree or in the first-parent history
+   at or before the named commit; a store found either way is expected to hold both files,
+   and a subdirectory holding only other files or only deeper directories is neither
+   expected nor named; a structural file counts at its rename destination instead of its
+   old path only when the recorded destination blob id equals the source blob id (an exact
+   byte-identical move; git's similarity score of 100 alone does not prove that, since
+   reordered lines also score 100), no older first-parent record touched the destination,
+   and the renaming commit's tree holds no structural file under the source subdirectory,
+   so a machine subdirectory renamed whole with `git mv` is not reported as a PARTIAL
+   restore, while any other pairing git's similarity-based rename detection reports (for
+   example a store deleted beside a similar store created in the same commit, or a pairing
+   whose bytes were rearranged) reads as a deletion of its source, which stays expected,
+   fail-safe: the doubtful case is disclosed as missing, never silently absorbed. When the `.working`
+   tree a command restores lacks such an expected
+   structural file, the refusal says the restore is PARTIAL and names each missing path,
+   in words that state only that observed lack. A command is printed only when the
+   repository path and every restored path consist solely of the bare-command alphabet
+   (ASCII letters, digits, and `. / - _`); for any other value no command is printed at
+   all, and the refusal instead names the repository, commit, and paths in a rendered
+   form, for a restore performed by hand. Every value interpolated into init's output
+   (paths, rejected arguments, commit ids, exception text, and the JSON event lines
+   included) is rendered by one escaper with a fixed, narrow safe alphabet: ASCII
+   letters, digits, and `. / - _` render unchanged, and every other character (the
+   space included, both quote kinds, `!`, substitutions, separators, redirections,
+   glob characters, parentheses, braces, the tilde, the backslash, every control or
+   format character, and every non-ASCII character) is written as a backslash escape
+   of its code point. A rendered value is for reading and reconstruction by hand, not
+   for pasting into a shell, and readability is deliberately not a goal that widens
+   the alphabet: characters one shell merely groups are live syntax in another (bash
+   history expansion acts on `!` even inside double quotes; zsh glob qualifiers and
+   fish command substitution execute code). A failure of `opf init` itself is reported
+   the same way: one last-resort handler catches the exceptions the command lets
+   escape from init dispatch onward and prints only the rendered exception type and
+   text, so from that point `opf init` reports a rendered line rather than a Python
+   traceback, up to exactly three windows. Every fault raised while a helper module
+   is imported, a SyntaxError in an installed helper included, is mapped to a
+   rendered cannot-evaluate (exit 2) except a keyboard interrupt, as long as the
+   code opf loads neither ends the process itself nor replaces anything opf uses.
+   That code runs in opf's process with its privileges, at import, when called or
+   later (an atexit hook, a thread, a signal handler, a destructor, or a replaced
+   stream whose flush fails at shutdown, so that the process exits 120), and can do
+   both, so every exit status stated here holds only while it does neither. A
+   failure before init dispatch (a keyboard interrupt while a helper is imported,
+   or any interrupt before or during dispatch) is
+   outside that handler entirely; an interrupt landing in the boundary handler's own few
+   statements, after dispatch, escapes it; and an interrupt arriving after that
+   handler has returned, in the dispatcher's own return and exit statements, escapes
+   it too. Each of the three windows can surface as Python's own traceback or
+   signal. An interrupt in the boundary handler's own statements arrives while the
+   caught exception is still being handled, so its traceback can chain that
+   exception, with its raw, unrendered text; an interrupt after the handler has
+   returned interpolates no init value into its traceback; and a pre-dispatch
+   interrupt's traceback carries that interrupt's own text unrendered -- the stated
+   bootstrap residual. What the static route gate proves,
+   and the residual it cannot see (introspection reached at runtime through allowed
+   spellings, rendered-type constructions outside the scanned module, and the
+   sibling modules the init path calls into), is stated in the tooling docstrings.
+   What such code hands to init's own printed lines is covered at the output: every
+   value and exception text init renders or formats into a line, and every line it
+   writes, is first converted to an exact built-in string, as is each argument token
+   before the argument loop compares it, so a string subclass cannot change what is
+   rendered or printed; a JSON event line passes through unrendered only values that
+   are exactly integers, floats, booleans or null and renders any other value that is
+   not a list, tuple or mapping as text; the constructors format only registered
+   templates; and the refusal handler re-renders anything without its rendering proof. Output such code writes by itself, and in-process code that
+   rebinds init's own functions or forges the private rendering proof, are not
+   covered. The suite's runtime paste test is the primary guard. A repository whose history the scan cannot trust as-is (a shallow clone, any entry
+   at the legacy `.git/info/grafts` path, or a grafts path it cannot inspect) is refused as
+   cannot-evaluate rather than initialized.
+2. Commit the tree; confirm nothing under `.working/` is ignored.
+3. Work records-first: append a worklog entry per change; keep the backlog, findings, and decisions
+   in their typed files; regenerate views rather than editing them.
+4. At release: record the release and its worklog span in `version.toml`, draft the summary from
+   that span, curate it by hand, publish it into `CHANGELOG.md`, and record its freeze digest.
+5. If you later want the store elsewhere: `opf migrate --store <target>`. The generated public
+   deliverables (`CHANGELOG.md` and `VERSION`) are unchanged; migration re-points the committed
+   pointer, updates the manifest's recorded sync target, and records the move as a worklog entry.
+
+Scaffolding, validation, rendering, and migration tooling ships in later releases of the pack; until
+then the files are simple enough to keep by hand, and a conformance claim is self-asserted and says
+so. The specification defines one implementation model, with no conformance classes (OPF-SPEC
+section 16.1). Base 2.0.0, with `homes = 2`, is the only base version the specification
+defines, and the reference tooling does not yet implement it. The reference tooling's `opf doctor`
+grades a manifest declaring `spec_version = "2.0.0"` with `homes = 2` under its 1.2.0 rules, so its
+VALID verdict on such a store says nothing about conformance to the specification; `opf upgrade`
+and `opf record` refuse such a store. The reference tooling defines no store upgrade: `opf upgrade`
+refuses every invocation with exit 2, reading and writing nothing.
+
+The reference tooling's declaration (OPF-SPEC section 16.1) ships as one file, the declaration file
+`opf/tools/opf-declaration.toml`. The shipped-file digest is carried in
+`opf/tools/_opf_declaration.py` as `SHIPPED_DECLARATION_SHA256`. This release declares:
+
+```toml opf-declaration
+release = "1.0.5"
+spec_version = "1.2.0"
+homes = 1
+worklog = 1
+```
+
+Before `opf render`, `opf doctor`, `opf init`, `opf absorb`, `opf record`, or `opf adopt` resolves a
+store, the tooling checks the installed copy of that file against that digest and against its own
+build. A copy that is absent, unreadable, altered, malformed, or contradictory refuses the command
+with exit 2 before any store is resolved. `python3 -I -B opf/tools/opf.py --declaration` runs that
+check alone and prints the report: the declaration as shipped, both digests, and the runtime result.
+The runtime result is `pass` only where the run performed a store operation, `fail` where a run
+the check allowed performed none (so a read-only `opf doctor` or `--declaration` run reports
+`fail`), and `cannot_evaluate` where the check did not yield ok, which also exits 2.
+`opf doctor` appends the same report.
+
+The reference tooling requires Python 3.14 or newer.
+
+## Hand-start file contents
+
+Each file that step 1 of "Getting started" creates starts with exactly the bytes below: each
+machine-store TOML file holds every required key, no records and no releases, in the canonical
+form the reference tooling's emitter writes, and the root `CHANGELOG.md` holds the one heading line
+`opf init` writes. That emitter ends every file with one LF, so a zero-byte file is never in
+canonical form, and under specification section 5.7 `opf doctor` refuses a machine-store TOML file
+that is not in canonical form. The info string of each block names the files that start with it
+(`CHANGELOG.md` in the repository root, every other file in `.working/toml/`); `<type>`
+stands for each of the eleven baseline index types: `autonomous_decision`, `backlog_item`,
+`block`, `contribution`, `done`, `finding`, `handoff`, `maintainer_decision`,
+`pending_decision`, `preference_pattern` and `reference`. The manifest carries the required
+`[opf]` keys and one `[types.<name>]` table per baseline type; the optional tables of specification
+section 9 (`[store]`, `[modules]`, `[providers]`, `[views]`, `[deliverables]` and the rest) may be
+added. The zero counter rows apply only to a new store: a re-adoption seeds both counter series
+from its pinned ancestral snapshot and never zero-seeds prior ancestry (specification section
+8.2). As step 1 states, this release's tooling does not yet grade these files VALID.
+
+```toml opf-starter manifest.toml
+[opf]
+homes = 2
+import_status = "none"
+layout = "inline"
+posture = "required"
+spec_version = "2.0.0"
+standard = "opf"
+
+[types]
+
+[types.autonomous_decision]
+namespace = "AD"
+
+[types.backlog_item]
+namespace = "BI"
+
+[types.block]
+namespace = "BL"
+
+[types.contribution]
+namespace = "CN"
+
+[types.done]
+namespace = "DN"
+
+[types.finding]
+namespace = "FN"
+
+[types.handoff]
+namespace = "HO"
+
+[types.maintainer_decision]
+namespace = "MD"
+
+[types.pending_decision]
+namespace = "PD"
+
+[types.preference_pattern]
+namespace = "PP"
+
+[types.reference]
+namespace = "RF"
+
+[types.worklog]
+namespace = "WL"
+```
+
+```toml opf-starter counters.toml
+schema = 1
+
+[counters]
+AD = 0
+BI = 0
+BL = 0
+CN = 0
+DN = 0
+FN = 0
+HO = 0
+MD = 0
+PD = 0
+PP = 0
+RF = 0
+WL = 0
+"imported:AD" = 0
+"imported:BI" = 0
+"imported:BL" = 0
+"imported:CN" = 0
+"imported:DN" = 0
+"imported:FN" = 0
+"imported:HO" = 0
+"imported:MD" = 0
+"imported:PD" = 0
+"imported:PP" = 0
+"imported:RF" = 0
+"imported:WL" = 0
+```
+
+```toml opf-starter version.toml
+release = []
+schema = 1
+summary = []
+```
+
+```toml opf-starter worklog.toml worklog.imported.toml
+entry = []
+schema = 1
+```
+
+```toml opf-starter <type>.index.toml <type>.imported.index.toml
+record = []
+schema = 1
+```
+
+```markdown opf-starter CHANGELOG.md
+# Changelog
+```
+
+---
+
+# Flags: contradictions found and interpretive additions
+
+Contradictions between the base spec and the final decisions, resolved in the revision above:
+
+1. **Fixed topologies versus free location.** Base section 5 declared exactly two conforming
+   topologies; the final decisions make location a free configuration with named patterns as mere
+   examples. Revised section 5 supersedes the two-topology framing entirely.
+2. **"No pointer to go stale."** Base section 4.3 argued the design's virtue was having no pointer
+   at all; the final model introduces a committed pointer for the store repository while keeping
+   pointerless observation for the machine subdirectory. The rationale is reworded (section 4.5)
+   to scope the no-stale-pointer argument to the subdirectory and to state that the pointer, which
+   does declare a location, is validated at every resolution and fails closed.
+3. **Promotion out of scope versus first-class.** Base section 17 declared companion-store
+   promotion mechanics unstandardized; the final decisions make render-into-product-repo and
+   migration first-class. Sections 5.4, 5.8, and the revised residual in 17 replace that
+   disclosure with a narrower one (the product repository's own review discipline).
+4. **Path-root preamble.** The base resolved every path against the store repository root, which
+   contradicts public deliverables living in the product repository under a relocated store. The
+   preamble now names both roots.
+5. **Consistency contract versus the in-repo default.** Applying the behind/ahead refusal
+   literally to the in-repo default would refuse ordinary feature-branch work in the product
+   repository. Section 5.7 scopes the pull-current/refuse axis to a store with a dedicated sync
+   target and has the in-repo default inherit the product repository's branch-and-merge
+   discipline (lease plus clean-state check). This is an interpretation of the decision text, not
+   a literal transcription; flagged for architect ratification.
+
+Additions the decisions imply but do not literally specify, flagged for ratification:
+
+- The pointer filename `.opf.toml` and the uncommitted machine-local override `.opf.local.toml`
+  (needed so a committed pointer stays publishable while local-only and private targets resolve
+  per system).
+- `opf sync` named as the explicit surfaced pull/push step the contract's "pulled current" and
+  "sync back after" require.
+- Manifest additions: `[store] sync_target` (so the actual remote can be validated against a
+  recorded target before any push), `[providers.<name>]`, and `[unmanaged]`.
+- A lease mechanism sketch (`lease.toml`, synced to the target) plus its propagation-window
+  residual disclosure; the requirement is stated abstractly, the file is illustrative.
+- The verified-restore-path requirement on `opf migrate` (destination verified by clone-back and
+  digest reconciliation before the old location is retired).
+- Integrity-layer roster grew three checks: pointer and sync-target agreement, unmanaged-path
+  containment, and the tracked-store check now running against the resolved store.
+
+Superseded by the OPFiles identity fold (this revision):
+
+- The base discovery token is `opf`, carried in the `[opf]` base manifest table. This supersedes the
+  earlier `aiqt-opf` token; the interim `devprocess` token and `[devprocess]` table are retired by the
+  OPFiles rebrand.
+- The base storage field `layout_profile` is renamed to `layout`, reserving the word "profile" for
+  the base/profile mechanism (`[profiles.<name>]`).
+
+House-style conformance of both deliverables: no en or em dashes anywhere, Oxford -ize spellings,
+sentence-case headings, paths absolute or resolved against a named fixed root, and no
+adopter-internal repository, host, or system named (all examples synthetic).
