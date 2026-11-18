@@ -1,0 +1,9104 @@
+#!/usr/bin/env python3
+"""Homes contract, control-boundary and gitignore drift gate (writers still use legacy homes).
+
+Checks documented topology against the constructor authority. Text checks protect the base 2.0.0
+contract with homes 2, adoption and import included, not runtime conformance to it: the
+reference tooling does not yet implement 2.0.0. No store is mutated or required to install a
+block. The registered pins tile each registered section completely (the self-test proves the
+concatenation equality per section), so deleting any sentence in a tiled section turns the gate
+red. Residual: the default gate's pins are substring checks over normalized text, so added text,
+a pinned sentence neutralized by appended text included, stays green under the default entry
+alone; the self-test's per-section tiling equality turns red on any addition inside a tiled
+section. The live residuals are additions to untiled sections (for example 8.7, 9.1, 10, 10.1 to
+10.5 and 13), a default-gate run without the self-test, and an addition landed together with a
+matching registry edit, which review of registry changes catches. Sections split at every line
+that opens with "## " or "### " outside a fenced code block, so a heading-like line inside a
+fence (the "## Matches" line of the section 10.8 text report example, or the "## unreleased"
+line of the Appendix D changelog example) bounds nothing. The splitter reads a fence as
+CommonMark does at the top level: it opens on 0 to 3 spaces and three or more backticks (an info
+string holding no backtick) or tildes, and closes on 0 to 3 spaces, a run of the same character
+at least as long, and nothing after it but spaces or tabs; a fence never closed runs to the end
+of the text, so no heading below it bounds a section and a registered section there is missing
+(red). Residual: the splitter tracks no block quote, list item or HTML block, so it reads
+a fence line inside a list item as top level where the line opens with 0 to 3 spaces,
+and not where it follows a list marker or deeper indentation, and it reads a fence line
+inside an HTML block (a <pre> block or an HTML comment, for example) as a fence. Where that
+misreads a fence, the splitter masks a heading CommonMark reads (a lost or merged section)
+or, past the misread, splits at a heading-like line in a later fence, as it did before
+at every fence. The default entry fails closed on both: it is red where the splitter's
+section bounds differ from the level-2 and level-3 headings that the informative guard's
+block reading (_heading_bounds, below) finds outside any block quote or list item, and
+at every line that reading reports as possibly opening a raw HTML block, since it tracks
+no HTML block either (the live spec holds none, so this over-fires and fails closed). The
+two readers may agree and both be wrong at a line that block reading marks as not read, a
+line Markdown renderers read differently (a setext heading under a paragraph that opens like
+a link reference definition bounds nothing in either, for example), so the default entry is
+red at every such line as well (the live spec holds none either, so this over-fires and
+fails closed too). One addition is red under the default entry alone, through the retired-text
+check where the splitter's section bounds match that block reading and through that bounds check
+where they do not: a retired fragment (_RETIRED) restored in its own section, since base 2.0.0
+with homes 2 is the only base version (spec 4.2 and 9.2) and the base defines one implementation
+model (spec 16.1). Each fragment names a retired term (homes, legacy state, activation, a target
+contract, a pre-2.0.0 base version, an implementation class or its admission check, the
+legacy_fragment type, the imports reserved name, or the removed section 9.2 remedy adoption), so
+a sentence on another upgrade, such as a future 2.x or worklog-generation upgrade, matches none.
+A retired sentence is quoted, to say it no longer applies, in one exact form, a retired-text
+quotation block: a block quote whose first line is exactly "> Retired text, quoted and not in
+force:", with no line directly above it that opens with ">" after at most three spaces (a
+block-quote line, which the lead-in would continue), followed by at least one more line that
+opens with ">"; the block ends at the first line that does not open with ">". That first line
+must be rendered text: CommonMark opens a paragraph there (as the informative guard's block
+reading below finds it), so it is not in fenced or indented code or a lazy continuation of an
+earlier quote, and no line that the informative guard reports as raw HTML opens above it, since
+an HTML comment can hide it (the guard reports every line that may open an HTML block, a URI
+autolink included, so this over-fires and fails closed). The retired-text check and the pins
+read a section without these blocks, so a quotation neither restores a fragment nor stands in
+for a pin; each fails closed on text split around a block, which the retired-text check reads as
+joined and the pins read as apart (a pin holding the marker the pins read in a block's place is
+missing). The registry tiles a block through its own marker (_Q), an entry that holds the block
+as written and matches only one of its section's blocks, so the quoted text stays tiled, never
+satisfies a pin and is not keyword-linted. Everything else is operative text, which the
+retired-text check reads as written and with each line's leading block-quote markers removed,
+each once more with backslash escapes and hard line breaks read as CommonMark renders them (a
+backslash before ASCII punctuation as that character, a backslash ending a line as a line
+break), so a sentence wrapped across ">" lines is read joined: a different, indented or inline
+lead-in, a lead-in with text after it, a lead-in inside an earlier block quote (indented or
+not), in code or below a raw HTML block, a line after the block (which CommonMark may render
+inside the quote as a lazy continuation), and a sentence that negates the quotation are all
+read, and a fragment there, on one line, wrapped, broken by a backslash hard line break or
+holding a backslash escape, is red. Residual: the check removes no other markup, so a fragment
+broken by emphasis, a link, a character reference or inline HTML is not found there, and it
+reads a backslash in a code span as an escape too, an over-fire; and the check is
+section-scoped, so a fragment planted in another section is caught only by the self-test's
+tiling of a tiled section. Section 9.1 stays untiled and unpinned: its implementation-class
+paragraph is retired, since the base defines one implementation model (spec 16.1), so restoring
+one of its sentences there is red under the default entry; the rest of 9.1, and additions to it,
+stay unprotected. Appendix E stays untiled, and its sentences that state what section 16.1 makes
+of its probes are pinned sentence by sentence (_PINNED), so deleting or rewording a pinned
+sentence there turns the gate red; the rest of Appendix E, and additions to it, stay unprotected
+here. The quickstart's, the adoption guide's (opf/site/adopt.md) and the generated opfiles.ai
+disclosure, adopt and core-files pages' (opf/site/<page>/index.html) changed sentences, the
+record indexes' sentences held on the core-files page that carries them, are pinned the same way
+over tag-stripped text (_SURFACE), outside the keyword lint, and the self-test pins the
+registry's shape, so dropping a _SURFACE entry turns the self-test red; each sentence of the
+disclosure page's retired fresh-only item, the quickstart's retired conformance-class sentence,
+the record indexes' deleted importer-only legacy_fragment rows and counts, those three files'
+wording of the removed section 9.2 remedy adoption, and the disclosure page's and the record
+indexes' description of a store upgrade the reference tooling no longer defines, is searched
+over its whole file's normalized text and is red wherever it lands (_SURFACE_RETIRED). The rest
+of those files, and additions to them, stay unprotected, and beyond those registered retired
+sentences no retired-text check reads them, so any other deleted sentence restored there stays
+green.
+
+The default entry also runs a section 2 keyword lint over every registered pin: a pin without
+MUST, MUST NOT, SHOULD or MAY is red unless the registry marks it descriptive (_D), and a
+retired-text quotation entry (_Q) is not linted, since quoted text is not in force and the entry
+matches only a quotation block. Residual:
+the lint reads the registry marker, not the meaning, so a requirement wrongly marked descriptive
+stays green; review of registry changes catches that.
+
+The default entry also guards the informative sections: a heading whose title or body holds
+"(informative)" or the declaration ("This appendix is informative", or section or subsection,
+as Appendix E does), or whose title sets the word off as a label (below), and every
+descendant heading beneath it at any level, is red where its title or its body carries an
+uppercase requirement keyword (MUST, SHALL, REQUIRED, SHOULD, MAY, RECOMMENDED, OPTIONAL)
+outside the one exempt quotation form, a code span holding exactly the keyword preceded by
+"the keyword" or "the term"; a keyword in any other form there, a bare code span or a fenced
+block included, is a finding (the guard fails closed). A keyword is
+read where no letter, digit or underscore adjoins it, or where an underscore run adjoins it with
+no letter or digit beyond the run, as CommonMark requires before an underscore can open or close
+emphasis: _MUST_ and __MUST__ are read, MUST_DO and x_MUST_y (rendered as written) are not, and
+an unpaired run (_MUST alone) is read, an over-fire. It is read again with character references
+decoded, and in two normalized forms. Joined: plain link and image targets removed (below), each
+underscore run CommonMark could read as emphasis removed, and each emphasis, strikethrough,
+code-span, bracket and backslash character removed. Kept: the same underscore runs and each
+emphasis, strikethrough and code-span character removed, with brackets, targets and backslashes
+kept, since a "](" or "][" that opens no link shows its text. Each normalized form then has its
+character references decoded, its invisible characters dropped (format, nonspacing and enclosing
+marks, unassigned, private-use, surrogate, control characters other than whitespace, and the
+Hangul fillers) and its compatibility forms folded (NFKC), once as it stands and once with each
+superscript, subscript or circled form read as a space, since a footnote mark ends a word. So
+MU**ST**, [MU](/u)ST, [MU][r]ST, x](M**U**ST), [x][M**U**ST], &#77;UST, M&shy;UST, MU with a
+combining grapheme joiner before ST, MUST followed by a superscript 1, and fullwidth or
+mathematical MUST are read too; a removed character that renders visibly (MU!ST) over-fires.
+An informative marker is read the same way, in plain text alone, in any ASCII letter case
+and with any whitespace run, a line break included, read as one space; a URI autolink is
+read once more as its URI, the text CommonMark shows for it. A heading title and a body are
+each read for both marker forms: "(informative)" (spaces allowed inside the parentheses)
+and the declaration. So a title that states the declaration (## This section is
+informative, its setext form, ## Z: this section is informative) and a body that holds
+"(informative)" mark their sections. A title is also read for the word set off as a label:
+"informative" between two edges, an edge being the title's start or end or a character
+other than a letter, digit, underscore or whitespace, with only whitespace between the word
+and each edge (Z - Informative, Informative: Z, and "(informative)" as one case). The word
+among other words of a title (Informative references, Z (see the informative note)) marks
+nothing, and a body is not read for the label. A body is read as written and as the text of
+each of its paragraphs with the container markers of its lines removed (a block quote's ">"
+on every line, nested ones included); every paragraph is read, none is skipped, so a
+near-duplicate of a quoted declaration elsewhere in its section skips nothing. So Z
+(&#105;nformative), Z (Informative), Z (informa**tive**) and a declaration split across
+lines or across block-quoted lines mark their sections; reading more forms only marks more
+sections informative, so the guard scans more. Each marker is read wherever it stands, so a
+sentence that denies the declaration (Nothing in this section is informative.), a body that
+names another section's marker (see Appendix E (informative)), a marker inside an HTML
+attribute or comment read as text, or one inside a fenced or indented code block (the body
+is also read as written) marks its section informative too, over-fires. The guard reads no
+inline HTML tag and no character reference it does not decode; it finds every text that
+could show a marker from its letters, and holds that text to plain prose. A candidate's
+plain text is read for the markers above and nothing more, so a candidate that holds no
+marker marks nothing (a title Z (informed by the informative note) is a candidate and marks
+nothing). A heading title anywhere, or any paragraph in any section, block-quoted or not,
+is a declaration candidate where the letters of "informative" can be assembled, in order,
+from the letter runs of its normalized text: character references decoded, invisible
+characters dropped (as above, the Hangul fillers included), compatibility forms folded
+(NFKC) and ASCII letters lowercased, in that order, before any letter is compared. A letter
+run is a run of characters Python reads as letters or as numerics other than decimal
+digits, and each non-ASCII character left in a run after that normalization stands for any
+letter of the word (a non-ASCII letter, or a numeric that is no decimal digit, such as
+U+3007): a run inside the word used whole, runs between the pieces skipped, and the first
+and last pieces a suffix and a prefix of their runs. The wildcard sees only what
+normalization leaves: a compatibility form NFKC folds to ASCII letters is compared as those
+letters, the letters it shows (fullwidth A as "a"; the st ligature U+FB06 as "st", so
+"informa", U+FB06, "ive" spells "informastive" and is no candidate), and a dropped
+invisible character stands for no letter and splits no run, so eleven fullwidth A's, eleven
+Hangul fillers or eleven U+FB06 ligatures make no candidate. Candidacy and the declaration
+reader share one case fold (_fold_case): ASCII letters lowercased and every other character
+kept, so it maps each character to one and never expands one. No non-ASCII letter is
+folded, since a Unicode fold can expand one out of the reader's view (str.casefold reads
+the dotted capital I, U+0130, as "i" and a combining dot, so a plain declaration spelled
+with it was neither read nor refused); a non-ASCII letter instead stands for any letter in
+candidacy and is refused inside a candidate (below), so no fold is needed to find or refuse
+it. A candidate is held to plain prose: every character of it must be an ASCII
+letter, an ASCII digit, a space or the line feed joining a paragraph's lines, or one of
+. , ; : ' " ( ) - ? ! / (sentence punctuation, the marker's own parentheses, the hyphen of
+compound words, the slash of either/or phrasing; a bare "!" is plain, and the image form
+"![" is refused through its "["). Every other character in a candidate is a finding naming
+the character and its code point, at its first occurrence, whatever the section's
+classification and however it would render: every markup lead-in ("<" and ">", "[" and "]",
+the backtick, "*", "_", "~", a backslash, "&"), every control or format character (it
+renders invisibly or not at all, so it could split or hide the word unseen), every other
+ASCII character (a "#" or "="), and every non-ASCII character, letters included (another
+script's punctuation, space, digits or letters, a symbol): a letter a Unicode case fold
+expands (U+0130, sharp s U+00DF, a ligature such as U+FB01), one a reader takes for an ASCII
+letter (dotless i U+0131, an accented letter, a look-alike letter of another script such as
+a Cyrillic i), and the Hangul fillers (U+115F, U+1160, U+3164, U+FFA0), letters that render
+as blank space and that the reading forms drop, so one could stand unseen for the space
+between two words of the declaration. An allowlist decides that, not a list of markup forms,
+so no markup form is left to enumerate: every inline construct that can hide, replace or
+reorder text (an HTML tag or comment, a link, an image, an autolink, a code span, emphasis
+or strikethrough, a backslash escape, a character reference) opens with a character outside
+the set (each of QA rounds 4 to 8 found one more form a per-form list missed; the allowlist
+refuses the class at the character), with one exception the guard refuses by shape: a
+GitHub emoji shortcode (infor:m:ative shows an emoji for :m:) opens with an allowed colon,
+so a candidate also refuses each colon, one or more ASCII letters, digits or hyphens, and a
+colon, as an emoji shortcode (a "+" or "_" in a shortcode name is refused as a character
+already); a time or ratio of that shape (10:30:00) in a candidate is refused too, an
+over-fire. Every other construct that opens with an allowed character hides no text: a GFM
+extended autolink (www.example.org) shows its text as written, a list marker, setext
+underline or thematic break is block structure the block scan reads, and a two-space hard
+break is spaces and a line feed. A refused candidate is never silently skipped: each
+refused character is a finding. Its plain reading forms are still read over the text, so it
+can also mark its section informative, which only scans more; the refusal, not the reading,
+is what the gate relies on. Named over-fires of the refusal, each in a candidate alone:
+markup whose text CommonMark shows is refused even though the reading forms read it
+([informa](/u)tive and informa**tive** are still read as declarations and are findings too,
+as are a code span, a backslash, a decoded character reference and a plain ampersand, AT&T);
+plain text shaped like markup (informa<b holding no tag) is refused; a visible character
+outside the set (informa=tive, a superscript footnote mark, a non-ASCII space or digit, an
+accented letter in a name or loanword) is refused; ordinary words that never show the word
+can assemble it from pieces (in / form / at / i / v / e), so a paragraph holding no
+declaration can be held to plain prose; and since each non-ASCII letter stands for any
+letter of the word, text in another script is a candidate wherever its letters can assemble
+the word (any run of eleven non-ASCII letters left after normalization does), so a paragraph or
+heading title written in another script is refused, each of its distinct letters named. A
+candidate heading title is held to the same set by the same scan, each finding naming the title
+line holding the character, since a refused character could hide an "(informative)" marker. A
+heading title or paragraph that is no candidate is not refused for any character, however it
+renders: its letter runs hold no assembly of the word, so no removal or hiding of characters
+leaves the word shown; what a renderer adds beyond the source text is a residual, below.
+An informative section also fails closed, with a finding that names the form and asks for
+plain text or a move out of the section, on inline syntax it does not read: a "](" or "]["
+that opens no plain target (a destination with no space, parenthesis, quote, angle bracket
+or backslash, optionally a title in double or single quotes holding no quote, parenthesis or
+backslash, spaces and angle brackets allowed; or a reference label with no bracket or
+backslash), so nested or escaped parentheses and quoted parentheses are findings; a "<"
+followed by a letter, "/", "!" or "?" other than a URI autolink, since inline HTML can hide
+or reorder text, in a code span or fenced block too; and a character reference the guard
+does not decode, in a code span or fenced block too. That finding names a "<" that may open
+inline HTML, since plain text of that shape (a<b, a code span holding Vec<u8>, an email
+autolink) is refused too, an over-fire. Residuals: a keyword spelt with look-alike letters
+of another script (Cyrillic or Greek) is not read (an informative marker or declaration
+spelt so is not read either, but its text is a candidate and the look-alike letter is
+refused); a keyword adjoined by a letter or digit in another compatibility form is read as
+one word with it; a declaration spelled without the letters "informative" in their order,
+each non-ASCII letter counted as any letter, is no candidate, is not found and marks
+nothing, however it renders: one spelt in other words, one with a non-letter or another
+ASCII letter standing for a letter of the word (an inverted exclamation mark, U+00A1, or a
+digit 1 for the i), and one whose letters a renderer reorders (text written reversed under a
+direction-changing tag, style or override character); a renderer can generate text that
+stands in no letter run of the source, so a text that is no candidate can still show a
+declaration or a keyword on the page (an iframe srcdoc attribute a browser decodes a second
+time, a CSS content rule, an image of text; the raw-HTML-block and candidate refusals catch
+such carriers only where they open a block or stand in a candidate); and a heading that
+renders invisibly or empty (inline HTML in a non-candidate title, a comment as the whole
+title, an empty ATX heading) bounds a section here while a reader sees no boundary, so text
+below it can read on the page as part of the informative section above it; review catches
+those.
+
+Headings are read by CommonMark's block algorithm over block quotes and list items; lines end
+at LF, CR LF or CR only, and a tab advances to the next multiple of 4 columns. A block quote
+takes 0 to 3 columns, ">" and one space after it. A list item's marker is "-", "+", "*", or 1
+to 9 ASCII digits 0-9 then "." or ")"; its content column is the marker's end plus the 1 to 4
+columns after it (plus one where 5 or more follow or the item opens blank), and a list item
+interrupts a paragraph only where it holds content and, when ordered, starts at 1, so any other
+list-shaped line continues the paragraph, into a setext heading included. An ATX heading takes
+0 to 3 columns of indentation and a space or tab after its hashes; a setext heading underlines a
+paragraph in its own container, never a lazy line; a line of 4 or more columns past its
+container is indented code or a paragraph continuation, never a heading. A fenced line, in any
+container, never bounds a section: a fence opens on 0 to 3 columns and three or more tildes, or
+three or more backticks whose info string holds no backtick, and closes on 0 to 3 columns, a
+run of the opening character at least as long, and nothing after it but spaces or tabs, or
+where its container ends. A heading in no container bounds a section; one inside a list item or
+block quote bounds nothing but marks one informative where its title says so. Anywhere in the
+document the guard fails closed, with a finding that names the line and the form, where it reads
+no further or where Markdown renderers differ: a raw HTML block (read broadly: any line whose
+content opens with "<" and a letter, "/", "!" or "?", outside fenced and indented code), a
+paragraph that opens like a link reference definition, a lazy continuation line at 4 or more
+columns that would otherwise open a block, a ">" at 4 or more columns where a block quote is
+open, a list marker with a decimal digit other than ASCII 0-9, and a non-blank line inside or
+opening a block quote or list item with a tab before its content (fenced lines included, an
+over-fire). The gate is red where Appendix E loses that marking.
+"""
+import sys
+
+if tuple(sys.version_info[:2]) < (3, 14):
+    import os
+    try:
+        sys.stderr.write(
+            "error: check_opf_homes.py requires Python 3.14 or newer; this is Python %d.%d.%d (%s). "
+            "Nothing was run (cannot evaluate).\n"
+            % (tuple(sys.version_info[:3]) + (sys.executable or "unknown interpreter",)))
+        sys.stderr.flush()
+    except BaseException:
+        pass
+    os._exit(2)
+
+import html
+import re
+import tempfile
+import unicodedata
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _opf_store as store  # noqa: E402
+
+SPEC = Path(__file__).resolve().parents[1] / "spec" / "OPF-SPEC.md"
+QUICKSTART = SPEC.parent / "OPF-QUICKSTART.md"
+# The opfiles.ai pages are generated (tools/gen_draft_site.py, from opf/site/draft-src/), each an
+# index.html under its page directory. The core-files page also carries the record indexes that the
+# retired record-indexes page described, so that page's pins and retired sentences are held there.
+DISCLOSURE = SPEC.parents[1] / "site" / "disclosure" / "index.html"
+ADOPT_PAGE = SPEC.parents[1] / "site" / "adopt" / "index.html"
+ADOPT_GUIDE = SPEC.parents[1] / "site" / "adopt.md"
+CORE_FILES = SPEC.parents[1] / "site" / "core-files" / "index.html"
+
+
+class _Descriptive(str):
+    """Pin marker: descriptive by intent, so the section 2 keyword lint accepts it without MUST,
+    MUST NOT, SHOULD or MAY. It covers definitions, format, layout and field descriptions,
+    examples, rationale, status and activation notes, disclosed residuals, restatements of a
+    keyword requirement stated elsewhere, and enumerated items whose obligation a keyword lead-in
+    carries. A marked pin that carries a keyword is itself a finding."""
+    __slots__ = ()
+
+
+_D = _Descriptive
+
+
+class _Quoted(str):
+    """Pin marker: a retired-text quotation block (module docstring) as written, normalized like
+    a pin, its lead-in and ">" markers included. The pin check matches it against the section's
+    quotation blocks alone, never against operative text, so it is missing wherever its block is
+    not read as a quotation, and no other pin reads the quoted text. Tiling reads it like any pin,
+    so the quoted text stays tiled. The section 2 keyword lint skips it: quoted text is not in
+    force."""
+    __slots__ = ()
+
+
+_Q = _Quoted
+# Section 2 keywords, case-sensitive and whole-word: a lowercase "must" is not a keyword.
+_KEYWORD = re.compile(r"\b(?:MUST|SHOULD|MAY)\b")
+# Scope each wording check to its operative section, never a whole-document negative scan.
+# Ordered whole-section tiling: each tuple, space-joined, equals exactly its section's
+# normalized body (the self-test proves that equality), so deleting any sentence in a
+# registered section breaks a pin and turns the gate red. Every pin is also keyword-linted
+# (keyword_findings): _D marks a descriptive pin.
+_CONTRACT = {
+    "0": (
+        _D('# OPFiles: the operational-files standard Formal name: AIQT Development Operational Standard.'),
+        _D('Public brand: OPFiles (opfiles.ai).'),
+        _D('Base discovery token: opf.'),
+        _D('Status: this specification is a draft.'),
+        _D("The reference tooling's status in this build is the generated status note that follows, also published in opf/README.md, on opfiles.ai, and in opf/site/llms.txt (generated from VERB_STATUS in opf/tools/opf.py):"),
+        _D('Reference CLI status. Available: init, render, doctor, absorb. Partial: record (create, transition, done-with-receipt, and worklog-append; receipt-repair exits 2), adopt (plan, approve, reconcile, and status; apply and complete exit 2). In progress: upgrade, import, migrate, sync; each exits 2 in this build.'),
+        _D('Date: 2026-10-24 (UTC).'),
+        _D('OPFiles is a neutral, self-contained operational-files standard published under the Apache License 2.0 (except vendored third-party material, which remains under its own terms).'),
+        _D('AIQT and AIQT Guardrails are trademarks (registration pending); AIQT is a brand, not a legal entity, and the standard is authored and maintained by its lead maintainer.'),
+        _D('A project conforms to OPFiles with this specification and its own checks; the AIQT Guardrails pack is the reference enforcement suite and a consumer of the standard, not its definition.'),
+        _D('AIQT-specific requirements are layered as one optional profile, [profiles.aiqt] (section 9), and a base adopter need not adopt AIQT.'),
+        _D('Unless a path is written from /, a path under .working/ in this document is relative to the root of the repository that tracks the store (the "store repository"), and every other path (the pointer, CHANGELOG.md, ROADMAP.md, VERSION) is relative to the root of the product repository.'),
+        _D('The two roots coincide under the default configuration (section 4.1).'),
+    ),
+    "1": (
+        _D("OPF (operational files) standardizes how a project keeps its operational records: the backlog, the completion receipts, the worklog, findings, decisions, blocks, handoffs, and references that a records-first operational discipline requires (the discipline AIQT's records-first rule is one implementation of)."),
+        _D('It defines one machine-readable store of versioned TOML under .working/toml/, a set of generated human-readable views above it, and three release artifacts (a version ledger, a durable worklog, and a curated public changelog) with the gates that keep all of them honest.'),
+        _D('The store is always a git repository, wherever it lives.'),
+        _D('Its location is a free, migratable configuration resolved through a committed pointer, never an architectural commitment: it defaults to .working/ in the product repository and can be relocated at any time to any location a target can name, with history and the durable worklog preserved (section 5).'),
+        _D('OPF specifies formats, layout, naming, lifecycle, and enforcement posture, and names the standard command vocabulary of the reference tooling (opf init, opf adopt, opf import, opf doctor, opf render, opf migrate, opf sync, opf upgrade, opf absorb, opf record, opf report).'),
+        _D('It does not specify tooling internals; a reference implementation follows in later releases of the AIQT Guardrails reference suite.'),
+        _D('Every mode of opf report is read-only and report-only (section 10.8), so the verb adds no conformance requirement for a store.'),
+        _D('A project can conform to this specification with hand-maintained files and its own checks.'),
+    ),
+    "2": (
+        'MUST, MUST NOT, SHOULD, and MAY are used as in common standards practice: MUST is an absolute requirement of conformance, SHOULD is a strong recommendation departed from only for recorded reason, MAY is genuinely optional.',
+        _D('Statements without these keywords are descriptive.'),
+    ),
+    "2.1": (
+        _D('This specification fixes one meaning, the planning sense, for each planning term below; the evidence, resolution, delivery, and git-transport senses of "bundle" elsewhere in this specification (sections 4.2, 5.6, 8, 11, and 14) are untouched.'),
+        'A generated view declared in the view map (section 9) MUST NOT describe itself with a fixed term outside its meaning here: in particular, a view MUST NOT call itself a roadmap unless it is the future-facing list of section 10.7, and MUST NOT call itself a pipeline unless it renders per-lane ordered next entries as section 10.6 defines them.',
+        _D('The same rule binds every other generated planning surface of a conforming store, a command surface included.'),
+        _D('The whole rule, for declared views and for every other surface alike, is a requirement enforced by review rather than by the doctor (section 17).'),
+        _D('- **Backlog.** The full set of open items: the clean backlog_item records not in an unqualified terminal state (section 8.5).'),
+        _D('TODO.md and BACKLOG.md are composed views over it (section 10.1).'),
+        _D('- **Lane.** A long-lived workstream an adopter runs work through; "workstream" survives only as this gloss.'),
+        _D('Lane identity and lane operation, the keep-ahead depth included, belong to a lanes standard the adopter follows, if any, a separate document this specification takes as given: this specification fixes no lane ID scheme and defines no lane record type, and section 10.6 requires of a lane name only that it is a non-empty single line, unique within its ledger.'),
+        _D('- **Bundle.** A named, ordered group of backlog items delivered as one reviewed change.'),
+        _D('Bundles live as rows of the pipeline control ledger (section 10.6), never as records.'),
+        _D('- **Pipeline.** Per lane, the ordered list of the next bundle or single item to work on, then the following ones.'),
+        _D("Entries are drawn from the backlog, the stored order in the pipeline control ledger is the authority, and the head entry is the lane's next (section 10.6)."),
+        _D('PIPELINE.md is its deterministic render.'),
+        _D('- **Milestone.** A roadmap entry that a later release, and the changelog entry accounting for that release, discharge.'),
+        _D('Milestones live as rows of the roadmap ledger (section 10.7), never as records.'),
+        _D('- **Roadmap.** The future-facing direction: the milestones and themes ahead, ordered by intent, never by work sequence.'),
+        _D('ROADMAP.md is its generated render at the product repository root (section 10.7).'),
+        '- **Queue.** Retired as a synonym of pipeline: this specification does not use it, and a generated planning surface MUST NOT describe a pipeline as a queue.',
+        _D('Roadmap and pipeline both name generated artifacts rendered from machine sources.'),
+        _D('No definition admits a hand-edited ROADMAP.md or PIPELINE.md: the one optional curated preamble of section 10.7 is the only curated seam, and it is a block above the generated header, bounded by the fixed delimiter line as section 10.7 delimits it, never an edit of the generated body.'),
+    ),
+    "4.2": (
+        _D('Base spec 2.0.0, with [opf].homes = 2, is the only base version this specification defines.'),
+        _D('It includes adoption, the imported series and import (sections 8, 11 and 14).'),
+        'A writer MUST NOT accept a format that its doctor does not grade deterministically.',
+        _D('The reference tooling does not yet implement base 2.0.0 (section 16.1).'),
+        _D('<product repository root>/ .opf.toml # committed store pointer (section 4.3) CHANGELOG.md # curated public changelog (deliverable; section 6.3) ROADMAP.md # roadmap render, optional preamble (deliverable; section 10.7) VERSION # deterministic render from version.toml (deliverable) .working/ # the store; present here under the default in-repo configuration <store repository root>/ # the product repository itself, by default .working/ README.md # ownership and regeneration note (deliverable) WORKLOG.md # deterministic render of worklog.toml VERSION.md # optional human view of version.toml TODO.md BACKLOG.md PIPELINE.md DONE.md FINDINGS.md DECISIONS.md BLOCKS.md HANDOFF.md REFERENCES.md CONTRIBUTIONS.md CARRIED.md # optional profile-dependent area view (section 10.8) DECISIONS.toml # machine projection (deterministic; section 10.5) <TYPE>-INDEX.md ...'),
+        _D('# optional 1:1 index mirrors (section 10.1) toml/ manifest.toml # store manifest and discovery marker (section 9) counters.toml # per-namespace ID high-water marks (section 8.2) version.toml # version and release ledger (section 6.1) pipeline.toml # pipeline control ledger (section 10.6) roadmap.toml # roadmap ledger (section 10.7) worklog.toml # durable operational record (section 6.2) <type>.imported.index.toml # imported records per enabled type (section 8.3) worklog.imported.toml # imported worklog, on its own ID number line lease.toml # single-writer lease, present only while held (section 5.7) init.toml # bootstrap provenance of a coupled init (section 9), if present backlog_item.index.toml # typed record files (section 8) done.index.toml finding.index.toml pending_decision.index.toml autonomous_decision.index.toml block.index.toml handoff.index.toml reference.index.toml contribution.index.toml maintainer_decision.index.toml preference_pattern.index.toml archive/ 2026/ archive.toml # enumerates rotated IDs and spans (section 12) done.index.toml worklog.toml archive/ moved/<source-path> # default Move destinations (section 14.2) adoption/<run-id>/ # retire preimages and archived occupying sources (section 14.2) imported/<kind>/<run-id>/ # durable originals, inventories, approvals and receipts (section 14) staging/<kind>/<run-id>/ # short-lived staging, evidence-gated reclamation (section 14.1) journals/<kind>/ # reserved recovery state, never a view or ordinary op target journal/ # crash-durable frames runs/<run-id>/transaction.toml # gate-readable projections allocations/<run-id>.toml # irrevocable ID reservations (section 8.2) When the store has been relocated, the .working/ tree lives at the store repository root exactly as drawn, and the product repository keeps only the pointer and the public deliverables.'),
+        _D('The per-record layout (section 9) additionally places one file per record under .working/toml/<type>/, with each <type>.index.toml acting as the registry.'),
+        _D('The imported files are registered managed leaves beside the clean-series files, using the same enabled-type roster; worklog uses worklog.imported.toml instead of an imported index.'),
+        'Their manifest, emitter, upgrade and containment registrations MUST agree.',
+        'opf init MUST create the imported leaves for every enabled type, create-only and empty; enabling a further type or module later MUST create its imported leaf in the same act as its clean index.',
+        'opf init MUST write at zero the imported counter row of each type that has an imported leaf (section 8.2).',
+        "Enabling a further type or module MUST also add its imported counter row in the same act as its clean index, at zero only where no imported ancestry exists and otherwise at the largest <n> of that namespace's imported:<NS>-<n> IDs.",
+        _D('Both counter-row duties follow from the section 8.2 rule that requires the imported counter rows.'),
+        _D('They are machine records, distinct from the original-source evidence under .working/imported/.'),
+        'The first imported-series release MUST keep these files inline in either store layout and MUST NOT provide views over imported data; assistants read the TOML.',
+        _D('Historical releases remain in version.toml (section 14.3); there is no version.imported.toml or CHANGELOG.toml.'),
+        _D('The reserved children archive/, imported/, staging/, and journals/ are store-tree control area, neither machine-store records nor adopter content; they relocate with the machine store.'),
+        'OPF MUST NOT write state outside .working/ except the operation-lock and coupled-init substrate in the git common directory, and MUST NOT write any under .aiqt/.',
+        'The record archive MUST remain inside the discovered machine store, and the example name toml MUST NOT be hardcoded.',
+        _D('The closed kind vocabulary is import, ingest, adoption, layout, preview, record.'),
+        _D('Import and ingest run IDs use imp-<YYYYMMDD>T<HHMMSS>Z-<hash16>; adoption uses adopt- with that suffix.'),
+        _D('Layout and preview reserve layout- and preview- with the same suffix.'),
+        _D('Record reserves record- with the same suffix; it is a journal-only kind that names just its journal home, journals/record/, never a staging or imported home.'),
+        _D('Here hash16 is 16 lowercase hexadecimal characters; constructors check lexical shape, not calendar validity or filesystem safety.'),
+        'File operands MUST use canonical contained relative paths: no empty, dot, or parent components, absolute/drive/backslash forms, control characters, or line separators.',
+        'Init, and any upgrade, MUST render this managed block into .working/.gitignore from the topology constants: gitignore # >>> opf-managed >>> /journals/ /staging/ # <<< opf-managed <<< Durable imported/ and archive/ evidence MUST stay tracked.',
+        'Installation MUST inspect effective ignore rules and the index first; tracked staging or journals MUST require an explicit reviewed untracking change, never silent index mutation.',
+        _D('The block travels with the store and joins the indexed-ignore candidate set.'),
+        'At homes 2 an implementation MUST register .working/.gitignore by its exact path as a managed control file that containment recognizes as OPF control area; containment never reads it for drift, and the doctor does not yet grade drift of its managed block.',
+        _D('Gitignore is not access control: git add -f can stage ignored state.'),
+        'Journals are machine-local even after completion; a clone without them cannot recover those transactions, and requested recovery MUST fail closed on a missing journal.',
+        _D('Containment and doctor exclude journals and make no recovery claim, with one exception: the doctor reads the reservations under journals/<kind>/allocations/ read-only, and only for the section 8.2 counter checks; any other journal content, a rogue file included, is outside their coverage.'),
+        _D("A store whose adoption home .working/imported/adoption/ exists has started an adoption and receives the adoption grading: each admitted run's recorded paths are registered, the non-occupying retire, move and migrate rows of its plan (and only those) are its frozen sources, and a frozen source whose live bytes still match its plan digest is graded as bounded adoption state while a drifted or vanished source is a containment failure at required (section 11)."),
+        _D('At homes 2 the doctor does not yet grade that adoption home: it reports a store holding it as cannot-evaluate until adoption grading lands there.'),
+        "The doctor MUST decide that a run is admitted, and that its retirement is recorded, from the committed adoption evidence alone, the bundle under .working/imported/adoption/<run-id>/ and the run archive, which travel with every clone, and MUST NOT read the machine-local journal, so a clone without journals grades a run's admission and recorded retirement exactly as the original store does.",
+        _D("That parity covers adoption admission and recorded retirement alone: the doctor's read of the section 8.2 reservations under journals/<kind>/allocations/ makes a clone's counter grading differ from the original store's, a residual section 17 discloses."),
+        _D("That evidence check verifies internal consistency: the sealed inventories, plan and approval bound to the run id of the directory they sit in, and the listed bundle, archive and Move-root bytes at their recorded digests (a Move-root row counts only as a move destination the run's own plan records)."),
+        "The apply side MUST write each adoption inventory's [adoption] identity table, whose keys are exactly run_id, phase and plan_digest as the bundle layout below defines, when it derives the inventory, and the doctor MUST refuse an adoption inventory whose identity is missing or malformed, names another run, names a phase other than the one its file name carries, or names a plan digest other than the run's proven plan's own (the frozen plan that re-seals its own bytes and that its approval binds), so an inventory copied from another run or phase, an empty retirement record included, never evaluates as this run's record.",
+        "The apply side's bundle verifier, through which opf adopt status reports a run, MUST hold every adoption inventory to that bar against its bundle's own plan.toml: it MUST yield cannot-evaluate for an inventory that names a phase other than the one its file name carries or a plan digest other than that plan's, and for every inventory of a bundle whose plan.toml is absent, unreadable or not canonical, names another run, or carries a plan_digest that does not re-seal its own bytes, an empty base inventory included (a bundle with no inventory is its own named finding).",
+        "It MUST check that plan's inventory row against the same bytes its seal was proven from.",
+        _D("It does not check the approval's binding, which the doctor's admission checks."),
+        _D("A retirement is recorded only by a sealed retirement inventory in the shape the retirement-phase transaction derives from its own create ops: one row per move row of the plan, occupying or not, whose recorded Move destination (its move-file destination) lies beneath .working/archive/moved/, naming that destination at the moved source's plan digest, and nothing else, so the record of a plan without such a move row lists no files."),
+        _D("Those are the bytes the relocation writes: the frozen live source of a non-occupying move, and for an occupying move the committed archive copy the base inventory claims at that same digest."),
+        _D("Retire and migrate preimages are preserved at apply and claimed by the base inventory, never re-listed by the retirement record; that shape also binds the record to its phase, because a base inventory copied to the retirement name lists at least the plan and the approval, which are never Move destinations."),
+        "A retirement row whose path a base inventory row also names is a path claimed twice and MUST yield cannot-evaluate; a listed destination that does not hold its recorded bytes live MUST yield cannot-evaluate, and before a recorded retirement a file at a plan Move destination beneath .working/archive/moved/, occupying or not, MUST be a containment finding, since only the retirement-phase transaction creates that path (containment never grades an explicit destination outside the store).",
+        _D("The whole check detects accidents: an interrupted apply, a hand edit that is non-canonical or that changes listed bytes, and a misplaced or stale record."),
+        _D("It does not detect deliberate forgery: a hand edit that re-emits a canonical, self-consistent record, and any other crafted self-consistent bundle, is outside the accident-detection model, consistent with the rest of OPF."),
+        'An implementation MUST register the imported managed leaves, the adoption archive .working/archive/adoption/<run-id>/, the Move destination .working/archive/moved/, and the evidence bundles .working/imported/<kind>/<run-id>/, all recognized by containment as OPF control area, and MUST add the four section 8.3 imported-series checks to the doctor roster of every store.',
+        'The section 14.1 completion checks MUST still carry their own evidence digest verification beside C-EVIDENCE-ENUM.',
+        _D('Each evidence bundle .working/imported/<kind>/<run-id>/ carries its own inventories at its root: inventory.toml, plus a new inventory-<phase>.toml for each later phase, where <phase> is a lowercase letter followed by up to 31 lowercase letters or digits.'),
+        _D('Each holds exactly format = "opf.evidence.inventory/v1", a file array and, in an adoption bundle only, the [adoption] identity table below; the file rows have exactly path (a canonical store-relative file path spelled from .working/), size (a nonnegative integer), and sha256 (64 lowercase hex digits).'),
+        _D('A row may name a member of its own bundle other than a bundle-root inventory, a Move destination, default or explicit, under .working/archive/moved/, or, for an adoption bundle, a preserved file of the same run, a retire preimage or an archived occupying source, under .working/archive/adoption/<run-id>/.'),
+        "An adoption bundle's inventory MUST also hold exactly one [adoption] identity table whose keys are exactly run_id, phase and plan_digest: the bundle's own run id, the phase this inventory records, spelled base for inventory.toml and as the file name's <phase> for a later phase, whose name MUST NOT be base, and the run's approved plan's own plan_digest in the sha256: form with 64 lowercase hex digits.",
+        'An inventory of any other kind MUST NOT carry that identity table.',
+        'The apply side MUST write that identity when it derives the inventory.',
+        "C-EVIDENCE-ENUM MUST yield cannot-evaluate for an adoption inventory whose identity is missing or malformed, names another run, names a phase other than the one its file name carries, or names a plan digest other than its bundle's own sealed plan.toml digest, and for every inventory of an adoption bundle whose plan.toml is absent, unreadable or not canonical, names another run, or carries a plan_digest that does not re-seal its own bytes, so an inventory copied from another run or phase never evaluates as this run's record.",
+        "C-EVIDENCE-ENUM MUST check that plan.toml's inventory row against the same bytes its seal was proven from, so a plan swapped between two reads never combines into a clean result.",
+        "The owning writer MUST derive each inventory from the run's transaction record or receipt and MUST publish it exclusively with the retained bytes.",
+        'An inventory MUST NOT be rewritten, so a bundle stays immutable and an evidence commit changes only its bundle folder.',
+        _D('An inventory is not a journal projection and remains available in a clone without journals.'),
+        'A phase inventory MAY be published in the same transaction as the base inventory to claim the promotion receipt without creating a receipt/inventory digest cycle.',
+        _D('C-EVIDENCE-ENUM reconciles exact membership, directory structure, regular-file types, sizes and digests: every payload file under .working/imported/ and .working/archive/, meaning every file other than a bundle-root inventory, is claimed by exactly one row, and every inventory is itself schema-checked against the shape above rather than claimed.'),
+        'Unlisted or unclaimed entries, a bundle without an inventory, and missing listed files MUST be findings; unreadable or malformed inputs, including a path claimed twice, MUST yield cannot-evaluate.',
+        'A phase inventory MUST NOT substitute for a missing inventory.toml: such a bundle cannot evaluate.',
+        _D('Deleting a whole bundle (inventory and payload together) is outside this local snapshot check; independent history is required to detect that loss.'),
+        _D('Inventories assert membership, not authenticated actor history.'),
+        _D("The contained reader's size ceiling still applies."),
+        'staging/ MUST be walked and stray-graded, including empty runs; an unknown kind MUST always be a finding.',
+        _D('The existing staged-plan presence test also recognizes import and ingest runs in their typed staging homes.'),
+        _D('Partial status is receipt-bound under section 11, not inferred from staging.'),
+        'Doctor MUST NOT consult a journal to decide partial status and makes no claim that a staged plan has a recoverable transaction.',
+        'Ordinary transaction operands, including those of an open transaction being recovered, MUST NOT equal, descend from, or contain journals/.',
+        'Capability-bound journal APIs MUST derive their destinations from kind and run identity.',
+        'An ID reservation under allocations/ MUST be created exclusively and create-only, made durable before it is relied on and never rewritten, so an interrupted publication leaves no reservation or the complete one (section 8.2).',
+        _D('These comparisons are byte-exact: on a case-insensitive or normalizing filesystem, a differently cased or composed spelling can alias a reserved home and is not caught.'),
+        'Discovery precedes the manifest: it MUST examine manifest.toml in every immediate subdirectory, including journals/, MUST fail closed on a reserved-name match or ambiguity, and MUST NOT read deeper there.',
+    ),
+    "4.4": (
+        _D('Machine-store TOML records live in .working/toml/.'),
+        _D('The directory name .working at the store repository root is fixed by this standard.'),
+        "The machine subdirectory's standard name is toml; tooling MUST NOT hardcode it, and MUST locate it by discovery.",
+        'The names imported, archive, staging, and journals are reserved at the store level for OPF control area and MUST NOT be used as a machine subdirectory name; discovery fails closed on a machine store so named.',
+    ),
+    "4.5": (
+        _D('Within the resolved store repository, tooling locates the machine store by finding exactly one immediate subdirectory of .working/ containing a manifest.toml that declares standard = "opf" in its [opf] base table, trying toml first.'),
+        _D('Zero matches, or more than one, is a cannot-evaluate outcome: the tool reports it and stops; it never guesses, and never treats it as an empty or absent store.'),
+        _D('The pointer names which repository carries the store; the manifest discovery observes where, within it, the machine store sits.'),
+        _D('Because the machine subdirectory is observed at each use rather than declared and trusted, renaming it is a directory move with nothing to go stale; the pointer, which does declare a location, is validated at every resolution and fails closed rather than trusting a stale target (section 4.3).'),
+        _D('Profiles declared under [profiles.<name>] are enumerated after the base is validated; a profile a tool does not support is ignored for enforcement and recorded as unevaluated, never treated as a base-validation failure (section 9).'),
+        'An ambiguous outcome and an input that discovery cannot read or parse are a failed discovery of an existing store and MUST NOT be treated as an absent store that permits initialization or adoption.',
+        'A zero-match outcome over a present .working/ MUST NOT be treated as authorizing initialization or adoption by itself: only a section 14 first adoption authorizes initialization there, through an investigation that distinguishes first adoption from re-adoption and records a digest-stamped inventory, and one approved plan that gives every foreign file a disposition before init-store (section 14.1).',
+        'A discovered manifest that the section 9.2 validation refusals refuse for declaring a spec_version below 2.0.0, whatever its [opf].homes, is refused as a store (section 9.2): it MUST NOT be treated as authorizing initialization or adoption.',
+        'A tree under such a manifest MUST NOT be adopted until the operator has moved that manifest aside by hand, a step no OPF command performs; its files are then ordinary foreign content for a section 14 first adoption (section 14.1).',
+        'Files remaining under the reserved store control children (section 14.2) are the one exception: an adoption option MUST NOT select them, so the operator moves them aside by hand on the same terms, a step no OPF command performs, before that first adoption can complete.',
+        'A discovered manifest declaring a spec_version of 2.0.0 or above whose [opf].homes is missing or not the integer 2 is refused as a store (section 9.2), never foreign content: it MUST NOT be treated as authorizing initialization or adoption.',
+        'A manifest refused only at the section 9.2 version ceiling marks a store at a later version, never foreign content: it MUST NOT be treated as authorizing initialization or adoption, and its remedy is the tooling upgrade alone (sections 8.2 and 9.2).',
+    ),
+    "4.6": (
+        _D('Source files are lowercase; deliverables are uppercase.'),
+        _D('- Every file inside .working/toml/ is lowercase: manifest.toml, counters.toml, version.toml, pipeline.toml, roadmap.toml, worklog.toml, worklog.imported.toml, lease.toml, init.toml, <type>.index.toml, <type>.imported.index.toml, archive.toml.'),
+        _D('The pointer .opf.toml and its local override are lowercase machine source on the same terms.'),
+        _D('- Every generated deliverable at .working/ top level, and the public deliverables at the product repository root (CHANGELOG.md, ROADMAP.md, VERSION), is uppercase.'),
+        _D('The rationale: uppercase filenames are the recognized cross-industry norm for read-me-first documents (README, LICENSE, CHANGELOG), they sort to the top of directory listings, and their prominence signals "this is the surface a human reads".'),
+        _D('Lowercase signals machine-owned source that humans change only through tooling or review, never casually.'),
+        'The casing itself is part of the contract: a lowercase file MUST NOT be a deliverable, and an uppercase file MUST NOT be hand-authored truth.',
+    ),
+    "5.7": (
+        _D('Nothing stale, nothing ahead.'),
+        'Before any OPF operation other than the reconciliation step itself (init, adopt, import, doctor, render, migrate, upgrade, absorb, record; opf sync is that surfaced reconciliation step), the store repository MUST be reconciled to a known-consistent, up-to-date state against its sync target: the target is fetched and the local store compared against it.',
+        _D("opf report (section 10.8) is outside this contract: it reads the local store as found, takes no lease, and reads no network, so a report run against a store that is behind its target lists that store's state as found (section 17)."),
+        _D('- **Equal:** the operation proceeds.'),
+        '- **Behind the target:** the tooling MUST refuse to operate and MUST surface the state.',
+        'The remedy is a fast-forward pull to current (opf sync), which the tooling MAY offer and perform as its own surfaced step, then re-run the operation; the pull is never folded silently into another operation.',
+        '- **Ahead of the target** (local commits not yet pushed, the lease still held by the resuming holder, and no divergent remote side): the tooling MUST refuse to operate until the store is reconciled, and reconciliation is an authorized push of the pending local commits.',
+        'The holder MUST confirm and push them as its own surfaced step, never folded silently into another operation; the push is safe precisely because there is no divergent side that a push could lose.',
+        _D('This is the recovery path for a store left ahead by a crash between a local write and its sync-back.'),
+        '- **Divergent from the target** (unsynced commits on two systems): the tooling MUST refuse to operate and MUST surface the state.',
+        "A divergence MUST halt for the human, always: it MUST NOT be auto-merged or silently resolved by picking a side, because a textual merge of the store's TOML records can silently mangle the very records the standard exists to protect.",
+        '- **After any operation that writes,** the store MUST be synced back to its target in the same session, so the store is not left intentionally ahead on one system; a crash between the local write and the sync is detected on the next resume as an ahead-only or a divergent state and MUST be reconciled by the matching path above (an authorized ahead-only push by the lease holder, or a human-resolved halt on divergence), never left standing.',
+        "A **single-writer lease** prevents concurrent divergent writes: before mutating the store, a run MUST take the lease (lease.toml, present only while held, carrying the holder, the operation, and an acquired-at timestamp read from the clock) and MUST make it observable at the sync target before its writes begin, so a second system's reconciliation sees the held lease and refuses.",
+        'A lease MUST NOT be seized from a live holder; it MUST be reconciled against recorded state on resume or close, and a leftover lease from a dead run MUST be released only through that reconciliation.',
+        'Where the concurrent-operation module is enabled, the lease MUST additionally be recorded as a session_lease record.',
+        _D('There is a residual window between taking the lease and its reaching the target in which two systems can both begin; the divergence check above is the overlapping control that catches that collision after the fact, and the two layers together are the guarantee (disclosed in section 17).'),
+        _D('This contract states two generic operational requirements inline.'),
+        'First, a **single-writer lease**: a run MUST hold a lease so two runs never act on the same store state at once, MUST reconcile it on resume or close, and MUST NOT seize it from a live holder.',
+        'Second, **reconcile the record against reality**: the store is authoritative only while it matches what is actually in use, so divergence MUST be detected by observation at defined checkpoints and treated as a finding to resolve, never a discrepancy to leave standing, and a store MUST NOT certify itself current merely because nothing updated it.',
+        _D("AIQT's concurrency-lease and reconcile-record-against-reality rules are the reference implementation of these two requirements; the requirements themselves are the standard's and bind any conforming adopter."),
+        _D('Scope of the contract by pattern: - **A store with a dedicated sync target of its own** (a companion repository, or any relocated store with a remote) is bound by the full contract above: OPF tooling is the writer, and it pulls current, refuses on divergence, and syncs back after.'),
+        _D('- **The default in-repo store** has no dedicated sync target; it rides the product repository, whose own version-control discipline (branch and merge on green) is the consistency mechanism across systems.'),
+        'There the contract reduces to the lease plus a clean-state check: the store paths in the working tree carry no conflict markers, no mid-merge state, and no concurrent OPF run, or the tooling MUST refuse.',
+        _D("- **A local-only store** has no sync target, so the behind/ahead axis does not exist; the lease still guards concurrent runs on the one system, and durability is the adopter's recorded backup responsibility (section 5.3)."),
+        _D('**Parallel branches allocate against the integration base.** The lease serializes writers on one store, but two branches of a store that rides the product repository each start from the same committed counters.toml, so each can claim the same record ID.'),
+        "Store files therefore MUST NOT be hand-merged: after a merge conflict on a store path, take the integration base's version of the conflicted store files and redo the authoring operation on that base, which claims the next ID afresh (section 8.8).",
+        _D('The byte-reproduction precondition of opf record and opf upgrade refuses only a store file whose bytes are not the canonical serialization of its content, such as one carrying comments or non-canonical formatting.'),
+        _D('The canonical serialization writes U+2028 LINE SEPARATOR and U+2029 PARAGRAPH SEPARATOR inside a string as the escapes \\u2028 and \\u2029; a file that differs from it only by holding either character literally inside a basic string, as files written by earlier tooling do, still passes, reads back as the same values, and is re-spelled with the escapes by its next write.'),
+        _D("A write that would grow a store file past the store reader's size cap refuses instead, before anything is written, so an upgrade or record operation never rewrites a readable store into one the reader refuses."),
+        _D('The DECISIONS.toml machine projection (section 10.5) takes the same re-spelling without a generator-version bump: a projection an earlier tool rendered from a record holding either character differs from the current render in exactly that spelling, and the byte-level view-drift gate reports it as drifted until one re-render re-spells it.'),
+        _D('A projection over records holding neither character renders byte-identically, so a store without these characters sees no drift.'),
+        _D('opf doctor, and the pre-commit hook that runs it, also refuses a machine-store TOML file that is not in canonical form, at every run rather than only before a write: such a file is a C-CONTAINMENT finding, with the same allowance for a literal U+2028 or U+2029.'),
+        _D('It leaves out a path under a valid [unmanaged] declaration (the containment walk grades the declaration, never the files under it), the legacy import staging area, which the containment walk grades, the two planning ledgers pipeline.toml and roadmap.toml, whose canonical form sections 10.6 and 10.7 define over this section\'s serialization and whose departures C-PIPELINE and C-ROADMAP report, so one defect is reported once, and a file it cannot read or parse, which the check that reads it grades (except init.toml, which no other check reads, so an unreadable one cannot be evaluated and an unparseable one is a finding).'),
+        _D('During a partial import backed by an active import run, it also leaves out the stray paths the containment and archive walks triage there (section 14.2): a file outside the managed set and outside the archive tree (which, in an adopting store, the containment walk reports as a finding instead), and, within the archive tree, a file directly under archive/, a file under a bucket subdirectory, or a bucket file other than archive.toml, worklog.toml and a <type>.index.toml.'),
+        _D('Nor does it enter, there, a directory beneath which it leaves out every path: outside the archive tree, a directory that is not a managed namespace derived from the manifest (a per-record type directory, the generation-2 worklog directory or an ancestor of a store-scope view target), and, within it, a bucket subdirectory, so a symlink, an unreadable directory or deep nesting beneath one does not stop the store being evaluated.'),
+        _D("A bucket's archive.toml, worklog.toml and <type>.index.toml are checked at every import status."),
+        _D('A hand edit or hand merge that leaves canonical bytes passes both the precondition and doctor undetected, so the integration-base rule above is a separate requirement that neither enforces.'),
+        _D('A merge that resolves without a conflict yet duplicates an ID is caught by opf doctor, which checks store-wide ID uniqueness and that every ID lies within its counter (section 8.2).'),
+        'A collision MUST NOT be resolved by decrementing a counter or reusing an ID.',
+    ),
+    "6.1": (
+        _D('.working/toml/version.toml is the machine ledger of version numbers, release dates, and release boundaries.'),
+        _D("It is the single source for the project's version: the root VERSION file is deterministically generated from it (the latest release's version, as exact bytes) and drift-gated, and an optional human view renders to .working/VERSION.md."),
+        _D("The reference suite's release-delta tooling (the check that computes the minimum required version bump for a change) anchors here; it is a consumer of the ledger, not part of the base standard's definition."),
+        'The ledger is not the changelog: it carries numbers, dates, spans, and digests, and MUST NOT carry release prose.',
+        _D('Each [[release]] row records: - version: the SemVer version string, unique in the ledger.'),
+        _D('- date: the release date, RFC 3339 UTC, read from the clock at the release event.'),
+        _D('- worklog_span: the inclusive, contiguous span of worklog entry IDs the release covers, as a two-element array ["WL-1", "WL-88"], or an empty array for a release with no worklog entries.'),
+        _D('- coverage_digest: a digest over the canonical serialization of the covered worklog entries, in ID order, computed at release cut.'),
+        "The exact canonicalization is fixed by the schema release that follows this specification; it MUST be deterministic and cover the entries' full content.",
+        _D('- imported: optional boolean, permitted only as true and only on a historical release recorded under section 14.3.'),
+        'On an imported-flagged row, date carries the source-recorded release date rather than a clock read at a witnessed release cut, worklog_span MUST be empty, and the row rests on imported provenance.',
+        'A witnessed release cut MUST NOT set the flag, and the flag MUST NOT be added to or removed from an existing row.',
+        'Imported-flagged rows MUST form a prefix of the ledger, before any witnessed row, and a writer and a validator MUST both enforce it.',
+        'Release rows MUST be append-only and immutable once written.',
+        'Spans MUST be contiguous and non-overlapping across consecutive releases, in ID order, so the released worklog tiles exactly and the unreleased tail is everything after the last span.',
+        _D('The ledger also carries the summary rows that back the public changelog.'),
+        _D('Each [[summary]] row records: - covers: a single released version ("1.3.0"), an inclusive range over contiguous released versions ("1.0.0..1.2.3"), or "unreleased" for the optional working section.'),
+        _D('- status: working, published, or superseded.'),
+        _D('- digest: required once status is published or superseded; the freeze digest of the corresponding CHANGELOG.md entry (section 7.2).'),
+        _D('- superseded_by: present exactly when status is superseded; the covers token of the rollup summary that replaced this one.'),
+        _D('- imported: optional boolean, permitted only as true and only on a summary row whose digest rests on imported provenance under section 14.3.'),
+        'A flagged row MUST have status published or superseded, MUST NOT cover "unreleased", and every version it covers MUST be an imported-flagged [[release]] row, and a validator MUST refuse a flagged row that breaks any of these conditions.',
+        'Unlike the release-row flag, the summary flag MAY be removed from an existing row, and its removal is a curator act.',
+        'A curator MAY likewise add the flag to an existing summary row, as a curator act, only where every version the row covers is an imported-flagged [[release]] row.',
+        'Summary rows MUST hold digests and ranges only, never prose.',
+        'Prose MUST live in exactly one place: the root CHANGELOG.md.',
+    ),
+    "8.1": (
+        _D('| Tier | Type | Namespace | |---|---|---| | Baseline | backlog_item | BI | | Baseline | done | DN | | Baseline | worklog | WL | | Baseline | finding | FN | | Baseline | pending_decision | PD | | Baseline | autonomous_decision | AD | | Baseline | block | BL | | Baseline | handoff | HO | | Baseline | reference | RF | | Baseline | contribution | CN | | Baseline | maintainer_decision | MD | | Baseline | preference_pattern | PP | | Governance module | maintainer_action | MA | | Delivery-assurance module | artifact | AR | | Delivery-assurance module | gate_run | GR | | Delivery-assurance module | release | RL | | Delivery-assurance module | waiver | WV | | Operational-policy module | mode | MO | | Operational-policy module | tier_assessment | TA | | Concurrent-operation module | session_lease | SL | | Reserved, excluded | transaction | TX | | Reserved, unassigned | (none) | CL | | Reserved, unassigned | (none) | LF | Notes on the roster: - The word "changelog" is not a record type.'),
+        _D('It names the curated public deliverable (section 6.3).'),
+        _D('The detailed per-change type is worklog.'),
+        _D('The namespace CL is reserved unassigned so it can never half-collide with the freed word.'),
+        _D('- The namespace LF is reserved unassigned in the same way: no record type uses it in either series, and unmappable imported text stays verbatim in unparsed (section 8.3).'),
+        _D('- transaction (TX) is excluded from the adopter standard with its name and namespace reserved; it may enter later as a versioned module only if portable semantics are demonstrated.'),
+        _D('- Modules ship default-off; each is enabled by one manifest edit.'),
+        _D('- Imported history uses the same enabled types (section 8.2) in a separate series, not additional record types.'),
+        _D('Reserved namespaces remain reserved.'),
+        _D('Imported states describe history and confer no current authority (section 8.6).'),
+        '- done is a durable completion receipt linked one-to-one to a backlog item reaching ratified done; a standalone receipt MUST be imported history with provenance.',
+        _D('- A finding records the observation and links its remediation rather than containing it.'),
+        _D('- A block scopes one or more enumerated records and feeds actionability (section 8.5).'),
+        _D('- contribution records an artifact, fix, or proposal this project proposes or sends to a peer project, with a delivery bundle once sent: the outward counterpart to reference, which records what comes in.'),
+        _D('It carries no fleet-specific semantics; those ride a registered x-<vendor> extension (section 8.7).'),
+        _D('- maintainer_decision and preference_pattern are baseline types; the governance module carries maintainer_action alone.'),
+        _D('- The delivery-assurance release record, where enabled, references a version.toml release row by version string; the ledger row is the fact, the record is the delivery-assurance envelope around it.'),
+        _D('- version.toml, counters.toml, pipeline.toml, and roadmap.toml are control ledgers, not record types (sections 6.1, 8.2, 10.6, and 10.7).'),
+        _D('- lane, bundle, and milestone are not record types either: lane identity and operation belong to a lanes standard the adopter follows, if any (section 2.1), and bundles and milestones live as rows of the pipeline and roadmap control ledgers (sections 10.6 and 10.7).'),
+    ),
+    "8.2": (
+        _D('Clean record IDs have the form <NS>-<n>; imported IDs have the form imported:<NS>-<n>, for example imported:BI-7.'),
+        "The complete lexical grammar is ^(?:imported:)?[A-Z]{2}-[1-9][0-9]*$, and the namespace MUST additionally name the record's enabled type in section 8.1.",
+        _D('Namespaces map one-to-one to types within each series.'),
+        'counters.toml MUST hold independent monotonic high-water values per series and namespace, BI for clean backlog items and the quoted TOML key "imported:BI" for imported backlog items, with the imported series\' rows required, one for each enabled type.',
+        'The same rule includes "imported:WL"; clean release spans MUST tile only the clean WL number line.',
+        'The doctor MUST require the imported counter rows, whether opf init wrote them at zero or a re-adoption seeded them from its ancestral snapshot.',
+        "Uniqueness, counter high-water, contiguity and no-deletion checks MUST evaluate each series independently; allocation MUST increment its counter under the store's lock as one atomic claim, so no gap between choosing and reserving can double-allocate.",
+        'Counters MUST NOT be reset and IDs MUST NOT be reused, even when a record is superseded, refuted, or its work reverted.',
+        'Rotation, index rewrites, and store relocation MUST NOT touch counters.toml.',
+        'Re-adoption MUST seed both series from a pinned ancestral snapshot and MUST refuse a missing required namespace; it MUST NOT zero-seed prior ancestry.',
+        'Only a genuinely first adoption MAY start its counters at zero.',
+        'A store manifest declaring a spec_version of 2.0.0 or above whose [opf].homes is missing or not the integer 2 is refused as a store (section 9.2), never foreign content: that refusal MUST NOT authorize adoption over it, and the zero-seed ban above stands (sections 4.5 and 14.1).',
+        'A store refused only at the section 9.2 version ceiling keeps its ancestry: it is never foreign content, it MUST NOT be zero-seeded, and its remedy is the tooling upgrade alone (sections 4.5 and 9.2).',
+        'The claim additionally begins with one irrevocable reservation, journals/<kind>/allocations/<run-id>.toml (sections 4.2 and 8.8), which MUST hold exactly format = "opf.journal.allocation/v1", the run\'s kind, run_id and operation_id, and a non-empty [claims] table mapping each claimed counter key, a record namespace or, for a run of the import engine (kind import or ingest, section 4.2), a quoted imported-series "imported:<NS>" key, to that run\'s new high-water value, an integer of at least 1 and at most 2**63 - 1 so every conforming TOML reader can parse it.',
+        "A reservation MUST NOT be rewritten, and a reservation request finding an existing entry for the same run MUST be refused unless the entry reads back byte-identical to the exact payload the request would publish, in which case the request MUST re-establish the entry's durability before relying on it; a refusal is not evidence that the run holds its numbers.",
+        'The next-ID derivation applies per series key: the next ID under a counter key, the clean <NS> and quoted "imported:<NS>" number lines independently, is one more than the maximum of the counters.toml high-water and every reservation\'s [claims] value for that counter key, so recovery MUST treat a reserved number as issued even where no published record carries it.',
+        'The doctor MUST likewise treat a reserved number as issued wherever its checks would otherwise report that number missing, reading each reservation read-only and for that purpose alone (section 4.2); an unreadable or malformed reservation MUST yield cannot-evaluate.',
+    ),
+    "8.3": (
+        _D('Clean records carry the envelope below; the imported envelope follows it.'),
+        _D('Types add their own fields on top.'),
+        'Schemas are closed: an unknown key MUST fail validation unless it sits under a registered vendor extension table.',
+        _D("| Field | Requirement | Meaning | |---|---|---| | id | required | <NS>-<n>, matching the type's namespace | | type | required | the type name; must match the file the record lives in | | status | required | per the status grammar (section 8.4) | | proposed_from | optional | the unqualified state held before the current /proposed status, written by the authoring verb (section 8.8); legal only on a /proposed status, and only naming a legal predecessor state for the type | | title | required | one line, human-oriented | | created_at | required | RFC 3339 UTC, read from the clock at creation | | updated_at | required | RFC 3339 UTC, read from the clock at the last transition | | actor.kind | required | maintainer, assistant, automation, or importer | | actor.id | optional | identity detail within the adopter's own vocabulary | | summary | optional | short prose body | | links | optional | array of {rel, id}; rel from the closed link vocabulary (section 8.6) | | refs | optional | array of captured references (section 8.6) | | x-<vendor> | optional | registered vendor extension tables only (section 8.7) |"),
+        _D('The worklog entry uses a reduced envelope (id, date, actor, kind, summary, optional detail, links, refs); its status is fixed (section 8.5).'),
+        'The worklog records facts, not proposable decisions, so its entries MUST NOT take the /proposed qualifier whatever the actor: an assistant-authored or automation-authored worklog entry is a conformant recorded fact needing no ratification (section 8.4).',
+        _D('The imported envelope is closed and deterministic.'),
+        'It MUST carry id, type, a one-line title, status from the type\'s legal state set without /proposed, actor.kind = "importer", actor.id naming the importing assistant, and an import provenance table.',
+        'Imported worklog rows MUST use this envelope with type = "worklog" and status = "recorded", plus their worklog fields.',
+        _D('Standalone imported done receipts are legal history.'),
+        "Historical created_at, updated_at, date and decided_at are optional; when present they MUST be valid RFC 3339 UTC and no later than the writer's import clock instant.",
+        'Import time MUST NOT stand in for event time.',
+        "An imported record MUST give a missingness row in unrecorded = [{field, reason}] to each field of its type's schema that it omits, including optional type fields and each historical timestamp above that its type's schema carries.",
+        _D("The only exempt fields are proposed_from, summary, links, refs and registered x-<vendor> tables, which the envelope table above marks optional, each where the type's own schema does not require it; an imported record never carries proposed_from, since its status never takes /proposed."),
+        _D("An imported worklog row's summary is therefore never exempt, since the worklog schema requires it (section 6.2)."),
+        'unrecorded MUST hold exactly one row for each omitted field that is not exempt, and no row that repeats a field or claims a supplied field absent.',
+        'Supplied fields MUST retain their declared value types and vocabularies; unknown keys still fail.',
+        "field MUST name a field in that type's schema.",
+        "A missingness row whose field names an omitted exempt envelope field, one of the optional envelope fields proposed_from, summary, links, refs and registered x-<vendor> tables where the type's own schema does not require it, MUST be refused.",
+        _D('The closed reasons are not_recorded_in_source, unparsed, ambiguous, conflicting, and not_applicable.'),
+        _D('The first means "never recorded historically in the supplied source", not a claim about all history.'),
+        'The required imported envelope and provenance fields MUST NOT be waived through missingness.',
+        _D('Strict current resolution bundles and transition obligations do not apply to historical omissions.'),
+        "The import table MUST carry source (the canonical store-relative path of the preserved original, spelled from .working/), source_sha256 (64 lowercase hexadecimal digits), run (the imp-<YYYYMMDD>T<HHMMSS>Z-<hash16> run ID), and imported_at (RFC 3339 UTC read from the writer's clock).",
+        _D('Optional span is an informational byte range in the original.'),
+        'Optional import.history retains verbatim source-precision values that cannot be losslessly normalized, such as a date-only string; a UTC midnight MUST NOT be fabricated.',
+        _D('Optional import.unparsed holds verbatim source text that cannot be mapped.'),
+        'The assistant MUST retain such text rather than drop it.',
+        'When present, import.span MUST be an array of two integers, import.history an array of tables, and import.unparsed an array of strings.',
+        "Each import.history table MUST hold exactly two keys, field (a field named in the type's schema) and value (its verbatim source value as a string).",
+        _D('The writer performs no byte-tiling or leftover accounting: byte-level coverage and semantic fidelity are not machine-proven.'),
+        _D('Preserved originals remain the restoration authority.'),
+        'Imported records and their worklog entries MUST be immutable after publication; corrections MUST be a fresh import run retaining the old evidence.',
+        'A conforming imported series can reach doctor VALID: it MUST NOT enter the module-schema deferral seam.',
+        _D('C-IMPORTED-SCHEMA checks this envelope and missingness; C-IMPORTED-IDS checks the series grammar, counters and no-deletion; C-IMPORTED-PROVENANCE re-reads each preserved original and verifies source_sha256.'),
+        'C-IMPORTED-IDS owns every imported-series ID defect exclusively, its grammar, counter rows, uniqueness, contiguity and no-deletion included: such a defect MUST be a C-IMPORTED-IDS finding and MUST NOT be reported again by C-IMPORTED-SCHEMA or any other check.',
+        _D('C-CONTAINMENT recognizes the imported managed leaves, C-LINKS resolves the union of both series, and C-IMPORTED-SEGREGATION enforces section 8.6: a firewall breach for which no other check is named is a C-IMPORTED-SEGREGATION finding.'),
+        'Missing or unreadable evidence MUST fail closed.',
+    ),
+    "8.4": (
+        _D('status ::= state ( "/" qualifier )? state ::= lowercase name from the type\'s declared state set qualifier ::= "proposed" - Each type declares a closed state set: one initial state, zero or more working states, and one or more terminal states.'),
+        '- A terminal transition performed by an actor whose kind is assistant or automation MUST land with the /proposed qualifier (for example done/proposed); creating a record directly in a terminal factual or ACT state that awaits no ratification, such as an autonomous_decision or a reference, is not such a transition and carries no qualifier.',
+        'Only a maintainer transition MAY remove the qualifier (ratification) or return the record to a working state (rejection, with a recorded reason).',
+        'A /proposed status is not terminal: gates and completion claims MUST treat the record as unfinished, and views MUST surface it as awaiting ratification.',
+        _D("The /proposed qualifier attaches to any transition an assistant or automation makes that awaits a maintainer's ratification: the assistant or automation terminal transitions above (for example done/proposed or fixed/proposed), and the gated non-terminal states, which are proposals rather than grants even though they are not terminal."),
+        _D("A type declares its gated states: block gates active (a proposed block, active/proposed), contribution gates sent (an assistant-sent contribution, sent/proposed, awaiting a maintainer's ratification that it was genuinely sent), and preference_pattern gates active (an assistant-distilled pattern, active/proposed, awaiting ratification)."),
+        'This is one mechanism, not a set of per-type special cases: entering a gated state as an assistant or automation MUST take /proposed, and only a maintainer MAY ratify it to the unqualified state.',
+        'A recorded factual entry that proposes nothing and awaits no ratification is exempt: the worklog, whose entries record facts rather than propose a transition, MUST NOT take /proposed, so an assistant-authored or automation-authored worklog entry (status recorded) is a conformant recorded fact rather than an unratified proposal.',
+        '- Standing authorization for contribution sent: sent gating is on by default, but an adopter MAY declare a standing authorization for a named recipient that deactivates per-send gating for that recipient, letting an assistant or automation land the unqualified sent grant to it without a per-send ratification.',
+        "A valid declaration for the contribution's declared recipient relieves the gating; an absent or malformed declaration MUST fail closed, so gating stays on.",
+        _D('The declaration is an adopter configuration surface; a store that declares none keeps every sent gated.'),
+        '- No resurrection: a record in an unqualified terminal state MUST NOT re-enter a working state.',
+        'A revived concern MUST be a new record linking the old one.',
+        "- Supersession is a link, not a state edit: the superseding record MUST link supersedes, and where the type records it, the superseded record's terminal state MUST reflect it.",
+        'Where the superseded record is immutable, including every imported record, its recorded state MUST stand and the link alone records the supersession.',
+        _D('- The worklog is a special case of these rules, with terminality keyed to release rather than to a state transition (section 6.2).'),
+        _D("It declares the single state recorded: while an entry sits in the unreleased tail its recorded status is pre-terminal and mutable-until-release, and once a release freezes its span the entry's recorded status is terminal and immutable."),
+        _D("The released-frozen span is therefore the worklog's terminal state that satisfies the one-or-more-terminal-states requirement above, while correcting an unreleased entry in place is an ordinary pre-terminal edit, not a resurrection of a terminal record."),
+    ),
+    "8.5": (
+        'Baseline types: | Type | States | Rules | |---|---|---| | backlog_item | open > active > done or dropped; open > dropped | Ratified done MUST create the one-to-one done receipt.',
+        'Blocked-ness MUST NOT be a stored state; it is derived from active blocks at view time.',
+        _D('| | done | recorded | Created terminal, immutable.'),
+        _D('Links receipt_of to its backlog item.'),
+        _D('| | worklog | recorded | Durable operational record with release-keyed terminality: the unreleased tail is pre-terminal and mutable, a released-frozen span is terminal and immutable (sections 6.2 and 8.4).'),
+        _D('Takes no /proposed qualifier whatever the actor.'),
+        _D('Mutability governed by section 6.2, not by transition.'),
+        '| | finding | open > fixed, routed, refuted, or accepted | Severity MUST be graded at or after the fix decision, never before.',
+        '| | pending_decision | open > decided or withdrawn | All-or-none resolution bundle: an open decision MUST carry none of decision, decided_at, decided_by; a decided one MUST carry all.',
+        'A decided record MAY be superseded by a new decision linking supersedes; exactly one current effective resolution MUST exist per chain.',
+        _D('| | autonomous_decision | recorded | Immutable ACT record: the classification basis, the action, links.'),
+        'Overturning MUST be a new record (or maintainer decision) linking it.',
+        _D('| | block | active > released or expired | Scopes an enumerated list of record IDs.'),
+        'A block created by an assistant or automation actor is active/proposed and is a proposal, not a grant: it MUST NOT count toward blocked-ness or justify a stop until a maintainer ratifies it.',
+        '| | handoff | current > superseded | Posting a new handoff MUST supersede the previous in the same act; at most one current handoff MAY exist among clean records authored by non-importer actors (section 8.6).',
+        _D('The previous handoff is the one clean current handoff authored by a non-importer actor; a first handoff, posted while none stands, supersedes nothing.'),
+        _D("The superseded handoff lands the status the posting actor's transition takes (section 8.4): unqualified superseded for a maintainer, superseded/proposed for an assistant or automation."),
+        _D("An importer-authored current handoff is history: it neither blocks a posting nor is superseded by the posting's own supersession."),
+        'A handoff MUST NOT return to current while another such current handoff stands (section 8.8).',
+        _D('| | reference | recorded | Immutable captured reference.'),
+        '| | contribution | proposed > sent > acknowledged or superseded; proposed > withdrawn | Records what this project proposes or sends to a peer, with a delivery bundle {channel, ref, sent_at, receipt_ref?, receipted_at?}: channel/ref/sent_at MUST be present once sent, sent_at MUST NOT be present before, and the receipt fields MAY appear only at acknowledged.',
+        _D('sent is gated (an assistant lands sent/proposed; a maintainer, or a valid standing authorization for the recipient, lands the bare grant).'),
+        'acknowledged is the single positive terminal (responded, adopted, reshaped, or declined); the outcome MUST live in summary/x-<vendor>, never as a state.',
+        'A re-send MUST be a new record linking supersedes; the superseded record records superseded.',
+        _D('| | maintainer_decision | recorded | Created-terminal, immutable maintainer ruling carrying its decision (answer plus rationale).'),
+        'actor.kind MUST be maintainer or importer only (a maintainer ruling with assistant attribution is a contradiction; importer covers migrated history).',
+        'Overturning MUST be a new record linking the old.',
+        'It MAY exemplifies the preference_pattern it instantiates.',
+        _D('| | preference_pattern | active > retired | A distilled preference pattern carrying context and rationale (with the envelope title).'),
+        _D('active is gated: an assistant-distilled pattern lands active/proposed awaiting maintainer ratification to the unqualified active.'),
+        _D('| Module types, in outline (full schemas ship with the module schemas release): maintainer_action open > done or dropped; artifact staged > promoted or rejected; gate_run recorded with a three-valued verdict field (pass, fail, cannot_evaluate), never folded into status; release planned > published or abandoned; waiver active > expired or revoked, expiry required at creation; mode active > retired; tier_assessment recorded; session_lease held > released or reconciled.'),
+        _D('Actionability: a clean backlog item authored by a non-importer actor is actionable when its state is open or active and no clean, unqualified active block authored by a non-importer actor scopes it.'),
+        'Imported and importer-authored records MUST NOT enter this join on either side: an importer-authored backlog item is history, never actionable work, whatever its recorded state, and an importer-authored block MUST NOT block (section 8.6).',
+        'This is the block join every scheduling view renders; a scheduling view MUST surface an importer-authored item only as history, never as actionable.',
+    ),
+    "8.6": (
+        _D('links relate records to records; rel comes from a closed vocabulary: supersedes, resolves, remediates, receipt_of, corrects, follows, relates, exemplifies, derives_from.'),
+        _D('Extending the vocabulary is a specification version change.'),
+        _D('- exemplifies: the source record instantiates the linked pattern.'),
+        'Its target MUST be a preference_pattern (PP); the source side is unconstrained.',
+        _D('Its primary user is maintainer_decision (a ruling exemplifies the pattern it instantiates).'),
+        _D('- derives_from: the source record was derived from the linked record; directional, usable by any type.'),
+        _D('Its primary user is contribution (a contribution derives from the internal finding, decision, or backlog item that motivated it).'),
+        _D('refs capture external sources at the moment a claim or artifact is produced: each is {kind, locator, note} with kind one of path (a repository path, with a line where applicable), url, or doc (a document and section).'),
+        _D('A record whose claims rest on an external source without a captured reference is unsourced, whatever confidence backs it.'),
+        _D('Imported history has an authority firewall, enforced by the writer and doctor and keyed on provenance rather than on series alone: it covers every record whose actor.kind is importer.'),
+        'A clean-series record MUST NOT carry actor.kind = "importer".',
+        'An importer-authored record MUST NOT satisfy a current approval, receipt, actionability or supersession obligation of any record authored by a non-importer actor.',
+        _D("The same bar covers every current obligation, record-level or store-level, including field-borne authority: a gate_run verdict, a tier_assessment outcome, an artifact's promoted state, a release's published state and a maintainer_action's done on an importer-authored record describe history and discharge nothing now."),
+        "A clean done record's receipt_of MUST target a clean backlog item, and a clean backlog item reaching ratified done MUST hold a clean receipt authored by a non-importer actor.",
+        'An importer-authored decision MUST NOT be treated as the current effective resolution of a clean pending_decision chain; resolving such a chain now MUST take a new clean decision linking back.',
+        'Importer-authored blocks MUST NOT grant a current stop, and an importer-authored record MUST NOT discharge a required supersession.',
+        'The firewall covers every state-bearing type: an importer-authored record MUST NOT be treated as the current handoff, an active waiver, a held session_lease, an active mode, or a ratified active preference_pattern; a state-bearing status on an importer-authored record describes history at its source and MUST confer nothing now, and every current-state join, including the section 8.5 at-most-one-current handoff rule, MUST evaluate only clean records authored by non-importer actors.',
+        'The clean-series writer MUST refuse a transition on an importer-authored record in either series (section 8.8).',
+        'Acting on history MUST take a new strict clean record at the present time, with a link back to the historical record.',
+        'C-IMPORTED-SEGREGATION enforces this firewall: a clean-series record that carries actor.kind = "importer", and a breach of any other part of this firewall, the link rules below included, for which this specification names no other doctor check, MUST each be a C-IMPORTED-SEGREGATION finding.',
+        'Clean-to-imported links MUST be limited to relates, derives_from, follows, and same-type supersedes; the last records historical continuation without discharging a current supersession obligation, and the immutable imported target keeps its recorded state, the link alone recording the supersession (section 8.4).',
+        'Imported-to-imported links MAY use every declared relation subject to its type constraints.',
+        'Imported-to-clean links MUST be refused by both writer and doctor.',
+        'Links MUST resolve over the union of both series; a dangling cross-series link MUST be a finding, never silently omitted.',
+        'The imported series MUST NOT supply current authority through a link, an extension, or an adoption approval.',
+    ),
+    "8.8": (
+        _D("opf record is the reference tooling's record-authoring verb."),
+        _D("It writes the record and worklog shapes this specification defines, and it adds one optional envelope key of its own: proposed_from (section 8.3), which appears only on /proposed records written by opf record transition or by a handoff create's supersession (section 8.5)."),
+        _D('Its clean-series subcommands use the strict record model; the import write mode uses the separate imported model.'),
+        'Import is not a flag that relaxes create, and the clean-series subcommands MUST refuse actor.kind = "importer": an importer authors only through import.',
+        'The clean-series subcommands MUST also refuse an importer-authored record as their operand: acting on imported history is a new clean record linking back (section 8.6).',
+        _D("Its subcommands: - create: one new record of an enabled baseline type, in the type's initial state."),
+        _D('An assistant or automation author entering a gated initial state lands /proposed; a created-terminal factual or ACT type (reference, autonomous_decision, maintainer_decision) carries no qualifier (section 8.4).'),
+        _D('done receipts and worklog entries are not created this way.'),
+        _D("A handoff create lands unqualified current whatever the actor and supersedes the previous handoff (section 8.5) in the same act: the one current handoff authored by a non-importer actor in the active index moves to unqualified superseded when the actor is a maintainer, or to superseded/proposed with proposed_from set to current when the actor is an assistant or automation, and its updated_at takes the operation's clock value; the new record appends one supersedes link to it after its requested links; and the worklog entry adds a supersedes: <ID> line to its detail and a relates link to the superseded record."),
+        _D('With no such handoff standing, a store holding only superseded handoffs included, the create supersedes nothing and writes no supersedes link.'),
+        _D("An importer-authored current handoff is outside this selection (section 8.6): it neither blocks the posting nor is superseded by the posting's own supersession, and its record is left unchanged."),
+        "Before anything is written, a handoff create MUST refuse a requested supersedes link that names the handoff it supersedes, more than one such current handoff, such a current handoff found in the archive (section 12), an archive input that the doctor's archive walk finds defective, and a previous handoff that is not schema-valid or whose updated_at is not earlier than the operation's clock value.",
+        _D("- transition: a status change checked against the type's grammar (section 8.5)."),
+        "An assistant or automation author landing a terminal or gated state takes /proposed, and the verb MUST record the state the record held at that moment in the record's own proposed_from field (section 8.3) in the same act; only a maintainer ratifies, or rejects with a recorded reason back to the recorded pre-proposal state (section 8.4).",
+        'A rejection MUST restore exactly the recorded proposed_from state, and leaving the /proposed status, by rejection or ratification, MUST remove the field.',
+        _D('A proposed record that carries no proposed_from was proposed outside transition; that includes a record create lands directly at a /proposed initial state, so the absence establishes no provenance.'),
+        'Such a record cannot be rejected by transition, which never infers or invents a predecessor; the worklog entry of the proposing transition is informational, never evidence. transition MUST refuse to act on, or overwrite, a record whose current row is not schema-valid, proposed_from included, so a schema-detectable forgery must be repaired by the operator before transition acts; it is never laundered.',
+        _D('The field is an ordinary record field, so a canonical hand edit of it that keeps the row schema-valid is not detected, the same as any other field (the section 5.7 integration-base rule remains the control).'),
+        "A pending_decision's open > decided, landing bare or /proposed, MUST write its resolution bundle (section 8.5) in the same act: transition MUST require the decision and decided_by values there and MUST refuse them on every other transition.",
+        "decided_by MUST be given explicitly, never inferred from the actor, because the recorder of an answer is often not its decider, and decided_at MUST be the operation's clock value.",
+        'A ratification MUST keep the bundle; a rejection of decided/proposed MUST remove it together with proposed_from, since an open decision carries none of it.',
+        "A transition that lands a pending_decision at unqualified decided, a maintainer's open > decided or a maintainer's ratification of decided/proposed, MAY supersede the current resolution of a chain in the same act: transition then appends the supersedes link (section 8.5) to the record's links.",
+        'Before anything is written, the superseded record MUST be another pending_decision at unqualified decided, schema-valid, and the head of its chain (no pending_decision not authored by an importer already links supersedes to it), and its own chain MUST NOT lead back to the superseding record.',
+        _D("An importer-authored pending_decision's supersedes link is left out of that test: such a record discharges no supersession and confers nothing now (section 8.6)."),
+        'These target checks MUST read the same records as the chain rule below, the active index together with every archived record (section 12), so a decided, schema-valid chain head rotated to the archive can be superseded, and an archived pending_decision that already supersedes the target or leads back to the superseding record is counted.',
+        'transition MUST refuse the link on every other transition, a /proposed landing included, because the doctor counts a supersedes link from a proposal too and would then find the superseded chain without a current resolution.',
+        "Every transition that lands a pending_decision at unqualified decided, with or without a supersession, MUST then apply the doctor's chain rule (section 8.5) to the planned index together with every archived record before anything is written: the chain the record belongs to afterwards, a connected component over supersedes links in either direction, MUST have exactly one current effective resolution.",
+        _D('So transition also refuses to decide a record that a pending_decision not at unqualified decided already supersedes when no other member of its chain is a current resolution, and a supersession that passes the checks above but still leaves the chain without a current resolution.'),
+        'The rule MUST read the records the doctor reads for that check, the planned index together with every archived record (section 12), so a chain member rotated to the archive is judged before anything is written.',
+        "With no archive tree nothing has rotated; an archive input that the doctor's archive walk finds missing, unreadable, malformed or otherwise defective MUST refuse the transition with nothing written, never be skipped.",
+        "A contribution's proposed > sent, landing bare or /proposed, MUST write its delivery bundle (section 8.5) in the same act: transition MUST require the channel and ref values there and MUST refuse them on every other transition, and sent_at MUST be the operation's clock value.",
+        "The send MUST refuse a record that already carries delivery, so a rejection of sent/proposed removes the bundle whole and restores the record as it was before the proposal; a ratification MUST keep the bundle.",
+        _D("A record that carries a planned delivery at proposed (section 8.5) therefore cannot be sent by transition; the way out is to withdraw it and create a new contribution, whose send writes the bundle."),
+        _D("transition does not read a standing authorization (section 8.4): an assistant or automation send lands sent/proposed even where the authorization would permit a bare sent, for a maintainer to ratify."),
+        "A recipient receipt reference MAY be given only on sent > acknowledged, landing bare or /proposed: transition then adds receipt_ref and receipted_at, the operation's clock value, to delivery, and MUST refuse the value on every other transition.",
+        'A rejection of acknowledged/proposed back to sent MUST remove those two keys.',
+        'A transition that lands a handoff at current, the maintainer rejection of superseded/proposed, MUST refuse with nothing written while another current handoff authored by a non-importer actor stands in the active index or the archive, since a rejection restores only the one named record; the maintainer MAY instead ratify the proposal to superseded.',
+        _D('An importer-authored current handoff does not block that rejection (section 8.6).'),
+        'A backlog item MUST reach unqualified done only through done-with-receipt.',
+        _D('- done-with-receipt: maintainer-only.'),
+        _D('It moves a backlog item to unqualified done, from active or by ratifying done/proposed, and in the same act creates its one-to-one done receipt linked receipt_of (section 8.5).'),
+        _D('An assistant reaching done uses transition and lands done/proposed; no receipt exists until a maintainer ratifies.'),
+        _D('- receipt-repair: maintainer-only, with a recorded reason.'),
+        _D('It is the reviewed repair of a backlog item that stands at unqualified done without a clean receipt authored by a non-importer actor (sections 8.5 and 8.6), such as an item a reviewed hand edit put at done: in one act it creates the missing done receipt linked receipt_of, and it changes no status and no other record.'),
+        'It MUST refuse, with nothing written, unless the item is at unqualified done and its current row is exactly the row the prior commit holds, and it MUST refuse an item that already holds such a receipt in the active index or the archive (section 12).',
+        'Its new ID MUST be claimed through the irrevocable reservation of section 8.2.',
+        _D('A repaired receipt is linked one-to-one to its item, so it is not a standalone receipt (section 8.1).'),
+        _D('- worklog-append: one entry appended to the unreleased tail of worklog.toml, status recorded, never /proposed whatever the actor (sections 6.2 and 8.4).'),
+        'An entry that would fall inside a released span MUST be refused.',
+        _D("- carried: the reference profile's carried-finding subcommand, offered only by a tool that supports [profiles.aiqt] at version 1.1.0 or later and only on a store that declares it there."),
+        _D('It writes the x-aiqt.carried table of one finding: it creates the table, replaces its area, or appends exactly one disposition, and changes no status (section 9.3).'),
+        _D('- import --batch FILE [--root DIR]: the primary import surface (the import write mode; there is no separate --import flag).'),
+        _D('A single-record import is a one-row batch.'),
+        _D('The canonical TOML batch, opf.record.import-batch/v1, declares one source path, record rows, worklog rows, historical fields, missingness, verbatim unparsed text and batch-local link keys.'),
+        'The writer MUST resolve local keys to claimed imported IDs and MUST recompute source size and SHA-256 from preserved bytes, never trusting caller-supplied measurements.',
+        'One invocation covers one source in one journaled transaction, followed by one render and one full doctor; a frozen migrate, move or retire source (section 14.2) MUST NOT be written, and doctor grades it under the section 11 bounded treatment, never as an obstacle to VALID.',
+        'create, transition, done-with-receipt, receipt-repair, and carried MUST each append their own worklog entry, one entry per change (section 6.2), in the same journaled transaction as the change.',
+        "Its detail MUST open with a lifecycle line naming the record and its status change (opf-record create <ID> <status>, or opf-record transition <ID> <from> -> <to>), or, for carried, the act of section 9.3 (opf-record carried <ID> <act>[ <outcome>]); a rejection's entry MUST also record its reason.",
+        'worklog-append MUST refuse a detail that opens with that lifecycle grammar.',
+        'Every subcommand runs one operation sequence, and an implementation of the verb MUST preserve its guarantees: 1.',
+        "Resolve the store, then any interrupted authoring transaction MUST be reconciled first, under the section 9.2 refuse-before-write order, which applies the section 9.2 validation refusals before that reconciliation writes.",
+        'Reconciliation writes the store, so it MUST run only under the single-writer lease that publication uses: when a live or possibly-live holder holds that lease, reconciliation MUST refuse before any recovery write and MUST NOT seize the lease, and reconciliation MAY itself release a leftover lease from a confirmed-dead run of the same verb, since that release is the reconciliation on resume, and section 5.7 requires a leftover lease from a dead run to be released only through that reconciliation.',
+        'When any other lease is present, a confirmed-dead leftover of another verb included, reconciliation MUST refuse before any recovery write and MUST NOT release that lease.',
+        'An operand changed since the interruption, to bytes that are neither its journaled prestate nor its planned poststate nor a write of either torn by the interruption, MUST be reported and refused, never overwritten.',
+        'A reconciled interruption MUST refuse the new operation, so the operator inspects it before anything new is written.',
+        _D('2. Precondition: re-emitting the unchanged parsed model of every file the operation rewrites reproduces its on-disk bytes exactly (the section 9.2 rule).'),
+        'A file carrying comments or non-canonical serialization MUST be refused and left untouched.',
+        _D('The check proves serialization only: a hand edit or hand merge that leaves canonical bytes is not detectable by it, and the integration-base merge policy of section 5.7 remains a separate requirement.'),
+        _D('3. Claim each new ID as one atomic act (section 8.2): the claim is an irrevocable reservation in the journal home, made before the reversible publication (section 4.2).'),
+        _D("4. Postcondition: the model diff of every rewritten file equals exactly the operation's allowed delta (the new rows appended, the counters advanced by exactly the claim, and for a transition one status and updated_at change plus the proposed_from write or removal and, for a pending_decision, the resolution bundle write or removal and the supersedes link append), value for value and type for type (a boolean or float is never equal to an integer), before anything is written."),
+        'The expected delta MUST be derived from the request, the prior bytes of each rewritten file, the claimed IDs, the clock value, and the schema rules, never from the planned rows themselves.',
+        _D("For a handoff create that supersedes (section 8.5), the allowed delta also holds the superseded handoff's status and updated_at change and, for an assistant or automation post, its proposed_from write; it holds no change to any other existing record."),
+        _D('For carried, the allowed delta is the one section 9.3 defines.'),
+        '5. The in-repo store contract (section 5.7): the planned destinations MUST be clean, including ignored files, and the single-writer lease MUST be held across publication, render, and the final doctor.',
+        '6. Every rewritten file MUST be published in one crash-durable journaled transaction, so an interruption leaves the store exactly at its prestate or exactly at its poststate once reconciled.',
+        _D('That journal is .working/journals/record/journal.'),
+        _D('7. The declared views are rendered.'),
+        'Then a full doctor MUST report VALID; a failure leaves the change for review with recovery advice scoped to the planned paths.',
+        "One exception applies to a status change: doctor compares it with the prior committed snapshot, and doctor's history comparison sees only the prior snapshot's type and status, which identify neither the transitioning actor nor the pre-proposal state; doctor validates proposed_from but does not use it as rejection evidence, so doctor MAY grade that change cannot-evaluate until the change is committed.",
+        "The verb's render and final doctor MUST accept that cannot-evaluate only for exactly the record and the from and to statuses it has just written, never a finding and never any other cannot-evaluate, and the verb MUST report it as pending until commit.",
+        _D('opf doctor itself is unchanged and still reports it until then.'),
+        '8. The lease MUST be released, and only then are the claimed IDs and touched files reported.',
+        'The change MUST be left uncommitted in the working tree: the verb MUST NOT stage or commit it.',
+        'The verb MUST exit 0 when the change is recorded and the store is doctor-VALID (or carries only the pending cannot-evaluate of item 7), and 2 on every refusal or cannot-evaluate.',
+        'Import MUST preserve that operation sequence, including the one allocation seam, independent model delta check, cleanliness gate, lease and reconcile-first recovery.',
+        _D('Its atomic operands are the imported counter rows first, the touched <type>.imported.index.toml and worklog.imported.toml files, and the evidence bundle: the exact original at .working/imported/import/<run-id>/originals/<source-path> and inventory.toml in the retained opf.evidence.inventory/v1 format (section 4.2).'),
+        _D('The journal is .working/journals/record/journal.'),
+        'It MUST NOT rewrite clean records or clean counters.',
+        'Import MUST refuse with exit 2 on a non-importer actor, absent or invalid provenance, a clean-series record operand, an imported-to-clean link, a historical timestamp later than the run clock, an unknown missingness reason, or a type not enabled and supported by the writer.',
+        "It MUST also refuse without an adoption receipt, outside that plan's approved migrate-source scope, or when any section 14.1 bound item, the source bytes against the plan digest (archived under section 14.2 or frozen live), the tool release identity, or the prompt-pack version and digest included, no longer matches the approved plan.",
+        'Bound-item drift, in this session or a later one after a tool upgrade, MUST refuse into a fresh plan with its own single approval; import MUST NOT reinterpret the old approval.',
+        _D('Replay identity is (source_sha256, batch content digest).'),
+        'A completed identical replay MUST re-read and verify the published records and evidence, then succeed as a no-op reporting the existing IDs.',
+        'A partial overlap, including a differing batch against the same source within the run, MUST refuse, naming the overlap and directing to journal recovery.',
+        'Each source admits at most one completed batch per correction chain: a differing batch against a source whose batch already completed MUST refuse and name the completed run, unless the new batch declares that run as the completed run it corrects.',
+        "Such a corrected import is a fresh run; its records MUST link supersedes or corrects to the imported records they replace, the previous run's immutable evidence MUST be preserved, and source completion (section 14.1) evaluates the correcting run.",
+        "Before the source's recorded retirement, the source-bytes plan check of the refusal list MUST bind a correcting run as it binds any other; after that retirement, the preserved original under .working/imported/import/<run-id>/originals/ is the source of record, the digest bound is its recorded source_sha256, and the source-bytes check does not apply to the retired path.",
+        'Retry MUST NOT allocate duplicate IDs.',
+    ),
+    "9": (
+        _D(".working/toml/manifest.toml is the store's control document and discovery marker."),
+        _D('.working/toml/init.toml is the bootstrap provenance a coupled opf init records (its format is frozen in OPF-INIT-D2B).'),
+        _D('It is a managed leaf when present and is never required, so a store without it stays valid.'),
+        _D('The optional [opf].worklog key selects the active worklog storage generation, independently of [opf].homes and layout.'),
+        _D('Omission and integer 1 select the legacy worklog.toml ledger.'),
+        _D('This build supports only generation 1: integer 2 is reserved and refused before source selection; booleans, other types, and other integers are invalid.'),
+        _D('Archive buckets retain their legacy worklog.toml shape.'),
+        _D('Recognizing this key does not activate generation-2 writers or migration.'),
+        _D('Illustrative shape (the schema release that follows this specification is normative): toml # .working/toml/manifest.toml # OPFiles (AIQT Development Operational Standard) store manifest and discovery marker.'),
+        _D('[opf] standard = "opf" # discovery token; exact value required spec_version = "2.0.0" # OPFiles base spec version this store conforms to homes = 2 # homes generation; required, and 2 is the only value (section 9.2) layout = "inline" # storage layout: "inline" or "per-record" (was layout_profile) posture = "required" # "off", "warn", or "required" (section 11) import_status = "none" # "none", "partial", or "complete" [store] sync_target = "" # the store\'s dedicated sync target (section 5.7); empty under the # in-repo default, where the store rides the product repository [modules] # base-level optional capability modules (generic, not AIQT-specific) governance = true # the [profiles.aiqt] profile below requires these three enabled delivery_assurance = false operational_policy = true # (required by [profiles.aiqt].required_modules) concurrent_operation = true # (required by [profiles.aiqt].required_modules) # --- Profiles: additive requirement bundles, namespaced, ignored by base-only tooling --- [profiles.aiqt] version = "1.1.0" # AIQT profile version, independent of spec_version above base_compat = ">=2.0.0 <3.0.0" # base spec_versions this profile applies to posture_floor = "required" # effective posture = strictest(base.posture, this) required_modules = ["governance", "operational_policy", "concurrent_operation"] verification_floor = "triple-family" # AIQT reference-suite policy; base tools ignore this extension_namespace = "x-aiqt" # record-level namespace this profile owns (section 8.7) [profiles.aiqt.components] # optional carried-finding component map (section 9.3) store = ["src/store/**"] render = ["src/render/**", "templates/**"] # A second adopter could later add, ignored by everyone who does not support it: # [profiles.acme] # version = "0.1.0" # base_compat = ">=2.0.0 <3.0.0" [types.backlog_item] namespace = "BI" # ...'),
+        _D('one [types.<name>] table per enabled type; namespaces per section 8.1 [providers.local-directory] handler = "builtin" roles = ["create", "sync"] [providers.generic-git-remote] handler = "builtin" roles = ["sync"] # ...'),
+        _D('optional host providers, for example: # [providers.github] # handler = "plugin" # roles = ["create", "auth"] [unmanaged] paths = [] # pre-existing files kept in place, enumerated (section 14.2) [views."BACKLOG.md"] kind = "composed" sources = ["backlog_item", "block"] target = ".working/BACKLOG.md" [views."WORKLOG.md"] kind = "deterministic" sources = ["worklog"] target = ".working/WORKLOG.md" [views."CARRIED.md"] # optional area view; reads x-aiqt fields (sections 10.2 and 10.8) kind = "composed" sources = ["finding", "backlog_item"] target = ".working/CARRIED.md" profile = "aiqt" # the profile the view depends on (section 10.2) [views."DECISIONS.toml"] # a machine projection (section 10.5): deterministic, byte-drift-gated kind = "projection" sources = ["pending_decision", "autonomous_decision", "maintainer_decision", "preference_pattern"] target = ".working/DECISIONS.toml" [views."VERSION"] kind = "deterministic" sources = ["version"] target = "VERSION" [views."PIPELINE.md"] kind = "deterministic" sources = ["pipeline", "backlog_item", "block"] target = ".working/PIPELINE.md" [views."ROADMAP.md"] kind = "deterministic" sources = ["roadmap"] target = "ROADMAP.md" preamble = "optional" # the one curated-preamble seam (section 10.7) [deliverables."CHANGELOG.md"] kind = "curated" target = "CHANGELOG.md" [archive] period = "year" [vendors] registered = ["x-aiqt"] # record-level extension namespaces; the aiqt profile owns x-aiqt, # registered here so base-only record validation accepts x-aiqt fields View and deliverable targets under .working/ are relative to the store repository root; the public targets (VERSION, ROADMAP.md, CHANGELOG.md) are relative to the product repository root (section 5.8).'),
+        'The view key preamble is permitted only on [views."ROADMAP.md"], and only with the value "optional"; the key on any other view, or with any other value, MUST fail manifest validation (section 10.7).',
+        'The view key profile names the profile a view depends on (section 10.2): it is permitted only on a view of kind composed, its value MUST be the name of a [profiles.<name>] table the manifest declares, and the key on any other view, or with any other value, MUST fail manifest validation.',
+        'A composed view whose composition reads an extension field MUST carry the key.',
+        _D('Storage layout: The layout field selects the storage layout only: - **inline** (default): records live inline in <type>.index.toml; the index and the store coincide.'),
+        'One global store lock MUST serialize writers.',
+        _D('This is the ordinary single-writer case: a consumer reads one small file with one parse.'),
+        '- **per-record** (with the concurrent-operation module): <type>.index.toml becomes a registry of {id, state, path, digest} rows, records live one per file under <type>/, and any multi-record operation MUST take (namespace, id) locks in ascending order.',
+        _D('Concurrent writers pay the file-count cost only when they have the problem it solves.'),
+        _D('Readers always enter at <type>.index.toml in either layout.'),
+        'The ledgers are exempt from the per-record layout: version.toml, worklog.toml, pipeline.toml, and roadmap.toml MUST always be single files.',
+        _D('version.toml and worklog.toml are written under the store lock (allocation of WL IDs still goes through counters.toml atomically); pipeline.toml and roadmap.toml are edited through ordinary review (sections 10.6 and 10.7), and an assistant or automation that edits a planning ledger holds the section 5.7 single-writer lease instead of the store lock (section 10.6).'),
+    ),
+    "9.2": (
+        _D('Base spec 2.0.0 is the baseline, and it declares the homes generation with the required integer [opf].homes = 2 (section 4.2).'),
+        'A store that omits [opf].homes, or declares any value other than the integer 2, MUST be refused.',
+        _D('This specification defines no earlier base version, so this section defines no upgrade into 2.0.0; its rules bind each later base-schema version bump.'),
+        'Every later base-schema version bump MUST keep every manifest discoverable through the exact base discovery token opf (section 4.5).',
+        _D('No later base version exists, so the reference tooling defines no store upgrade (section 16.1).'),
+        "A base-schema version bump MUST ship a tested, in-place store-schema upgrade (opf upgrade) in at least one published implementation (section 16.1), the reference tooling, so that a store below the new version has an upgrade path; the path holds only within this section's preconditions and refusals and that implementation's disclosed residuals.",
+        _D('Every requirement of this section on an upgrade, its deltas, preconditions, refusals, and remedies binds every implementation that provides opf upgrade.'),
+        "Every implementation MUST apply the version ceiling's refusal at the end of this section.",
+        'The upgrade MUST be idempotent.',
+        'An upgrade MUST NOT create provenance, any approval (an adoption approval, a ratification or a receipt included), or history.',
+        'A schema-level bump MUST be additive, using atomic replacement of existing files, create-only writes for new index files, and regeneration of declared views through exclusively created temporary files followed by atomic rename.',
+        _D('These writes are sequential, with recovery scope held in memory, not a durable transaction journal.'),
+        'The upgrade MUST run under the store consistency contract and the single-writer lease (section 5.7).',
+        'It MUST fail closed on an unresolvable store, a declared spec_version ABOVE the tooling, a divergence, a held lease, or any populated state that contradicts its preconditions; it MUST NOT lower the fail-closed floor.',
+        'Before any write it MUST enforce two fail-closed preconditions: it claims the single-writer lease (section 5.7) and holds it across the whole mutation, and it verifies the working tree is clean, including ignored files, over the planned schema and render destinations (store and product roots) and the index collision candidates, so the committed HEAD is a verified restore path for that scope; a held lease or a dirty store refuses, and a dirty store is asked to commit its own changes, never restored by the tool.',
+        "After applying the schema delta, it MUST regenerate the declared views and MUST require a full doctor VALID before offering the uncommitted change for the adopter's own branch-and-merge.",
+        'It MUST NOT stage or commit the change.',
+        "The upgrade MUST NOT write the adoption archive and MUST NOT overwrite, relocate or remove a plan-enumerated frozen source (section 14.2); a frozen source sits outside the planned schema and render destinations, so the clean-tree precondition does not read it, and the required doctor VALID grades it under the section 11 bounded treatment.",
+        "An upgrade delta or manifest change that would declare a new view or managed store path at a registered [unmanaged] path or at a plan-enumerated frozen source MUST refuse, naming the collision; the remedy is the adopter's own fresh plan re-dispositioning that file (section 14.2).",
+        'The manifest and counters rewrite MUST be a model regeneration through the canonical new-document emitter, never a textual round-trip edit, bounded by two guards: a precondition that re-emitting the UNCHANGED parsed model reproduces the on-disk bytes exactly (proving the file is canonical and comment-free, so nothing can be lost), failing closed otherwise; and a postcondition that the model diff equals exactly the allowed delta, failing closed otherwise.',
+        _D('Repeated upgrade is a verified no-op only after full doctor VALID.'),
+        "Declaring a spec_version above the tooling's supported version MUST be refused at validation as a fail-closed INVALID finding naming the tooling-upgrade remedy, never treated as supported.",
+        'A store refused only at that ceiling is a store at a later version, never foreign content: that refusal MUST NOT authorize adoption over it, and the section 8.2 zero-seed ban stands (sections 4.5, 8.2, and 14.1).',
+        'A spec_version below 2.0.0 names no version this specification defines, and validation MUST refuse it as a fail-closed INVALID finding.',
+        'A manifest so refused, whatever its [opf].homes, is refused as a store: that refusal MUST NOT be read as authorizing initialization or adoption (sections 4.5 and 14.1).',
+        'A tree under a manifest so refused MUST NOT be adopted until the operator has moved that manifest aside by hand, a step no OPF command performs; its files are then ordinary foreign content for a section 14 first adoption (section 14.1).',
+        'Files remaining under the reserved store control children (section 14.2) are the one exception: an adoption option MUST NOT select them, so the operator moves them aside by hand on the same terms, a step no OPF command performs, before that first adoption can complete.',
+        'A manifest declaring a spec_version of 2.0.0 or above whose [opf].homes is missing or not the integer 2 is refused as a store by the [opf].homes refusal above, never foreign content: that refusal MUST NOT be read as authorizing initialization or adoption (sections 4.5, 8.2, and 14.1).',
+        'Before any command writes to a store, the claim, release, or reconciliation of the single-writer lease (section 5.7), a fast-forward by opf sync, and the recovery of sections 8.8, 14.1, and 14.2 included, every implementation MUST apply these validation refusals and the [opf].homes refusal above to the store manifest that discovery finds there, so a store they refuse stays byte-identical.',
+        'For opf sync, these refusals and the [opf].homes refusal MUST also be applied to the store manifest the fetched state carries, before a fast-forward lands it, so a fast-forward never brings a refused manifest into the store.',
+    ),
+    "9.3": (
+        _D('The shipped profile [profiles.aiqt] carries the rules of this section from its version 1.1.0; they map a carried low finding (section 10.6) to the later changes that address it.'),
+        _D('They bind only a store that declares that profile at version 1.1.0 or later, and only for a tool that supports that version (section 9.1).'),
+        _D('A tool that supports the profile only below version 1.1.0 records these rules as unevaluated for such a store, never as passed (section 16).'),
+        _D('Base validation reads the extension table below as an opaque registered extension (sections 8.7 and 9.1), so no store gains a base requirement from this section.'),
+        _D("The record-level data rides the profile's registered extension namespace while the design settles; a later version of this specification can move the same shape into a default-off module or an optional base field, and this version makes neither move."),
+        _D('A finding marks itself as a carried low finding by carrying the table x-aiqt.carried.'),
+        _D("The table records the adopter's judgement that the finding is a carried low finding; the base still defines no severity scale (section 10.6)."),
+        'The table: - MUST NOT appear except on a finding whose status is unqualified routed, and MUST hold no key this section does not name.',
+        _D("An assistant or automation that routes a finding lands routed/proposed (section 8.4), so the table waits for the maintainer's ratification: a rejection returns the finding to open (section 8.8), where it could not shed a table whose dispositions are append-only."),
+        _D('- area: an optional array of area entries, non-empty and without duplicates where present.'),
+        _D('An area entry is either a component reference, the string component: followed by the name of a component the component map declares, or a path glob in the dialect below.'),
+        _D('A finding without area has no area: it never matches a changed path, and the report lists it apart (section 10.8).'),
+        _D('- dispositions: an optional array of disposition tables, in the order recorded.'),
+        "Each disposition MUST hold exactly change, outcome, and reason: - change: a non-empty single-line string that locates the change in the host's own terms, for example its URL.",
+        _D('A change is a host object, not a store record, so no link and no doctor check resolves it.'),
+        _D("- outcome: one of the closed set fixed (the change fixed the finding) and deferred (the change touched the finding's area and left the finding unfixed)."),
+        _D('- reason: a non-empty single-line string that says why the change fixed the finding or left it unfixed.'),
+        'Dispositions are append-only: an entry MUST NOT be removed or rewritten, and a correction is a new entry.',
+        _D('For each distinct change value, the last disposition in array order is the effective one, so a correcting entry for the same change replaces the effect of every earlier one; the checks of this section read effective dispositions only.'),
+        _D('opf record carried (section 8.8) is the sanctioned writer of the table and its dispositions.'),
+        'Its operand is one clean finding in the active store authored by a non-importer actor whose status is unqualified routed; any other operand MUST be refused with nothing written.',
+        "Any non-importer actor MAY run it, because writing the table is not a transition and lands no /proposed status (section 8.4); the maintainer's ratification of the remediating backlog item's done stays the control (below).",
+        _D('Each run performs exactly one act: - table: creates x-aiqt.carried on a finding that does not carry it, with the area entries given, or with no area where none is given, and with no dispositions.'),
+        _D('- area: sets or replaces the area of a finding that carries the table, or removes it where no entry is given.'),
+        _D('area is a current judgement, not history, so it is not append-only.'),
+        _D('- disposition: appends exactly one disposition, from the change, outcome, and reason given, after the last existing one on a finding that carries the table, creating the dispositions array where it is absent.'),
+        'The run MUST refuse, with nothing written, a request that would break a rule of this section, such as a table act on a finding that already carries the table, an area or disposition act on one that does not, a component reference to an undeclared component, a glob outside the dialect below, or a disposition that would leave a backlog item in unqualified done that remediates the finding without an effective fixed disposition (C-CARRIED-CLOSURE, below).',
+        _D("Its allowed delta (section 8.8, item 4) is exactly: in the finding, that one table creation, area change, or disposition append, with no change to status, updated_at, or any other field; in the per-record layout, the finding's index row with its digest recomputed for the rewritten record file (sections 9 and 13) and no other change to that row; and the run's own worklog entry with the counter advanced by exactly its claim."),
+        _D('That worklog entry opens its detail with opf-record carried <ID> table, opf-record carried <ID> area, or opf-record carried <ID> disposition <outcome>, links the finding with relates, and, for a disposition, carries the change as a refs entry whose locator is the change value and whose note is the outcome, of kind url where that value contains :// (the URL test of section 5.6) and of kind doc otherwise (sections 6.2 and 8.6); the report reads such entries to age the finding (section 10.8).'),
+        'The run follows the whole section 8.8 operation sequence: reconciliation first, the byte-reproduction precondition, the ID claim, the independent delta check, the section 5.7 clean-state check and single-writer lease held across publication, render, and the final doctor, one journaled transaction in .working/journals/record/journal, the render of the declared views, a final doctor that MUST report VALID, and the lease released before the change is reported and left uncommitted.',
+        _D("transition neither writes nor removes the table, and no other operation's allowed delta includes it."),
+        _D('A store kept by hand (section 1) writes the same delta through ordinary review: the written record, and in the per-record layout its index row with its recomputed digest, is re-emitted in the canonical serialization of section 5.7 before commit, together with a worklog entry of the same shape, and the section 5.7 merge-conflict rule applies to it as to any store path.'),
+        'An assistant or automation that writes the table by hand MUST hold the section 5.7 single-writer lease while it writes.',
+        'Where the enforcement pack protects the record series (section 14.1), opf record carried is the only write path, and a tool that enforces C-CARRIED-CLOSURE (below) MUST offer opf record carried, because enforcement MUST NOT ship before the writer can perform every operation it forces (section 14.1).',
+        "Writing the table or a disposition by any path is not a transition, so it MUST NOT change the record's status or updated_at (section 8.3).",
+        _D('Imported records are immutable (section 8.3), so the table is never written onto one.'),
+        _D('[profiles.aiqt.components] is the optional component map: a manifest table mapping each component name to a non-empty array of path globs, without duplicates, in the dialect below.'),
+        'A component name MUST match ^[a-z0-9]+(-[a-z0-9]+)*$.',
+        _D("A component reference expands to its component's globs, so a rename or move changes one map line rather than every record that names the component."),
+        _D('The map is a profile store-wide field (section 9.1), invisible to base validation.'),
+        _D('A path glob is relative to the product repository root and is written in this closed dialect: - It is one or more segments separated by /, with no leading or trailing /, no empty segment, no segment that is . or .., no backslash, no C0 control character or DEL, and no leading component:.'),
+        _D('- ** as a whole segment matches zero or more whole segments; ** inside a longer segment is outside the dialect.'),
+        _D('- * inside a segment matches zero or more characters other than /, a leading . included.'),
+        _D('- ? matches exactly one character other than /.'),
+        _D('- Every other character matches itself, compared by Unicode code point and case-sensitively; the dialect has no escapes, character classes, or alternation.'),
+        _D('- A glob matches a path only when it matches the whole path.'),
+        _D('A carried finding is a clean finding authored by a non-importer actor that carries x-aiqt.carried.'),
+        _D('A remediating backlog item of it is a clean backlog item authored by a non-importer actor that a remediates link connects to the finding, whichever of the two records carries the link.'),
+        _D('A carried finding is: - **open** where at least one of its remediating backlog items is not in an unqualified terminal state; - **closed** where none is, and at least one stands in unqualified done; - **unremediated** where it has no remediating backlog item, or every one stands in unqualified dropped.'),
+        _D('A carried finding closes through its remediating backlog item, never through a finding transition.'),
+        _D('The finding stays routed, because section 8.5 gives routed no outgoing transition and a finding links its remediation rather than containing it (section 8.1).'),
+        _D('After the change that a fixed disposition names has merged, an assistant or automation moves the remediating backlog item to done/proposed (section 8.4); the base already permits that move, and this profile adds no precondition to it.'),
+        _D('Only a maintainer ratifies it to done, and ratified done creates its receipt (section 8.5).'),
+        'Where the effective posture (sections 9.1 and 11) is required, a tool that supports the profile MUST refuse, with nothing written, a done-with-receipt that would leave the item without an effective fixed disposition on each carried finding it remediates, or, for a superseded carried finding, on a successor (C-CARRIED-CLOSURE, below).',
+        'A store that declares the profile MUST NOT rotate a carried finding to the archive (section 12) unless the finding is closed.',
+        _D('An open or unremediated carried finding can still take a disposition, and rotation preserves an archived record byte for byte (section 13), so an archived finding could never take one.'),
+        _D('A tool that ignores the profile can still rotate a carried finding that is not closed (section 17).'),
+        _D('The remedy is a successor: a new carried finding, authored through opf record (section 8.8), that links supersedes to the archived one (section 8.6) and carries on its tracking, its own remediates links included.'),
+        _D('An archived carried finding that a carried finding links supersedes to is a superseded carried finding, whether or not it is closed.'),
+        _D('A superseded carried finding is never listed by the report or the view (section 10.8), its successor standing in for it, and an effective fixed disposition on its successor, or on a later successor along the supersedes chain, counts as one on the superseded finding for C-CARRIED-CLOSURE.'),
+        _D('A tool that supports the profile runs two checks as extra gates of the profile (sections 9.1 and 11).'),
+        'Each resolves records across the active store and the archive alike (section 12), and each MUST fail closed on an unreadable or unparseable input: - **C-CARRIED-SHAPE** reads every clean record authored by a non-importer actor, active and archived, and the component map.',
+        'An x-aiqt.carried table on a record that is not a finding in unqualified routed, a key this section does not name, an area or dispositions value that breaks the rules above, a component reference that names no declared component, a malformed component map, and a glob outside the dialect MUST each be a finding.',
+        _D('An x-aiqt.carried table on an importer-authored record, in either series, is imported history (section 8.6): it marks no carried finding, and no check of this section reads it.'),
+        _D('- **C-CARRIED-CLOSURE** evaluates clean records authored by non-importer actors only (section 8.6).'),
+        'A backlog item in unqualified done that remediates a carried finding MUST be matched by at least one effective disposition with outcome fixed on that finding, or, for a superseded carried finding, on a successor (above); each carried finding it remediates without one MUST be a finding.',
+        'A backlog item in done/proposed in the same position MUST be reported as carried_unreferenced detail rather than failed, so the gap shows before ratification.',
+        _D('A remediating backlog item that reaches dropped is outside this check.'),
+        'A carried finding in the archive that is not closed MUST be a finding, because it can no longer take a disposition, unless it is a superseded carried finding, which MUST be reported as carried_archived_open detail rather than failed.',
+        _D('The check reads that the disposition exists, never that the change merged or fixed the finding (section 17).'),
+        _D('**Choices for the maintainer to confirm.**'),
+        _D("The maintainer's recorded decisions fix the area field (globs plus a manifest-declared component map), the overlap check (the report run when a change, such as a pull request, opens, plus a generated area view), the change reference (a structured {change, outcome, reason} disposition list with a closed outcome set, in an extension first), the closure rule (proposed then ratified, plus the profile doctor rule requiring a fixed disposition reference), and the aging rule (age in releases or in merged changes, the unit to be agreed in the lanes standard)."),
+        _D('The following are choices this text makes beyond those decisions.'),
+        _D('They stand as written until the maintainer confirms or replaces them, and a replacement is a change to this specification: 1. The outcome set is exactly fixed and deferred.'),
+        _D('2. The area lives on the finding, and a finding is carried because it holds x-aiqt.carried, never because of a severity it records.'),
+        _D('3. The table is permitted only on unqualified routed, never on routed/proposed.'),
+        _D('4. The glob dialect above, its root at the product repository root, the component: prefix, and the component-name pattern.'),
+        _D('5. The writer opf record carried with its three acts, open to any non-importer actor without a /proposed landing; a disposition is recorded both in the table and as its worklog entry.'),
+        _D('6. The effective disposition is the last one for each change.'),
+        _D('7. The profile narrows rotation, and the successor remedy and the detail codes carried_unreferenced and carried_archived_open handle a carried finding archived while not closed.'),
+        _D('8. An x-aiqt.carried table on an importer-authored record is ignored as history.'),
+        _D('9. The report verb opf report, its mode carried, and report contract v1 (section 10.8): its options, sections, formats, exit codes, and change-body block.'),
+        _D("10. The aging reference instant: the latest linking worklog entry's date, else the finding's created_at (section 10.8)."),
+        _D("11. The area view's name CARRIED.md, its target, and its layout (section 10.8)."),
+        _D('12. Profile version 1.1.0, and transform vocabulary version 2 within base spec_version 2.0.0 (section 10.2), together with the base manifest view key profile (section 9) and the carried subcommand listed in the base opf record (section 8.8).'),
+        _D('13. The pre-write refusal, at the effective posture required, of a done-with-receipt that would leave a remediated carried finding without an effective fixed disposition on it, or, for a superseded carried finding, on a successor (above).'),
+    ),
+    "10.6": (
+        _D('.working/toml/pipeline.toml is the pipeline control ledger: one machine pipeline file beside version.toml and counters.toml, a control ledger rather than a record type (section 8.1).'),
+        _D('It holds, per lane, the ordered entries the pipeline definition of section 2.1 names: clean backlog item IDs, or named bundles of them.'),
+        _D('It is lowercase machine source (section 4.6), exempt from the per-record layout like the other ledgers (section 9).'),
+        _D('It is working state rather than a durable record: an entry leaves the ledger when its item or bundle completes or is dropped, a [[bundle]] row leaves in the same change as the one entry that names it, and removing either deletes no record, because the ledger holds references and order only, while the durable facts live in the backlog records, the done receipts, and the worklog.'),
+        'opf init MUST create the ledger, create-only, holding schema = 1 and no rows, and an empty ledger renders a PIPELINE.md stating that no lane is declared.',
+        _D('The pipeline and roadmap control ledgers and their renders are part of the base 2.0.0 baseline: no earlier base version carries them, because none is defined (section 9.2), and the reference tooling does not yet implement base 2.0.0 (section 16.1), so no store upgrade is needed.'),
+        _D("Each ledger and its render are required where the manifest's view map declares the render (section 9)."),
+        'opf init MUST declare both renders in the manifest it writes and MUST create both ledgers, so every newly initialized store carries both by default; an adopter that publishes no roadmap MAY remove the ROADMAP.md declaration through ordinary review; the PIPELINE.md declaration MUST NOT be removed, and a manifest that does not declare [views."PIPELINE.md"] MUST fail manifest validation (section 9).',
+        'Where its render is declared, an absent ledger MUST fail closed at required (section 11), never read as empty; where the ROADMAP.md render is not declared, the roadmap ledger MAY be absent.',
+        _D('A ledger that is present is a managed store path and is checked by its doctor check (C-PIPELINE or C-ROADMAP, below and section 10.7) whether or not its render is declared.'),
+        _D('Illustrative shape (the schema release that follows this specification is normative): toml schema = 1 [[lane]] lane = "fixes-and-hardening" entries = [ { item = "BI-412" }, { bundle = "render-hardening" }, { item = "BI-398", act = "MD-31", pinned = true }, ] [[bundle]] name = "render-hardening" items = ["BI-371", "BI-385", "BI-390"]'),
+        _D('The shape is closed:'),
+        '- Each [[lane]] table MUST hold exactly lane (the lane\'s name, an adopter-supplied name under any lanes standard the adopter follows; section 2.1) and entries (an ordered array of entry tables, which MAY be empty: a lane with no entries renders as a lane with no entry).',
+        'Each lane name MUST appear exactly once: one list per lane.',
+        '- An entry MUST hold exactly one of item (a clean backlog item ID) or bundle (a declared bundle name), plus an optional act (the ID of the maintainer_decision, or of the maintainer_action where the governance module is enabled, that records a maintainer override) and an optional pinned (permitted only as true, and only beside act).',
+        'An unknown key MUST fail validation.',
+        '- Each [[bundle]] table MUST hold exactly name (unique among bundles) and items (a non-empty ordered array of clean backlog item IDs).',
+        _D('A bundle is delivered as one reviewed change.'),
+        "- A bundle name and a roadmap milestone name (section 10.7) MUST each match ^[a-z0-9]+(-[a-z0-9]+)*$; these names are this specification's own.",
+        'A lane name MUST be a non-empty single-line string, unique within the ledger; its form belongs to any lanes standard the adopter follows (section 2.1), and this specification constrains it no further.',
+        _D('- Canonical form, the form whose departure is the non-canonical C-PIPELINE failure below and never a second C-CONTAINMENT finding (section 5.7), is the canonical serialization of section 5.7 with these orderings: the schema key first; then every [[lane]] table, their file order being the ledger order the render follows; then every [[bundle]] table, sorted by name; within a [[lane]] table, lane then entries; within an entry, item or bundle, then act, then pinned, each entry an inline table on its own line; within a [[bundle]] table, name then items; and the byte rules of section 10.3 (UTF-8, LF).'),
+        _D('The schema release that follows this specification fixes any remaining layout bytes.'),
+        _D('- Both planning ledgers are hand-edited machine sources written through ordinary review and re-emitted in canonical form before commit; no section 8.8 authoring operation writes them.'),
+        'An assistant or automation that edits either ledger MUST take the section 5.7 single-writer lease, observable at the sync target where the store has one, before it writes, and hold it across its writes and, where the store has a sync target, their sync-back (section 5.7), and the command that re-emits a ledger in canonical form ships with the schema release that follows this specification.',
+        _D("After a merge conflict on either ledger, the section 5.7 rule applies as to any store path: take the integration base's version and redo the edit on that base, which claims no ID, because the ledgers hold references and order only."),
+        _D("The stored order is the authority, and the head entry is the lane's next."),
+        _D("The actor that operates a lane (typically an assistant or automation), working under the adopter's standing priorities, owns that lane's order; the order is recorded in the ledger and visible in every render of it."),
+        "The maintainer MAY reorder or pin any entry, and MAY insert an urgent entry at the head, by a recorded act: the override's maintainer_decision or maintainer_action record, whose ID each affected entry names in act.",
+        "The act record's actor.kind MUST be maintainer, and a maintainer_action act MUST stand in the unqualified done state, which only a maintainer transition lands (section 8.4), so an assistant or automation can never author or ratify the act that authorizes its own override.",
+        "A pin fixes the entry's position relative to the other entries of its lane: except by a further recorded act, an entry MUST NOT be inserted ahead of, or reordered across, a pinned entry; a pinned entry MUST NOT be removed except by a further recorded act or once its item, or every item of its bundle, stands in an unqualified terminal state.",
+        'An act on an unpinned entry records provenance only: the lane owner MAY later move that entry, and only pinned protects position.',
+        'Where a finding the adopter grades as low severity is left unfixed by the change that found it (a carried low finding), the backlog item that remediates it (section 8.6, remediates) MUST enter the pipeline as a member of a bundle whose items touch the same area of the product, or, where no such bundle exists, as an entry in the lane the adopter designates for fixes and hardening, or, where none exists, as an entry in the lane that owns the area.',
+        _D("Severity and area are the adopter's judgement; the base defines no severity scale and no area field."),
+        _D("Where the store declares the reference profile, the finding's x-aiqt.carried table records that judgement for the area (section 9.3), opf report carried lists the open carried findings a change touches, and the optional CARRIED.md view lists them by area (section 10.8)."),
+        _D('In either case this placement rule is enforced by review, not by the doctor (section 17).'),
+        'Blocked-ness MUST NOT be stored in the ledger: it is derived at view time through the existing block join (sections 8.5 and 10.2), and a ledger render is bounded by the rules of this section and section 10.7 plus that join, never by any new entry in the section 10.2 vocabulary.',
+        _D("PIPELINE.md is the ledger's deterministic render, declared in the view map with the sources pipeline, backlog_item, and block, and gated on byte drift like any deterministic view (sections 10.3 and 11)."),
+        _D("It renders every lane in ledger order and each lane's entries in stored order, head first."),
+        _D("For each entry it renders the entry's item ID or its bundle's name and member item IDs, the act ID and the pin where present, and the entry's standing with that standing's marker; it renders no backlog field beyond the item ID."),
+        _D('The fixed marker strings are left to the schema release that follows this specification.'),
+        _D("Each entry's standing is derived at view time, resolving items across the active store and the archive alike (section 12), and every entry holds exactly one standing, the first of these that applies, in this order: - **stale**: the entry's item, or its bundle's every item, stands in an unqualified terminal state (the stale entries of the doctor list below); - **awaiting ratification**: the entry's item holds a /proposed-qualified status (section 8.4), or its bundle's every non-terminal item does; - **blocked**: a clean, unqualified active block authored by a non-importer actor scopes the entry's item, or, for a bundle entry, every non-terminal item of its bundle is so scoped: the block join proper (section 8.5), nothing wider; - **actionable**: the entry's item is actionable or, for a bundle entry, some item of its bundle is actionable (section 8.5); - **not actionable**: every remaining case, for example a bundle mixing blocked, /proposed, and terminal items of which none is actionable."),
+        _D("The head entry is the lane's next (section 2.1)."),
+        "Where the head is not actionable, the render MUST mark the head with its standing and MUST name beside it the lane's first entry whose standing is actionable, passing over stale, awaiting-ratification, and not-actionable entries as it passes over blocked ones, never reordering the stored list.",
+        'Where no entry of a lane is actionable, the render MUST state that the lane has no actionable entry.',
+        "The render MAY display a lane's keep-ahead depth where a lanes standard the adopter follows defines one; this specification does not define lane operation (section 2.1).",
+        "The doctor checks the ledger in the integrity layer as C-PIPELINE (section 11); each defect below is a finding that fails at required, except where a bullet states a different treatment: - a ledger that violates the shape rules above, for example an unknown or missing key, an entry holding both or neither of item and bundle, a pinned value other than true, an empty bundle items, a bundle name outside the lexical form, or a lane name that is empty, multi-line, or appears more than once, MUST be a finding; a defect a later bullet names is reported by that bullet alone; - every item value, and every member of every referenced bundle's items, MUST name a clean backlog item authored by a non-importer actor, resolving across the active store and the archive alike (section 12); - an entry whose item, or whose bundle's every item, stands in an unqualified terminal state is a stale entry: it MUST be reported as pipeline_stale detail rather than failed, so a ratified completion never fails the store, and it SHOULD leave the ledger in the next ledger change; - a backlog item MUST NOT appear in more than one lane, or more than once within a lane, directly or through a bundle; each such duplicate MUST be a finding; - every bundle value MUST name exactly one declared [[bundle]] row, and every declared bundle MUST be named by exactly one lane entry; - a pinned key without act, and an act value that does not resolve, across the active store and the archive alike (section 12), to a clean maintainer_decision or maintainer_action record whose actor.kind is maintainer (for a maintainer_action, one standing in the unqualified done state), MUST each be a finding; - an unreadable, unparseable, or non-canonical ledger, and an absent ledger whose render the view map declares, MUST each fail closed at required (section 11), never read as an empty pipeline.",
+    ),
+    "10.7": (
+        _D('.working/toml/roadmap.toml is the roadmap ledger: the machine milestone source beside version.toml, a control ledger rather than a record type (section 8.1).'),
+        _D('It is lowercase machine source (section 4.6), exempt from the per-record layout (section 9), and it is working state in the same sense as the pipeline control ledger: direction, never durable fact.'),
+        _D('It is written as the pipeline control ledger is (section 10.6): hand-edited through ordinary review, re-emitted in canonical form before commit, under the same merge-conflict rule.'),
+        "A milestone's row MUST leave the ledger in the change that records, in version.toml, the release that discharges it; from then on the changelog entry accounts for the work.",
+        _D('The discharging release of a milestone carrying target_version is the release of that version; for a milestone carrying items alone, it is the first release cut after every member item stands in an unqualified terminal state.'),
+        'An item MAY be named by more than one milestone; each milestone discharges on its own terms.',
+        'opf init MUST create the ledger, create-only, holding schema = 1 and no rows, and an empty ledger renders a ROADMAP.md stating that no milestone is declared.',
+        _D('Illustrative shape (the schema release that follows this specification is normative): toml schema = 1 [[milestone]] name = "adoption-tooling" title = "Ship the adoption apply and completion path" theme = "adoption safety" target_version = "1.4.0" items = ["BI-371", "BI-412"]'),
+        '- Each [[milestone]] table MUST hold name (unique among milestones, in the lexical form of section 10.6) and title (one line), and MUST hold no key this section does not name: an unknown key MUST fail validation.',
+        _D('- theme is an optional short direction field.'),
+        'target_version is an optional SemVer version of the planned release that discharges the milestone and MUST NOT name a version already released in version.toml.',
+        'items is an optional non-empty array, each member of which MUST name a clean backlog item authored by a non-importer actor.',
+        'A milestone MUST carry target_version, a non-empty items, or both, so every milestone names what will discharge it.',
+        _D('- Direction is carried as these short fields.'),
+        'The ledger MUST NOT carry release prose (section 6.1); whatever story the fields cannot carry has exactly one curated home, the optional preamble below.',
+        _D('- The ledger ordinarily covers the next two or three releases: the milestones and themes ahead, ordered by intent (section 2.1) and rendered in row order.'),
+        _D('ROADMAP.md is a generated public deliverable at the product repository root (section 5.8): the deterministic render of the roadmap ledger in row order, under the determinism requirements of section 10.3 and declared in the view map with the source roadmap alone and with preamble = "optional" (section 9).'),
+        "The render shows, per milestone in row order, its name, title, theme, and target_version where present, and its items as backlog item IDs alone: the render MUST NOT include a backlog item's title or any other backlog field, so no backlog prose from a private store enters the public deliverable (section 5.8).",
+        _D("Item IDs are rendered as the opaque strings the ledger holds, and their resolution is C-ROADMAP's alone (below), so a backlog change never alters the public render or its header's source-set digest."),
+        _D('One optional curated preamble is the single curated seam, the one declared exception to the section 10.3 rule that a generated file opens with its header.'),
+        'The first line of the ROADMAP.md generated header MUST be the fixed delimiter line <!-- opf:generated -->, the same bytes in every render whatever the sources, digests, or generator version, and the header MUST state that any bytes above it are a curated preamble, gated on facts (section 3).',
+        'The preamble is the bytes of the target file before the first line byte-equal to that fixed delimiter line, and it MUST NOT contain such a line; opf render MUST copy the preamble verbatim above the freshly generated body and MUST read nothing else from its target.',
+        'An absent target has an empty preamble; a target that exists but holds no delimiter line MUST fail closed at required and MUST NOT be rendered over.',
+        _D('The byte drift gate compares the bytes from the delimiter line to the end of the file, so the generated body is drift-gated while the preamble is never byte-drift-gated.'),
+        'The preamble is hand-written and edited through ordinary review, with no machine draft and no freeze digest; it is gated on its facts, not its bytes, like the changelog (section 7): every version token the preamble carries (a SemVer 2.0.0 version string with a leading v, delimited by word boundaries; the leading v is what marks a token as a version, so a bare dotted number, a date, or an address is never gated) MUST, once its leading v is removed, name a released version in version.toml or a declared target_version in the roadmap ledger, and the gate fails closed on an unreadable input.',
+        'opf render MUST refuse to write ROADMAP.md while the preamble fact gate fails (section 5.8).',
+        _D('A store that wants no curated voice omits the preamble, and ROADMAP.md is then byte-identical to its render.'),
+        'The doctor checks the ledger in the integrity layer as C-ROADMAP (section 11); each defect is a finding that fails at required: a milestone that violates the shape rules above, a milestone carrying neither target_version nor a non-empty items, an items member that does not resolve (across the active store and the archive alike, section 12), a target_version naming a released version, and an unreadable, unparseable, or non-canonical ledger, or an absent ledger whose render the view map declares, which MUST fail closed, never read as an empty roadmap.',
+        _D('Canonical form is the canonical serialization of section 5.7 under the section 10.6 orderings: the schema key first, then every [[milestone]] table in row order, keys within each table in the order this section lists them (name, title, theme, target_version, items); a departure is this non-canonical C-ROADMAP failure, never a second C-CONTAINMENT finding (section 5.7).'),
+    ),
+    # 10.8: the sentence "The input is UTF-8, every line ends with LF, and an empty input is an empty
+    # list." occurs twice in the section, and the pin-flip self-test requires each pin to occur once
+    # in its section, so each occurrence is pinned joined to the sentence before it (the --changed
+    # and --merged pins): two pins of two sentences each, against the one sentence per pin rule.
+    "10.8": (
+        _D("opf report is the reference tooling's report verb."),
+        'Every mode of it MUST be read-only and report-only: it MUST write nothing but its standard output and standard error, MUST NOT take a lease, read the network, or read the clock, and no posture makes its content a gate (section 11).',
+        _D('The verb adds no conformance requirement for a store, so a store that never runs it stays conformant (section 1).'),
+        _D('This specification defines one mode, opf report carried, the report over the carried findings of section 9.3.'),
+        _D("A host or an assistant runs it when a change opens or is updated; how its output reaches the change is the host's concern."),
+        _D('Inputs (each option at most once; an unknown or repeated option, or a combination this list does not allow, is a malformed argument): - The resolved store.'),
+        'Where it does not declare [profiles.aiqt] at version 1.1.0 or later, in a version the tool supports (section 9.3), the command MUST exit as cannot-evaluate, never with an empty report.',
+        _D('- Exactly one mode: --changed <file> (change mode) or --by-area (by-area mode).'),
+        _D('Both, or neither, is a malformed argument.'),
+        _D("- --changed <file>: the change's changed paths, where - reads standard input. The input is UTF-8, every line ends with LF, and an empty input is an empty list."),
+        _D('Each line is a path relative to the product repository root: one or more segments separated by /, with no leading or trailing /, no empty segment, and no segment that is . or ...'),
+        'A segment MAY hold any character other than /, a C0 control character, and DEL, so a * or ? in a path stands for itself.',
+        _D('Identical lines collapse to one.'),
+        _D('- --by-area: list every open carried finding grouped by area entry, instead of matching a change.'),
+        _D('- --format text (the default) or --format toml.'),
+        _D('- --age-unit releases or --age-unit changes, with --age-threshold <n> for a positive decimal integer n without leading zeros: both or neither.'),
+        _D('The command has no default unit and no default threshold: the unit and the threshold are for the lanes standard the adopter follows to agree (section 2.1), and the command takes them only as arguments.'),
+        _D('- --merged <file>: required with the changes unit and a malformed argument otherwise.'),
+        _D('It lists the merged changes, where - reads standard input; at most one of --changed and --merged reads standard input. The input is UTF-8, every line ends with LF, and an empty input is an empty list.'),
+        _D("Each line is an RFC 3339 UTC instant ending in Z, one space, and the change's locator, a non-empty string holding no C0 control character and no DEL."),
+        _D('Identical lines collapse to one; two lines that give one locator different instants are malformed.'),
+        _D('Selection reads the carried findings and remediating backlog items of section 9.3, across the active store and the archive alike (section 12).'),
+        _D('The report lists open and unremediated carried findings; a closed carried finding is never listed, and neither is a superseded carried finding (section 9.3), whose successor stands in for it.'),
+        _D('The open remediating backlog items of an open carried finding are those not in an unqualified terminal state, and its standing is awaiting_ratification where every one of them holds a /proposed status and open otherwise.'),
+        _D("A changed path matches an open carried finding when it matches a glob of one of the finding's area entries, a component reference contributing its component's globs (section 9.3)."),
+        _D('An open carried finding without area is listed as having no area in every run and never matches.'),
+        _D('Aging measures how long an open carried finding has gone untouched; an unremediated finding is not aged.'),
+        _D("Its reference instant is the latest date of an entry of the clean worklog (section 6.2), its archive included, that links the finding, whatever the relation, or the finding's created_at where no such entry links it."),
+        _D('Its age in releases is the number of [[release]] rows in version.toml without the imported flag whose date is later than the reference instant; its age in changes is the number of distinct --merged lines whose instant is later than the reference instant.'),
+        _D('A finding whose age reaches the threshold is aged.'),
+        _D('An aged finding is a candidate only: routing it to a lane is an act under the lanes standard and a pipeline control ledger change (section 10.6), never a write of this command.'),
+        'Output contract (report contract v1): - The output MUST be deterministic under the byte rules of section 10.3: UTF-8, LF line endings, no timestamp, and the orderings below, so the same store and the same inputs give the same bytes.',
+        '- The command MUST exit 0 whenever it writes the report, whatever the report lists, and MUST exit 2 as cannot-evaluate, writing nothing to standard output, on an undeclared or unsupported reference profile, an unreadable or unparseable store input, a C-CARRIED-SHAPE defect (section 9.3) in a record or table it reads, or a malformed argument or input line.',
+        _D('It never exits 1, because a report has nothing to fail.'),
+        _D('- Every run reports these sections, in this order: in change mode match, then no_area, unremediated, and, where aging is requested, aged; in by-area mode area, then no_area, unremediated, and, where aging is requested, aged.'),
+        _D('Their entries, with keys in the order listed: - match: one per open carried finding that a changed path matches, with finding, standing, backlog (its open remediating backlog item IDs), areas (the area entries, as written, that a changed path matched), and paths (the changed paths that matched).'),
+        _D('- area: one per distinct area entry that an open carried finding carries, with entry (the entry as written, a component reference never expanded) and findings (the open carried findings that carry it).'),
+        _D('- no_area: one per open carried finding without area, with finding, standing, and backlog.'),
+        _D('- unremediated: one per unremediated carried finding, with finding.'),
+        _D('- aged: one per open carried finding whose age reaches the threshold, with finding, standing, backlog, and age (an integer).'),
+        _D('The area entries are in Unicode code-point order of entry, and the entries of every other section in ascending numeric order of finding.'),
+        _D('Within an entry, backlog and findings are in ascending numeric ID order, and areas and paths in Unicode code-point order.'),
+        _D('- The toml format holds, in this order: schema = 1 (the report contract\'s own version, bumped independently), report = "carried", and mode ("change" or "by-area"); an [inputs] table, present only where it holds a key, holding in this order changed_sha256 (in change mode, the SHA-256 digest of the --changed bytes as read), age_unit and age_threshold (where aging is requested), and merged_sha256 (for the changes unit), each digest written as 64 lowercase hexadecimal digits; then one array of tables per reported section, [[match]], [[area]], [[no_area]], [[unremediated]], and [[aged]], in the section order and each present only where the section has an entry.'),
+        _D('It is written in the canonical serialization of section 5.7 with this layout: each key on its own line as key = value; strings as TOML basic strings; integers in decimal; every array inline on one line, its elements separated by a comma and one space, with no space inside the brackets; one empty line before each table header and no other empty line; no comment; no trailing whitespace; and a final LF.'),
+        _D('- The text format carries the same content in fixed lines, each ending with LF and none carrying trailing whitespace.'),
+        _D('The first line is the title line, the fixed string opf report carried: report contract v1, mode followed by change or by-area, with one space after the comma and after mode.'),
+        _D('Then comes one line per [inputs] key present, in the toml key order, written as the key, a colon, one space, and the value.'),
+        _D('Then each section the run reports, in the section order, opens with one empty line and its fixed heading line: ## Matches, ## Areas, ## No area, ## Unremediated, or ## Aged.'),
+        _D('A section with no entry holds the single line none.'),
+        _D("Each entry opens with a line holding - and the entry's first value (the finding ID, or the entry of an area entry), then one line per remaining key, in the key order above, holding two spaces, the key, a colon, one space, and the value; an array key gives one such line per element, in the array's order."),
+        _D("- In change mode, the text format ends with one empty line, the fixed heading line ## Change body, and the change-body block: the fixed delimiter line <!-- opf:carried:begin -->, one line per match entry in the section's order, and the fixed delimiter line <!-- opf:carried:end -->."),
+        _D("A block line holds the finding ID, one space, the entry's backlog IDs separated by a comma and one space and enclosed in parentheses, a colon, one space, fixed here, the separator | (one space, a vertical bar, one space), and not fixed, because:."),
+        _D('With no match entry, the section holds the single line none and no delimiter line.'),
+        _D("The change's author keeps one alternative on each line and completes the reason."),
+        _D('The change body is not a store file, so completing the block breaks no generated-file rule, and the list of IDs is never kept by hand.'),
+        _D('The author records each outcome as a disposition in the store through opf record carried (section 9.3); the block itself records nothing.'),
+        _D('An example text report in change mode without aging, where --changed holds the two lines src/render/header.py and docs/usage.md in that order, the first matches the carried finding of Appendix A, one open carried finding has no area, and none is unremediated:'),
+        _D('text opf report carried: report contract v1, mode change changed_sha256: 5d01140ebfcf660058a7faa8b5983ad039cdaecfdb149deac2ba9a0c67ba9239 ## Matches - FN-12 standing: open backlog: BI-57 areas: component:render paths: src/render/header.py ## No area - FN-19 standing: awaiting_ratification backlog: BI-63 ## Unremediated none ## Change body <!-- opf:carried:begin --> FN-12 (BI-57): fixed here | not fixed, because: <!-- opf:carried:end -->'),
+        _D('CARRIED.md is the area view: the standing generated listing of the open carried findings grouped by area entry, a composed view under the determinism requirements of section 10.3, composed through transform vocabulary version 2 (section 10.2).'),
+        'It is optional: a store that declares the reference profile at version 1.1.0 or later MAY declare it, and its declaration MUST carry kind = "composed", the sources finding and backlog_item, the target .working/CARRIED.md, and profile = "aiqt" (section 9).',
+        'As an exception to section 10.2, entry 4, a tool that supports the profile at version 1.1.0 or later MUST fail manifest validation for a CARRIED.md declaration in a store that declares the profile below version 1.1.0; a tool that supports the profile only below 1.1.0 records the view as present-but-unevaluated (section 10.2, entry 4).',
+        _D("The view's composition is fixed: - Filter: a clean finding authored by a non-importer actor, in unqualified routed, on which x-aiqt.carried is present, with at least one item of the remediation join not in an unqualified terminal state: the open carried findings of section 9.3."),
+        _D('- Group: by x-aiqt.carried.area, one group per area entry as written, a component reference under its own name and never expanded, so the view reads neither the product tree nor the component map; the open carried findings without area form the final group.'),
+        _D('- Sort: within each group, by finding ID in ascending numeric order, and the projected items of a finding by item ID in ascending numeric order.'),
+        _D('- Project: per finding, its ID, its title, and each item of the remediation join not in an unqualified terminal state with its status, so an item awaiting ratification shows its /proposed status (section 8.4).'),
+        _D("Layout: after the generated header of section 10.3, each group opens with one empty line and the heading line ## Area followed by its area entry as written, and the final group's heading line is ## No area, which no area group's heading can equal; a finding's line is - , its ID, one space, and its title, and each projected item follows on its own line as two spaces, - , the item ID, one space, and its status."),
+        _D('A group with no finding is not written.'),
+        _D('The schema release that follows this specification fixes any remaining layout bytes, as it does for PIPELINE.md (section 10.6).'),
+        _D('The view reads the active store alone: an open carried finding does not rotate (section 9.3), and neither does an open backlog item (section 12).'),
+        _D('opf report carried --by-area lists the same open carried findings by area as tool output, apart from a carried finding rotated against section 9.3 that no successor supersedes, which only the report lists, and adds the unremediated and aged sections the view does not carry.'),
+    ),
+    "11": (
+        _D('Enforcement has two layers with deliberately different ceilings:'),
+        _D('| Layer | off | warn | required |'),
+        _D('|---|---|---|---|'),
+        _D('| Artifact and record integrity | not run | reported, non-failing | build-failing, fail-closed |'),
+        _D('| Adoption coverage | not run | report only | report only, never build-failing |'),
+        _D('The integrity layer is deterministic and safe to hard-fail; opf doctor runs it.'),
+        _D("It includes: schema validity of what exists; ID uniqueness across active, archive, and staging; counter monotonicity; bidirectional index reconciliation; transition legality and no-resurrection; the all-or-none resolution bundle; view drift (byte) for every deterministic view including VERSION, with the ROADMAP.md body compared from its fixed delimiter line and its preamble fact gate evaluated beside it (section 10.7); the pipeline control ledger checks (C-PIPELINE, section 10.6); the roadmap ledger checks (C-ROADMAP, section 10.7); worklog span tiling and frozen coverage digests; changelog range coverage; changelog freeze; archive integrity; the tracked-store requirement against the resolved store; pointer and sync-target agreement (the committed pointer, the manifest's recorded sync target, and the store repository's actual remote agree; section 5.6); unmanaged-path containment (section 14.2); and path containment."),
+        'At required, an unreadable, unparseable, or unresolvable declared input MUST be a failure, never an empty or clean result.',
+        'Imported history joins this integrity layer through the deterministic checks in sections 8.3 and 8.6; the authority firewall MUST NOT be report-only.',
+        _D("A tool that supports a declared profile runs that profile's checks beside this layer as extra gates at the effective posture (section 9.1); for the reference profile these are C-CARRIED-SHAPE and C-CARRIED-CLOSURE (section 9.3), whose findings are reported against the profile, never against the base (section 16)."),
+        _D('A profile-dependent composed view, such as CARRIED.md, joins the view drift check only in a tool that supports its profile; any other tool records it as present-but-unevaluated (section 10.2).'),
+        _D('The output of opf report is never a gate at any posture (section 10.8).'),
+        _D('import_status = "none" means clean start with no approved migrate-source import.'),
+        _D('"partial" means the adoption receipt enumerates migrate-disposed sources whose completion results are not yet recorded green (section 14.1); it can persist across assistant sessions without a process running.'),
+        _D('"complete" means every such source has a green completion result and recorded retirement under section 14.1 with a live full doctor VALID.'),
+        'A partial or complete status that no adoption receipt with completion results substantiates MUST fail closed, as does a missing, unreadable or contradictory input.',
+        'Elapsed time and a staging directory MUST NOT be taken as proof of status.',
+        'From the recorded approval until its retirement is recorded, a path the approved plan enumerates as a frozen retire, move or migrate source (section 14.2) is bounded adoption state: while its live bytes still match its plan digest, containment MUST report it as migration_incomplete detail rather than failing it, at "none" during a clean start as much as at "partial".',
+        'A digest mismatch (a drifted source), a source that is gone before its retirement is recorded (a vanished source), or an unenumerated path MUST remain a containment-gate failure at required; the bounded treatment is never a blanket exemption.',
+        'A formerly occupied destination needs no bounded treatment: its occupying source was archived at apply (section 14.2), the destination is an ordinary managed path from apply onward, and a check that reads the adoption archive, the section 14.1 completion check and import included, MUST fail at required, naming the path, on a missing, unreadable or digest-mismatched archived copy.',
+        _D("Adoption coverage (which types are populated, which modules are wired, how much of the project's operational surface has moved into the store) is a report, never a gate: breadth of adoption is a journey, and failing a build over it would train bypasses."),
+        'It MUST stay report-only at every posture.',
+        'Defaults: scaffolding and clean-start adoption MUST write posture = "required" and import_status = "none".',
+        'An adoption with migrate-disposed sources keeps required and MUST hold import_status = "partial" until each source\'s completion result is recorded green (section 14.1), then "complete".',
+        'Import status MUST NOT weaken posture.',
+        'Reports MUST carry migration_incomplete while an approved source or detected file remains unresolved.',
+        "Weakening the posture (required toward warn or off) is a guardrail-configuration change: it MUST take effect only through the maintainer's explicit, recorded authorization, separate from adoption approval, and MUST NOT be self-applied by the assistant or by tooling.",
+        "A profile MAY raise, and MUST NOT lower, the effective posture: the effective posture is the strictest of the base posture and every supported profile's posture_floor.",
+        "Weakening the base posture remains a guardrail-configuration change under the maintainer's recorded authorization; a profile floor is additive and MUST NOT substitute for that authorization in the loosening direction.",
+    ),
+    "12": (
+        'Rotation MUST be relocation, never deletion, and never ID reuse.',
+        'Records in unqualified terminal states, other than worklog records, MAY rotate to .working/toml/archive/<YYYY>/ (calendar-year buckets) on manifest-declared age or size thresholds.',
+        'Worklog records are excluded from that generic terminal-record permission and rotate solely under the release-based rule: only released, frozen worklog spans MAY rotate, and the unreleased recorded tail never rotates whatever its age or size, because it is pre-terminal and mutable-until-release (sections 6.2 and 8.4).',
+        'Open records, active blocks, unresolved decisions, unexpired waivers, the current handoff, and the unreleased worklog tail MUST NOT rotate.',
+        _D('A declared profile can only narrow rotation further: the reference profile keeps a carried finding that is not closed out of the archive (section 9.3).'),
+        'The imported series MUST NOT rotate: <type>.imported.index.toml and worklog.imported.toml sit outside the rotation thresholds and their records MUST NOT move to the record archive.',
+        _D('The record-rotation archive under the discovered machine store is distinct from the store-tree archive/ in section 4.2, which retains relocated adopter files, adoption preimages and archived occupying sources (section 14.2), never rotated records.'),
+        'Tooling MUST NOT scan either as the other.',
+        'Imported originals, acceptance evidence, retirement preimages, and archived occupying sources MUST be retained indefinitely by default, except for the pre-commit abort reversal of archived occupying sources and retirement preimages written by the aborted, uncommitted apply in section 14.2.',
+        'Automatic reclamation MUST apply only to staging runs, after independent re-read and digest verification of their required evidence in its durable home; age alone MUST NOT authorize deletion.',
+        "Each rotation MUST write the year's archive.toml, enumerating every moved ID (and, for the worklog, every moved span) and its destination.",
+        "Validation MUST confirm that every ID exists in exactly one active or archived location, and coverage gates MUST read active and archive together, so rotation never changes any gate's answer.",
+        'counters.toml MUST remain untouched by rotation, preserving ID permanence.',
+        'Retention is thereby indefinite by default; an adopter bound by a retention policy MUST apply it as a recorded maintainer decision governing archival and rotation (aged data moved into the archive, preserved byte for byte), never as deletion of a record.',
+    ),
+    "14": (
+        _D('opf adopt guides setup and wiring; opf import is only the post-adoption import activity.'),
+        _D('Relocating the store remains opf migrate (section 5.4).'),
+        _D('Clean start is first-class: preserve and retire old operational files, establish the new store and enforcement, and import nothing.'),
+        _D('This makes no claim that historical obligations were fulfilled or converted.'),
+        _D('Adoption follows investigate, plan, one approval, apply, completion, then retirement.'),
+        'Investigation MUST distinguish first adoption from re-adoption and MUST record a digest-stamped inventory, including governance surfaces for each supported assistant platform.',
+        'Every foreign .working/ file, and every pre-existing file at a declared view or deliverable destination outside .working/, the product-root VERSION and ROADMAP.md included, MUST have a disposition before init-store; adoption MUST NOT run blind init over populated content.',
+        'Apply MUST compose the coupled-init substrate and the journaled adoption operations, with per-operation preimage checks and reversal.',
+        'It MUST end with rendered views at every declared destination, a destination whose occupying source apply archived under section 14.2 included, and with an adoption receipt plus its outcome-event chain.',
+        'A bootstrap views-ready marker alone MUST NOT count as adoption success.',
+    ),
+    "14.1": (
+        'A manifest declaring a spec_version of 2.0.0 or above whose [opf].homes is missing or not the integer 2 is refused as a store (section 9.2), never foreign content: investigation over it MUST fail closed and MUST NOT read that refusal as authorizing any adoption (sections 4.5 and 8.2).',
+        'A manifest refused only at the section 9.2 version ceiling marks a store at a later version, never foreign content: investigation over it MUST fail closed, naming the tooling-upgrade remedy, and MUST NOT read that refusal as authorizing any adoption (sections 4.5 and 8.2).',
+        'Exactly one adopter approval MUST follow each concrete plan.',
+        "The opf.adoption.plan/v2 plan MUST bind: - product and store identities and the observed revision; - every source path, byte digest, disposition and preservation destination; - exact creations, replacements, removals and consumer repointings; - tool release identity, including manifest_sha256 and the named anchor it was checked against (a copy of that digest published apart from the release artefact), the two digests agreeing; - the version and digest of the prompt pack; - enforcement-pack contents per platform and each platform's disclosed residual coverage; - the completion-check roster and the rule that retirement requires green checks and matching bytes; - the missingness and unparsed-content policy, the skip policy under which a migrate-disposed source may be recorded as skipped, and the migrate-disposed sources import may touch.",
+        'The attributed approval MUST bind plan_digest and inventory_digest, hence that whole plan.',
+        'A per-fragment acceptance or later adopter checkpoint MUST NOT occur within the approved plan.',
+        'Any bound-item drift MUST refuse into a fresh plan with its own single approval; a changed old file MUST NOT be retired.',
+        "One renewal is not drift: a section 5.4 whole-store relocation MUST rebind the plan's bound paths to their relocated equivalents with the bound digests unchanged (section 14.2).",
+        'Approval MUST NOT absorb a separate posture-weakening authorization (section 11) or changelog curation (section 7.3).',
+        _D('Digests establish binding, not actor authenticity or semantic correctness; self-asserted identity and same-user tampering remain disclosed residuals.'),
+        'The clean-start completion check MUST deterministically verify the following roster: 1. Authority and freshness: roots, destinations and live preimages still match the approved plan.',
+        _D('2. Discovery accounting: every inventory entry has a disposition or recorded exclusion.'),
+        _D('3. Preservation and restore: each retirement preimage, preserved at apply for a retire-disposed file and for a non-occupying migrate-disposed source alike, and each archived occupying source (section 14.2) exists, digest-matched, under .working/archive/adoption/<run-id>/, and a restore exercise reproduces its bytes.'),
+        _D('4. Operational readiness: the store resolves to the planned identity, and CI asserts store presence and identity so absence cannot pass as NOT-APPLICABLE.'),
+        _D('Doctor validity and declared-view byte drift are evaluated on the live tree, where apply has already rendered every declared view, a formerly occupied destination included, and any drift the plan does not account for fails the check.'),
+        _D('Consumer repointings match the plan.'),
+        _D('5. Wiring: the enforcement pack is installed and probed, with a direct store write denied, a write under .working/archive/adoption/<run-id>/ denied, and sanctioned writer and render paths succeeding on the live tree.'),
+        _D("Server-side branch protection is adopter-attested, explicitly outside the local probe's guarantee."),
+        _D('6. Retirement readiness: each retire-disposed file that occupied no managed destination is present in the live tree and its live bytes still equal its plan digest, and each archived occupying source still equals its plan digest in the archive.'),
+        'Retirement MUST be recorded only on a green completion check.',
+        'For an occupying source, apply has already archived and removed it under section 14.2, so the green check records its retirement without touching the live tree, and MUST re-verify its archived bytes against the plan digest before recording.',
+        'For an old file at no managed destination, the physical removal or relocation MUST also wait for the green check: the file MUST stay frozen, byte-identical in place, its live bytes MUST still equal the plan digest when the removal or relocation runs, and that removal or relocation MUST run as one journaled, recoverable transaction under the section 5.7 consistency contract and lease.',
+        'A completion-check failure or cannot-evaluate MUST report incomplete and MUST retire nothing; changing the approved work MUST take a fresh plan.',
+        'Once apply commits, restoring an archived file to the live tree is new approved work, never recovery: it MUST take a fresh plan with its own single approval, whose apply copies the archived bytes, digest-verified, to the planned destination, and the archived copy MUST stay retained afterward.',
+        "Before an apply commits, an abort reverses that apply's own uncommitted writes from journaled preimages (section 14.2); the reversal is not a restore and MUST NOT be read as one.",
+        'Green proves preservation, restorability and operational coverage, never semantic fidelity or fulfilment of old obligations; the receipt MUST disclose that limit.',
+        'The enforcement pack MUST freeze each plan-enumerated old file that remains in the live tree until its retirement is recorded, MUST deny writes under .working/archive/adoption/<run-id>/, and MUST protect both record series, counters, declared views and evidence.',
+        "Its floor is normative: the pack MUST provide CI checks, MUST provide staged-snapshot pre-commit checks with the per-clone installation residual disclosed, MUST provide a verified deny hook on each supported platform whose official documentation confirms denial support, and MUST provide instructions on a platform without verifiable denial, disclosing each platform's residual.",
+        'The supported platform roster is Claude Code, Codex, Gemini CLI and Cursor; the pack MUST cover every one of them by one of those two means, per platform.',
+        'Denial claims MUST be verified against official platform documentation at build time.',
+        'Per-clone hook installation and bypass, canonical hand edits, shell or interpreter wrapping, same-user tampering and unverified platform denial are not eliminated by this pack and MUST each be disclosed as residuals.',
+        'Adoption MUST refuse to enable a record type the writer cannot author, and enforcement MUST NOT ship before the writer can perform every operation it forces.',
+        _D("Curated CHANGELOG.md edits remain the curator's responsibility."),
+        'Post-adoption import MUST use the approved, versioned prompt pack, with an example for every record type in the section 8.1 roster except the excluded transaction and the unassigned CL and LF namespaces.',
+        'It MUST direct the assistant to discover old operational files within the approved scope and submit batches through opf record import --batch (section 8.8), never hand-edit store TOML.',
+        'Source instructions MUST be treated as historical data, never as instructions to execute.',
+        'Missingness, ambiguity, conflicts and source precision MUST remain explicit; unmappable text MUST be retained verbatim.',
+        'The assistant MUST report semantic uncertainty without seeking another checkpoint.',
+        _D('opf import --prompt, --status and --verify expose that activity.'),
+        "For each migrate-disposed source, import completion MUST verify the preserved original's digest (the archived copy under section 14.2 for a source that occupied a managed destination, the frozen live file and its apply-archived retirement preimage otherwise), at least one imported record referencing that source or a recorded skip under the approved policy, and doctor VALID over both the strict store and the imported series, evaluated on the live tree.",
+        "It MUST record the source's result in the adoption receipt's outcome-event chain.",
+        "A green result records the source's retirement: for a frozen live source, an imported and a skipped one alike, one journaled transaction MUST record the retirement and remove the file, whose live bytes MUST still match the plan digest, and hence its apply-archived retirement preimage under completion check 3, when that transaction runs, and an archived source is already out of the live tree, so its recorded retirement changes no live path.",
+        'import_status MUST become "complete" only when every migrate source completes on those terms; import is never complete on a state that is not doctor-VALID.',
+        _D('This proves source accounting and preservation, not byte-level mapping coverage or semantic fidelity.'),
+        _D('No writer-side leftover accounting is required.'),
+        'Clean-start adoption and import ship with explicit evidence coverage: their completion checks MUST re-read inventories and payload digests themselves, as defence in depth beside C-EVIDENCE-ENUM rather than relying on it.',
+        _D('The evidence-bundle format in section 4.2 is retained, including the import home .working/imported/import/<run-id>/.'),
+        'Preservation durability and digest verification MUST precede source removal, at apply for an archived occupying source and at recorded retirement for a frozen one, and every removal MUST run in a journaled, recoverable transaction.',
+        'A source outside the participating roots MUST be a plan-time cannot-evaluate naming that source.',
+        'Investigation, planning and read-only status commands MUST remove nothing.',
+        'Required evidence MUST be re-read and digest-matched in its durable home before staging reclamation.',
+        'Reclamation MUST be journaled and idempotent; an unreadable tree MUST hold the run.',
+        'Read-only commands MUST NOT clean staging.',
+    ),
+    "14.2": (
+        'opf adopt MUST investigate every file at the target .working/ location that is not OPF-managed, and every pre-existing file at a declared view or deliverable destination outside .working/, the product-root VERSION and ROADMAP.md included: the manifest, ledgers, counters, clean and imported typed indexes, declared views and registered control areas define the managed set.',
+        'A matching pathname alone does not prove OPF ownership: foreign content at a planned managed destination, a machine-store path as much as a view path, MUST still take a disposition.',
+        _D('A hand-maintained TODO.md belongs to the adopter.'),
+        'opf init MUST refuse undispositioned foreign content; post-adoption import MUST use only its approved source scope and MUST NOT authorize an incidental discovery.',
+        'The plan MUST record one disposition per foreign file from keep, migrate, move, retire: - **Keep.** Leave it untouched and register it under [unmanaged].',
+        'Ordinary tooling MUST NOT read, rewrite or delete it.',
+        'An [unmanaged] path MUST NOT equal or contain a discovery candidate, a manifest.toml present in an immediate subdirectory of .working/ (section 4.5); such an entry is a contradictory input and MUST yield cannot-evaluate, so the keep protection never covers a file that discovery reads.',
+        'A keep declaration whose path equals or contains a discovery candidate MUST refuse at plan time, naming that candidate, the same way a collision refuses below.',
+        _D('A no-follow existence probe of manifest.toml in an immediate subdirectory of .working/, a kept one included, used only by discovery and by this rule, is not a read of a kept path.'),
+        'An unmanaged path MUST NOT collide with an OPF-managed file or view: a keep declaration naming a declared view or managed store path MUST refuse at plan time, and a later manifest change, type enablement or upgrade delta that would declare a view or managed store path at a registered [unmanaged] path MUST refuse the same way (section 9.2), so a kept path never becomes an occupied destination.',
+        _D('- **Migrate.** Keep the source for post-adoption import into the separate imported series.'),
+        'Its exact bytes MUST be preserved at apply, as the archived occupying copy for an occupying source and as a retirement preimage under .working/archive/adoption/<run-id>/<source-path> for a non-occupying one (completion check 3), and its retirement MUST be recorded only after its source completion check is green (section 14.1).',
+        'There MUST NOT be an imported view.',
+        "Import MUST read an occupying source's archived copy and a non-occupying source's frozen live file.",
+        _D('- **Move.** Relocate to a named destination outside the managed store, or by default to .working/archive/moved/<source-path>, preserving substructure.'),
+        'An occupied move destination MUST be a collision finding, never an overwrite.',
+        'An explicit destination inside the store tree MUST lie beneath .working/archive/moved/.',
+        'The default Move MUST refuse a store resolved outside the product root until a multi-root coordinator exists.',
+        'The relocation MUST run only after the plan-bound green completion check, with digest-verified preservation; for an occupying source it MUST copy the archived bytes to the move destination, and the archived copy MUST stay retained.',
+        '- **Retire.** The first-class clean-start choice: the exact preimage MUST be preserved under .working/archive/adoption/<run-id>/ with restore proven, and the retirement MUST be recorded only on the green completion check (section 14.1).',
+        _D('No old obligation is thereby fulfilled.'),
+        _D('Occupied destinations are resolved preserve-first, uniformly for a declared view path and a machine-store path alike.'),
+        "Within the one approved apply transaction, apply MUST copy each occupying source byte-identically to .working/archive/adoption/<run-id>/<source-path>, MUST verify the copy's digest against the plan digest, MUST commit the copy durably, and only then MUST remove the source from the live path: verify, then remove, in that order, never reversed and never split across transactions.",
+        "Before apply commits, an abort takes the ordinary per-operation preimage reversal of section 14: the reversal MUST restore each removed source to its live path from its journaled preimage, MUST verify the restored bytes against the plan digest, MUST commit the restored bytes durably, and only then MAY discard the aborted run's archive copy of that source, so an interruption leaves each source either live and byte-identical or archived with its removal journaled, never removed without a durably committed, digest-verified archive copy.",
+        'The reversal MAY also discard retirement preimages written by that uncommitted apply for non-occupying sources, since each such source remains frozen, live and byte-identical in place and is never removed at apply.',
+        _D("That reversal undoes the uncommitted apply's own writes; it is not the section 14.1 restore, whose fresh-plan rule governs an archived file only once apply commits."),
+        'Recovery of an interrupted apply MUST resolve from the apply journal alone and MUST NOT require the live tree to resolve as a store: on restart the one transaction either completes forward from its durably committed journal or reverses fully as above, so an interruption that removed an occupying machine-store file, the manifest included, never leaves the store unresolvable or waiting on a plan it cannot form.',
+        _D('A fully reversed first adoption leaves .working/ holding its retained journal, so the store location reads as present without a manifest (section 4.5), and journal state that a foreign tree planted there is touched only by a fail-closed refusal, never consumed as recovery state; clearing it is the operator\'s own act outside any OPF operation, a same-user residual of the class section 14.1 discloses.'),
+        _D('After the archival the destination is an ordinary managed path: apply initializes the machine file or renders the view immediately, and no writer carries an occupied-destination obligation afterward.'),
+        _D("The archived copy is the disposition's preserved original: the retire preimage, the source import reads for migrate, or the bytes a move relocation copies out after the green check."),
+        _D("Archival is preservation, not retirement: the green completion check of section 14.1 remains the one gate that records each disposition's retirement."),
+        'An old file at no managed destination takes no archival at apply beyond its retirement preimage under completion check 3, preserved at apply for a retire-disposed and a migrate-disposed file alike: it MUST stay frozen, byte-identical in place, and MUST be removed or relocated only after the applicable green check, exactly as section 14.1 orders.',
+        _D("The adoption archive is immutable in each archived file's store-relative identity and bytes."),
+        "Once apply commits, a file under .working/archive/adoption/<run-id>/ MUST keep that store-relative path and those exact bytes: it MUST NOT be written, rewritten, relocated or removed within its store by any OPF operation, and the enforcement pack MUST deny writes there (section 14.1).",
+        "A section 5.4 whole-store relocation MAY carry the archive, and only as part of the whole .working/ tree it relocates: every archived file keeps its store-relative path and its exact bytes, opf migrate --store MUST re-verify every carried archived copy's digest against the plan at the destination before the old tree is removed, and the enforcement pack's write denial with the completion check 5 probe (section 14.1) binds .working/archive/adoption/<run-id>/ within the resolved store, at the destination after that relocation as before it.",
+        "The completion check MUST re-verify every archived copy's digest against the plan (section 14.1, check 3), import MUST re-verify an archived source's digest against the plan before reading it, and a missing, unreadable or digest-mismatched archived copy MUST fail closed at required, naming the path.",
+        'Once apply commits, restoring an archived file to the live tree MUST be a fresh plan with its own single approval (section 14.1); no other operation restores it, and the pre-commit abort reversal above is not restoration.',
+        'A frozen source whose live bytes no longer match its plan digest is a drifted source: it MUST NOT be archived, retired, moved or removed, doctor MUST fail it at required (section 11), and the remedy MUST be a fresh plan with its own single approval (section 14.1).',
+        "opf migrate --store is whole-store relocation (section 5.4), never disposition execution: it MUST carry every frozen source, the adoption archive and every evidence bundle byte-identically into the destination at unchanged store-relative paths, MUST NOT execute, advance or end any disposition, and MUST renew the approval's bound paths to their relocated equivalents in the same recorded change, the bound digests unchanged; any byte difference remains bound-item drift refusing into a fresh plan (section 14.1).",
+        'Detection MUST surface unresolved files in the plan and MUST NOT silently absorb, delete or overwrite them.',
+        'Dispositions are plan data and MUST be covered by the single approval, never by separate approvals per file.',
+        'An unreadable declaration or detected input MUST fail closed.',
+        'Reports MUST retain migration_incomplete until the declared work is resolved.',
+        _D('The reserved children archive/, imported/, staging/, and journals/ are OPF control area.'),
+        'Detection MUST NOT surface them as adopter content, an adoption option MUST NOT select them, and an [unmanaged] declaration MUST NOT equal, contain, or lie within them.',
+        "Adoption evidence MUST be committed and immutable under .working/imported/adoption/<run-id>/; append-only outcome events retain the receipt's history.",
+        "Every adoption evidence inventory MUST carry the section 4.2 [adoption] identity table, naming its own run id, its phase and the approved plan's plan_digest.",
+        _D('Transaction records live under .working/journals/adoption/.'),
+        'After adoption, containment uses the receipt-bound import_status and the bounded treatment of section 11: a plan-enumerated frozen retire, move or migrate source whose live bytes still match its plan digest MUST be reported rather than failed until its retirement is recorded, whatever the status, and a drifted source MUST fail at required exactly as section 11 defines.',
+        'An unregistered path outside that enumerated scope MUST fail containment at required.',
+        'No source is implicitly imported, and staging presence MUST NOT grant authority.',
+    ),
+    "14.3": (
+        _D('An adopter with an existing single-source release flow (for example, a release-notes TOML that generates a version file and a changelog) migrates by recording its releases in version.toml as imported-flagged [[release]] rows (the optional imported flag of section 6.1) and its per-release notes as published per-release [[summary]] rows.'),
+        'Pre-migration releases have no worklog entries: their spans MUST be empty and their summary digests MUST be recorded as imported facts, flagged when the summary row is recorded by the optional summary-row imported key of section 6.1 as resting on imported provenance rather than on a witnessed release cut.',
+        'A curator MAY later remove that flag under section 6.1.',
+        'This is the historical-release path: the ledger is not an imported record type, its spans MUST NOT refer to imported:WL IDs, and import MUST NOT create a separate version or changelog TOML file.',
+        "Changelog prose MUST still come from the curator's act.",
+    ),
+    "15": (
+        "A conforming store's base-required schema vocabulary MUST NOT name a particular adopter, operator, profile, internal system, endpoint, tier vocabulary, or command.",
+        _D("A profile schema (for example [profiles.aiqt]) legitimately names its owner, and a conforming store's own data legitimately names an operator via actor.id; the neutrality constraint binds the base-required vocabulary, not profile schemas or store data."),
+        'actor.kind MUST carry only the portable categories; identity detail lives in actor.id or extensions.',
+        'mode, tier_assessment, and waiver MUST ship structure only (evidence, assessor, outcome, validity, scope, expiry) with adopter-supplied vocabularies.',
+        _D('The location patterns of section 5.3 are described generically; no pattern names a real repository, host account, or internal system.'),
+        "Import and adoption provenance, including originals under imported/ and retired files under archive/, MUST stay inside the adopter's own repositories.",
+        _D('.aiqt/ is AIQT-owned material, not an OPF state home; OPF operates without it.'),
+        'OPF MUST NOT read OPF artefacts from former .aiqt/ locations or touch unrelated AIQT material.',
+        _D('A no-follow existence probe of a former .aiqt/ location, used only to refuse an operation, is not a read of that material.'),
+        'Experimental fields MUST ride registered x-<vendor> tables only, within the limits of section 8.7.',
+        _D("The base standard's required schema vocabulary names no adopter, operator, or profile by definition; a conforming store's own data legitimately may (an operator via actor.id, a profile via a [profiles.<name>] table the adopter chose)."),
+        _D("AIQT appears in the standard's title and brand as trademark and authorship attribution (the standard is authored and maintained by its lead maintainer), which is attribution rather than a requirement dependency; AIQT is also one profile, [profiles.aiqt], cited only as the reference enforcement suite and a consumer."),
+        _D("A profile carries an adopter's own additional requirements without the base ever depending on them."),
+    ),
+    "16": (
+        _D('Conformance is reported against the base and, separately, against each declared profile a tool evaluated.'),
+        _D('A report speaks in conformant_for_declared_scope, nonconformant, indeterminate, or migration_incomplete, each qualified by whether it concerns the OPFiles **base** or a named **profile**.'),
+        _D('Every report names its scope, its exclusions, and its cannot-evaluate results.'),
+        _D('A base-conformant store may declare a profile the reporting tool did not evaluate; the report names that profile as unevaluated rather than implying whole-store coverage.'),
+        _D('An unqualified claim of "OPFiles conformant" or "AIQT conformant" is never emitted, by tooling or by prose: a conformance claim is a completeness claim over a declared set, and it enumerates that set, including which profiles were and were not evaluated.'),
+        _D("A profile check's finding, such as one from C-CARRIED-SHAPE or C-CARRIED-CLOSURE (section 9.3), makes a report nonconformant for that profile alone and leaves the base result untouched; where the tool did not evaluate the profile, or supports it only below the profile version that defines a check, that check is unevaluated, never passed."),
+        'Until validation tooling ships, a conformance claim is self-asserted and MUST say so.',
+    ),
+    "16.1": (
+        _D('An implementation is a tool or tool suite offered to create, write, or validate OPF stores.'),
+        _D('A project that keeps its own store by hand, with its own checks over that store alone (section 1), is not an implementation under this section.'),
+        "The base defines one implementation model and no implementation conformance classes: a declared scope, exclusion, profile, or posture MUST NOT waive a base requirement, and current-format requirements, the imported series, adoption, and the section 8.6 authority firewall included, bind every implementation.",
+        _D('An implementation supports base spec_version 2.0.0 and homes generation 2, the only ones this specification defines (sections 4.2 and 9.2), and the worklog storage generation it declares, and initializes stores directly at them.'),
+        _D('The reference tooling does not yet implement base 2.0.0: it still initializes and validates stores at base 1.2.0, a pre-release format this specification does not define, and it makes no claim of conformance to this specification.'),
+        _D('The reference tooling\'s opf doctor grades a manifest declaring spec_version = "2.0.0" with homes = 2 under its 1.2.0 rules, so its VALID verdict on such a store says nothing about conformance to this specification, and its opf upgrade and opf record refuse such a store.'),
+        _D('The reference tooling defines no store upgrade: its opf upgrade refuses every invocation with exit 2, reading and writing nothing.'),
+        'An implementation MUST declare, in the documentation of each release and in every report its emitter writes, its release identity and its supported spec_version, homes generation, and worklog storage generation.',
+        'Each release MUST ship that declaration as one file, the declaration file.',
+        _D("A runtime check is the step of the implementation that, in a run, reads the declaration and gates that run's store operations, the emitter is the step of the implementation that writes the conformance reports section 16 describes, never a store-file emitter such as the canonical new-document emitter, and a documented run of the runtime check and the emitter need not resolve a store."),
+        _D("Whether a run authorized store operations is an observable of that run: it authorized them exactly where it performed one, a write within a store that run resolved or to that store's lease, as the checker observes the run's writes, and an authorization no performed operation shows is not compared."),
+        _D('The following writes, and no others, are not store operations under this section, for the runtime-result comparison and the store part below alike: the claim of the single-writer lease a command takes; its release; the session_lease record of that claim and of that release; and the reconciliation and recovery writes sections 5.7, 8.8, 14.1, and 14.2 require to reconcile or release such a lease.'),
+        _D('A run that stops as cannot-evaluate and writes nothing but what section 5.7 requires to end its own claim therefore performed no store operation.'),
+        _D('Every other write within a store the run resolved is a store operation, the other writes sections 8.8, 14.1, and 14.2 require included: a record publish performed where the expected runtime result is cannot_evaluate remains one.'),
+        'A runtime check MUST read the declaration from the copy of that file installed with the implementation (the installed copy) alone, never from the documentation of the release or from any report.',
+        "Each release MUST also carry, in the implementation and apart from that file, the SHA-256 digest of that file's bytes as the release ships them (the shipped-file digest), and the documentation of each release MUST state where the implementation carries it.",
+        'A release that carries no such digest, or whose documentation states no such place, does not conform to this section, and a conformance claim MUST NOT be made for it.',
+        "A runtime check MUST compare the installed copy's bytes with the shipped-file digest before it reads any field, and an installed copy that is absent or unreadable, or whose bytes differ from that digest, MUST yield cannot-evaluate and MUST NOT authorize any store operation.",
+        _D('That comparison detects an edit of the installed copy alone; section 17 discloses that residual and the others these rules leave.'),
+        'Every report the emitter of a release writes MUST carry the four parts compared in every report, exactly these: the restatement of the declaration, the shipped-file digest the implementation carries, the installed-copy digest, and the runtime result.',
+        "The installed-copy digest is the SHA-256 digest of the installed copy's bytes that the runtime check read, or the token not-read where that check read none because the installed copy is absent or unreadable, and a report MUST NOT carry not-read with any runtime result other than cannot_evaluate.",
+        "Each digest in a report MUST be written as 64 lowercase hexadecimal digits, and the runtime result MUST be written as one of the tokens of the three-valued gate_run verdict field (section 8.5): cannot_evaluate where that run's runtime check yielded cannot-evaluate or another rule of this section made that run yield cannot-evaluate, and otherwise pass where it authorized store operations and fail where it did not.",
+        _D('Section 8.5 fixes those tokens, not their meaning here: under this section pass and fail read observably, over performed store operations, so a documented run that resolves no store, and one whose only writes are the exempt writes above, each authorized none and, where no rule yields cannot-evaluate, write fail.'),
+        _D("A restatement differs from that file's declaration where it gives a different value for any field the file carries, omits such a field, or states a field the file does not carry."),
+        "The documentation of each release MUST restate that file's declaration without differing from it.",
+        _D("The expected report of a release is fixed by the bytes the release ships alone: its restatement is the declaration of that file as the release ships it, each of its digests equals the SHA-256 digest of that file's bytes as the release ships them, and its runtime result is cannot_evaluate exactly where a rule of this section makes those bytes yield cannot-evaluate, and otherwise pass or fail, between which this section, as it now stands, sets no rule."),
+        _D('A report deviates from the expected report where any of the four compared parts is omitted, written in another form, or holds another value; no other content of a report is compared.'),
+        _D("The runtime-result part also deviates where its token disagrees with whether that run authorized store operations, the performed operations the checker observes; this comparison reads the run's writes, so the runtime result is the only part of a report compared with more than the shipped bytes alone."),
+        _D('A pass token beside no performed store operation, a fail token beside one, and a cannot_evaluate token beside one each disagree that way, whatever the expected result, since a run that yields cannot-evaluate authorizes no store operation.'),
+        "The behaviour-coupled comparisons are exactly two, the token comparison above and the store part below, and they read only the writes the checker observed: a run for which the checker cannot determine whether it observed every write gives it no evidence under either comparison, so a result-part or store-part failure that only those two comparisons of such runs could show MUST be reported as unresolved, never as established, a residual section 17 discloses; the rest of the expected-report comparison reads such a run's report as any other.",
+        _D("An execution environment is unaltered where it is a stock install of a platform and version within what the documentation of the release names or, where that documentation names none, of the platform the checker uses, as that platform's own installer leaves it, changed only as that documentation directs and in this closed operational list, and in nothing else: the account name, administrative privilege only where that documentation directs it, the working and temporary locations, and the clock."),
+        _D("Every default of that stock install that the documentation does not exclude, by directing that it be changed or by naming a platform that lacks it, is part of an unaltered execution environment, so meeting it is the release's, whichever platform and version within that naming a checker uses."),
+        _D('An attempt is the documented installation of a release, made by one checker in an unaltered execution environment, from the bytes the release ships and, for each installed file the release does not ship, from the source its documentation directs, followed by two successive documented runs of the runtime check and the emitter over that installation.'),
+        _D("A reference run of a release is a run of an attempt whose installed copy holds that file's bytes as the release ships them and is readable when the run starts."),
+        _D("The installation or the execution environment is altered where any byte, file, or setting of either differs from what the stock install's defaults, the changes the closed operational list above permits, the documented steps, the release's own code, and code those steps install from a source the documentation of the release directs left it; the working and temporary locations the checker chose are the checker's own, and what sits there alters neither, the installation apart: the installed files, the installed copy included, and the files a documented step or the release's own code wrote belong to the installation wherever they sit, those locations included, so an edit of any of them alters the installation there as anywhere."),
+        _D('An attempt whose installation or execution environment anything else altered is not an attempt and establishes nothing.'),
+        "A verdict under this section is decided from the checker's own observations, given its detection of alterations (section 17), and an attempt whose eligibility under this rule the checker cannot determine establishes nothing for that checker: a failure that only such attempts show MUST be reported as unresolved, never as established.",
+        "A release MUST be available: every attempt MUST complete the documented installation and yield two reference runs, so an installer that rewrites that file's bytes, by converting its line endings or otherwise, an installed copy a documented run cannot read, an installation step an attempt cannot complete, and a first run whose writes leave the second run with an installed copy that no longer holds the shipped bytes are each a failure of this rule.",
+        'A reference run of a release MUST NOT emit a report that deviates from the expected report, and its runtime check MUST NOT authorize any store operation where the expected runtime result is cannot_evaluate.',
+        "Only a checker's own attempts and reference runs are evidence under the two rules above: a report of any other run or installation, altered or not, MUST NOT be presented as establishing or countering conformance of any release, and whether a release conforms to this section is judged only from the bytes the release ships, the implementation and the installer included, inspected, from the documentation of the release, and from the checker's own attempts and reference runs.",
+        _D('A failure of either rule is shown for a checker where one of its own attempts or reference runs shows it, and established for that checker where a second of its own attempts or reference runs, made on the same platform and version, shows a failure of the same rule and, under the reference-run rule, in the same part, the four compared parts of the report and the store part below each one part; attempts and reference runs that show no failure, however many there are, never counter a shown or established failure.'),
+        "The two rules above are the one path from attempts and reference runs to a verdict: a breach of any requirement of this section that an attempt or a reference run shows in what those rules compare, the four compared parts of a report, not-read beside another runtime result, a run's cannot-evaluate and the store operations it performs, a restatement a report states, and the store part below included, MUST be judged solely as a failure of the availability rule or of the reference-run rule, shown and established only as those rules provide, never as nonconformance on one showing; only what a checker inspects in the bytes the release ships or reads in the documentation of the release decides a verdict under this section without that procedure.",
+        _D("Every requirement of this section that those rules do not compare is a requirement on the bytes the release ships, on the documentation of the release, or on a checker's own conduct and reporting: in particular, a requirement on the conduct of the implementation's commands outside what the parts above read is a property of the bytes the release ships, and a breach of it is judged by that inspection alone, never by this procedure."),
+        _D("A run that is no reference run and belongs to none of the checker's attempts, a run of another command over a store the checker made and the Appendix E scratch-copy probe over an edited installed copy included, is an observation of the implementation's behaviour, never an inspection of the bytes the release ships or a reading of the documentation of the release: however often it is repeated, it is no evidence under the two rules above, it shows and establishes nothing there, and it decides no verdict under this section, on one showing or many, since only those two rules, that inspection, and that reading decide; it can only direct the checker to what an inspection of the bytes the release ships then finds, and section 17 discloses what every inspection and such an observation rest on."),
+        _D('An availability failure is shown by a failed attempt and established by a second failed attempt of the same checker on the same platform and version; it has no part, so the same-part condition does not apply to it.'),
+        _D("Under the reference-run rule the same-part condition applies to every failure, a store operation performed where the expected runtime result is cannot_evaluate included: that operation is a failure in a part of its own, the store part, shown and reproduced only by a run that performs such an operation, never by a deviating report."),
+        "The showing and the reproducing evidence MAY be any two of the checker's own reference runs on the same platform and version, the two runs of one attempt included.",
+        'A checker that reports on a shown failure MUST report it as established or, where its own evidence has shown it and not reproduced it, as unresolved, MUST name the platform, the version, and its own attempts and reference runs behind that state, and MUST NOT report an unresolved failure, or the absence of a shown one, as conformance of the release.',
+        "A release for which a checker's own evidence establishes a failure of either rule does not conform to this section, and that checker MUST NOT make a conformance claim for it; a conformance claim under this section MUST name the attempts and reference runs it rests on.",
+        'Each such failure is a release nonconformance, never a runtime state of the declaration: it MUST NOT be treated as making the declaration malformed or contradictory, and it does not change what a runtime check of an installed copy yields.',
+        'An unreadable, malformed, or contradictory declaration MUST yield cannot-evaluate and MUST NOT authorize any store operation.',
+        'A declaration that is absent, or that omits its release identity, its spec_version, its homes generation, or its worklog storage generation, is malformed: it MUST yield cannot-evaluate and MUST NOT authorize any store operation.',
+        'The rules on an absent, unreadable, malformed, or contradictory declaration govern the file alone: a runtime check MUST apply them to the installed copy as it stands, a check of the documentation or of the reports MUST apply them to that file as the release ships it, and each check MUST NOT take any field from the documentation of the release or from any report.',
+    ),
+    "17": (
+        _D("The gates in this standard are strong where they are strong and say so where they are not: - The freeze gate proves a published summary's bytes changed only through recorded re-publication; it cannot prove the prose is accurate or complete."),
+        _D('Human curation (section 7.3) is that control.'),
+        _D('- Range coverage proves every release is summarized exactly once; it cannot judge summary quality.'),
+        _D("- The pipeline control ledger checks prove that every entry resolves, that each backlog item holds one place across lanes, and that each lane has one list; they cannot prove that the recorded order matches the adopter's standing priorities, or that work is actually taken in that order."),
+        _D('A recorded override act binds through review like any other store change, never through authenticated authority, and the same-user tampering residual of section 14.1 covers the ledger as it covers every store file.'),
+        _D('Blocked-ness is derived at render time, so PIPELINE.md names a next entry that is current as of its last render; the byte drift gate reports a stale render, it does not prevent one.'),
+        _D("- Pin stability is enforced by review, not by the doctor: the doctor reads one ledger snapshot, so it proves a pinned entry's act resolves, never that no entry crossed the pin between snapshots (section 10.6)."),
+        _D('Version-control history over the tracked store is the control.'),
+        _D("- The rule that a milestone's row leaves the roadmap ledger in the change that records its discharging release (section 10.7) binds through review: for a milestone carrying target_version, the doctor reports a leftover row, because its target_version then names a released version, but it cannot prove the row left in the same change; for a milestone carrying items alone, review is the only control, because no leftover-row doctor check exists for it."),
+        _D("- The carried-low placement rule of section 10.6 is enforced by review, not by the doctor: severity and area are the adopter's judgement, and no check reads either for placement."),
+        _D('Where the reference profile is declared, C-CARRIED-SHAPE checks the shape of a recorded area (section 9.3), never that it is the right area or that the finding is low severity.'),
+        _D('- C-CARRIED-CLOSURE (section 9.3) proves that a ratified remediating backlog item has an effective fixed disposition on its carried finding, or on a successor of a superseded one; it cannot prove that the named change exists, that it merged, or that it fixed the finding, because a change is a host object outside the store.'),
+        _D('Maintainer ratification of done (section 8.4) and review are that control.'),
+        _D('- Dispositions are append-only (section 9.3).'),
+        _D('opf record carried only appends, but the doctor reads one store snapshot, so it cannot see a disposition removed or rewritten between snapshots by a hand edit; review and version-control history over the tracked store are the control.'),
+        _D('The same holds for the rule that writing the x-aiqt.carried table changes no status or updated_at: opf record carried checks its own delta, but the doctor sees only the snapshot a hand edit leaves.'),
+        _D('- The rule that a carried finding rotates only once closed (section 9.3) binds the rotation itself, and a tool that ignores the profile does not apply it; C-CARRIED-CLOSURE reports an archived carried finding that is not closed after the fact, never before the rotation lands, and the successor remedy of section 9.3 turns that finding into detail rather than clearing the archived record, which stays as rotated and stays superseded once it closes.'),
+        _D('- opf report (section 10.8) reads the local store as found and is outside the section 5.7 reconciliation, so a report run against a store that is behind its sync target lists stale state.'),
+        _D('- CARRIED.md (section 10.8) lists the open carried findings as of its last render, like any composed view; the byte drift gate reports a stale render, it does not prevent one.'),
+        _D('A tool that does not support the reference profile neither renders nor drift-gates the view (section 10.2).'),
+        _D('- A path glob can go stale when product files are renamed or moved, and the product tree is not store data, so no check proves that a glob matches any existing path; C-CARRIED-SHAPE proves only that each glob is in the dialect and that each component reference resolves.'),
+        _D('The component map (section 9.3) narrows the upkeep to one map line per component.'),
+        _D("- opf report carried (section 10.8) is as complete as its inputs: it cannot detect a changed path missing from --changed or a merged change missing from --merged, a changed path holding a C0 control character or DEL makes the run exit 2 rather than report it, and its aging reads worklog entries that link a finding, so a disposition recorded without such an entry does not reset the finding's age."),
+        _D("The report lists candidates only, and whether an aged finding reaches a lane is the lanes standard's matter, which no check reads."),
+        _D("- The section 2.1 rule that a planning surface describes itself only within the fixed vocabulary is enforced by review, not by the doctor: no doctor check reads a surface's self-description, for declared views and command surfaces alike."),
+        _D("- The ROADMAP.md preamble fact gate proves that every v-prefixed version token in the preamble resolves to a released version or a declared target; it cannot prove the preamble's direction is accurate or complete."),
+        _D('Human curation through ordinary review (section 10.7) is that control for the preamble, as the curation flow (section 7.3) is for the changelog.'),
+        '- The unreleased worklog tail is mutable until release: an entry there MAY be corrected in place, a guarantee that rests on review and version-control history rather than machine enforcement; machine freezing and immutability begin at release cut.',
+        _D('- Adoption and import run with C-EVIDENCE-ENUM, which re-enumerates their control areas (.working/imported/<kind>/<run-id>/, .working/archive/adoption/<run-id>/ and .working/archive/moved/) on every doctor run, and the section 14.1 completion checks still verify their evidence digests themselves when they run; C-EVIDENCE-ENUM asserts membership, not authenticated actor history; deleting a whole bundle (inventory and payload together) is outside its local snapshot check (section 4.2).'),
+        _D('Version-control history over the tracked store is the control, and C-IMPORTED-PROVENANCE still re-verifies every preserved original an imported record references.'),
+        _D("- Journals are machine-local (section 4.2), and the doctor reads the ID reservations under journals/<kind>/allocations/ for the section 8.2 counter checks, so a clone, which holds none, can grade those checks differently from the original store: where a reservation covers a number that no published record carries, the original store's doctor treats that number as issued and a clone's doctor reports it missing."),
+        _D('Adoption admission and recorded retirement, which the doctor decides from committed evidence alone, grade the same in both (section 4.2).'),
+        _D('- Store resolution fails closed on a pointer that does not resolve and on zero or multiple manifests at the target; it cannot detect a second store that no pointer names, placed somewhere the tooling was never aimed.'),
+        _D("- The tracked-store check verifies the resolved store is under version control, not ignored, and that the pointer, the manifest's recorded sync target, and the actual remote agree; it cannot verify the backup, access, or hosting discipline of the repository that tracks the store."),
+        "The local-only pattern in particular places durability wholly on the adopter's own backup, which is why choosing it SHOULD be a recorded decision (section 5.3).",
+        _D('- The single-writer lease has a propagation window: between a lease being taken and its becoming observable at the sync target, two systems can both begin.'),
+        _D("The consistency contract's divergence check is the overlapping control that catches that collision after the fact; the two layers together, not the lease alone, are the guarantee (section 5.7)."),
+        _D("- The dead-run lease release of sections 5.7 and 8.8 proves holder death by a process probe on the probing host, serialized by a lock on the lease's directory so concurrent recoveries whose locks one kernel arbitrates never race it: a live holder in another PID namespace that shares the store and this hostname can read as dead there and lose its lease, and a dead holder whose pid a live process reused reads as possibly-live and keeps refusing until the operator reconciles."),
+        _D('The probe errs toward refusal, and the journal-lock owner model shares the same residual where no process start time is recorded.'),
+        _D("That serialization holds only within one kernel: where the store sits on NFS or another filesystem whose flock is local to each client kernel, two hosts that share the store under one hostname can both take the lock and race the release, and where flock is unsupported or fails, every dead-run release refuses, naming the lock failure, and stays the operator's reconciliation step."),
+        _D("- A host provider's create and auth conveniences call the external API of the host the target names."),
+        _D("The egress bound is that named host and nothing else; the standard cannot vouch for the host's own behaviour beyond that bound."),
+        _D("- Public deliverables reach the product repository through opf render under the product repository's normal review flow (section 5.8); the quality of that review flow is the adopter's own discipline, which this standard requires to exist but does not itself gate."),
+        _D('- A base-only tool does not evaluate profiles: a store could satisfy the base and violate a profile it declares, and a base-only tool would not detect it.'),
+        _D('This is by design (profiles are additive and a base tool is out of their scope), and it is the reason a conformance report always names which profiles it did and did not evaluate.'),
+        'Fail-safe-for-unknown-profiles is scoped to a tool that does not cover the profile; a profile-aware tool MUST fail closed on its own profile.',
+        _D('- The base discovery token opf is a single exact string carried in every adopter manifest.'),
+        _D('A mistyped or altered token makes the store undiscoverable, which resolves to cannot-evaluate (fail-closed), never to a silent empty store.'),
+        _D("The token is stable, and this specification gives a store-breaking rename no path: every later base-schema version bump stays additive and keeps every manifest discoverable through the exact base discovery token opf (sections 4.5 and 9.2), so no bump this specification permits renames the token."),
+        _D("- The section 16.1 runtime check compares the installed copy of a release's declaration file with the shipped-file digest the implementation carries, so it detects an edit of that copy alone, which yields cannot-evaluate; it does not detect a co-edit that changes both the installed copy and the digest the implementation carries to match it, or one that changes the installed copy together with the implementation's comparison code so that the comparison no longer refuses that copy, and an anchor outside the installation, such as a signature over that file that the implementation verifies, is the stronger option only against an edit that does not also change the implementation's verification key or its anchor check; section 16.1 does not require one."),
+        _D("Whether a release's runtime check compares the installed copy's bytes with the digest the implementation carries at all, and whether that digest sits at the place the documentation states, are established only by an inspection of the implementation, never by a reference run: every reference run's installed copy holds the shipped bytes, over which a runtime check that skips that comparison and one that makes it can yield the same report."),
+        _D("Section 16.1 verdicts are observer-local: each rests on a checker's own knowledge of its stock baseline and of what it changed, so an alteration the checker did not detect, such as an organization-wide package-manager configuration file taken for part of the stock install, can mislead that checker."),
+        _D("Another checker contests a claim only with its own evidence: under the section 16.1 availability and reference-run rules, with its own attempts and reference runs alone, and otherwise with what it finds by inspecting the bytes the release ships or by reading the documentation of the release, such as that the release carries no shipped-file digest or that its documentation states no place for it."),
+        _D("Honest checkers can reach different verdicts on stock installs of different platforms or versions, each within what the documentation of the release names or, where that documentation names none, the platform the checker in question uses, since section 16.1 makes every default of each such install that the documentation does not exclude, by directing that it be changed or by naming a platform that lacks it, the release's to meet."),
+        _D("They can also reach different verdicts on one platform and version, where the changes the section 16.1 closed operational list permits, such as the account name or the clock, differ between their attempts, or where one checker's own attempts and reference runs show a failure of one rule twice, under the reference-run rule in the same part both times, and another checker's show it once or never."),
+        _D("The same residual covers the section 16.1 rule that an attempt whose installation or execution environment differs from what the stock install's defaults, the changes the closed operational list permits, the documented steps, the release's own code, and code those steps install from a source the documentation of the release directs left it is not an attempt and establishes nothing: only a checker that detects the alteration can know to set that attempt aside, and section 16.1 has a checker that cannot determine an attempt's eligibility report what only such attempts show as unresolved, never established."),
+        _D("It covers whether a checker observed every write of a run the same way: the section 16.1 runtime-result token comparison and store part read the writes the checker observed, so a write a checker missed could make an honest token read as disagreeing, or hide a disagreeing token or a store-part failure that the run's writes show, and a checker that cannot determine whether it observed every write of a run reports what only the behaviour-coupled comparisons of such runs show as unresolved, never established."),
+        _D("The working and temporary locations a checker chose are its own, and what sits there alters nothing, the installation apart: the installed files, the installed copy included, and the files a documented step or the release's own code wrote stay part of the installation wherever they sit, so the Appendix E scratch-copy probe, which edits an installed copy, alters the installation it probes."),
+        _D("That probe, like every run outside the checker's own attempts and reference runs, is an observation of the implementation's behaviour, never an attempt, a reference run, or an inspection of the bytes the release ships: it establishes nothing under the section 16.1 rules however often it is repeated, it decides no verdict of its own, and it informs only the section 16.1 inspection of the implementation, which rests on the same observer-local attribution."),
+        _D("A requirement of section 16.1 on the conduct of the implementation's commands that its two rules do not compare is judged only by that inspection, so a conduct breach a checker cannot attribute to the bytes the release ships decides nothing for that checker, and one it can attribute is decided by what that inspection finds in those bytes, never by the observed run itself on any number of showings."),
+        _D('A failure that a checker cannot show twice in its own attempts and reference runs, on the same platform and version and, under the reference-run rule, in the same part, stays unresolved, however many other checkers each show it once, and an unresolved failure neither establishes nor counters any conformance or nonconformance of the release.'),
+        _D("Where the documentation of a release directs that a file the release does not ship be installed and does not pin its bytes, attempts made at different times can differ as the bytes the directed source serves differ, a residual of the release's own documentation."),
+        _D('Appendix E gives informative guidance for checking release conformance: a record of attempts, redaction of secrets, sharing and repetition, corroboration across checkers, a consistency probe over third-party reports, scratch-copy probes of the byte comparison, and an optional content-addressed reference environment.'),
+    ),
+}
+# Sentence pins in sections the registry does not tile: substring-checked and keyword-linted
+# like _CONTRACT pins, each proven unique and deletion-red by the self-test, but with no
+# per-section tiling equality, so additions there stay green. Section 9.1 is neither tiled nor
+# pinned: its implementation-class paragraph is retired (_RETIRED), since the base defines one
+# implementation model (spec 16.1). Appendix E is
+# informative and stays untiled; its pins are the sentences that state what section 16.1 makes of
+# its probes, so reverting one of them turns the gate red.
+_PINNED = {
+    "E": (
+        _D('This appendix is informative: it recommends practice for checkers and releases working under section 16.1, it adds no requirement, and section 16.1 alone decides what a failure, a verdict, or a conformance claim is.'),
+        _D("A shared record informs another checker's work and never substitutes for that checker's own attempts and reference runs."),
+        _D('Corroborate across checkers: where two checkers each show the same failure once, on the same platform and version, that agreement is a strong reason to keep attempting, though under section 16.1 the failure stays unresolved for each checker until its own attempts or reference runs show it twice, on the same platform and version and, under the reference-run rule, in the same part.'),
+        _D("Where its installed-copy digest is 64 lowercase hexadecimal digits other than the SHA-256 digest of the shipped file's bytes and its runtime result is other than cannot_evaluate, the report is inconsistent with a run whose runtime check compared the installed copy's bytes with that digest before reading any field and, on finding them different, yielded cannot-evaluate as section 16.1 requires, whose emitter reported that run truthfully, and whose report no one altered after the emitter wrote it."),
+        _D('It does not show that no comparison ran: a co-edit that also changed the digest the implementation carries (section 17), a comparison that is skipped, defective, or made without refusing a mismatch, an emitter that misreports, and a report altered after it was written each explain it, and the report does not tell which.'),
+        _D('It establishes nothing under section 16.1.'),
+        _D("This observes the implementation's behaviour over bytes the release did not ship; section 17 discloses that no reference run can show whether that comparison is made."),
+        _D('An edited installed copy is an altered installation under section 16.1 wherever it sits, a disposable location included, so a probe run is no attempt and no reference run and, however often it is repeated, establishes nothing under the section 16.1 availability and reference-run rules.'),
+        _D('It is an observation, never an inspection of the bytes the release ships, and it decides no verdict: it can only direct the checker to what an inspection of those bytes then finds.'),
+    ),
+}
+
+# Base spec 2.0.0 with homes 2 is the only base version (spec 4.2 and 9.2): the specification defines
+# no homes-1 store, no homes migration, no activation of a later generation and no 1.x upgrade delta.
+# These fragments of the retired text are the one negative check, scoped to their own sections: the
+# default entry is red where one reappears there, outside a retired-text quotation block, on one line
+# or wrapped across quoted lines, so restoring one does not wait for the self-test's tiling equality.
+# Each fragment names a retired term (_RETIRED_TERMS): homes, legacy state, activation, a target
+# contract, a pre-2.0.0 base version, an implementation class or the fresh-only admission check
+# (spec 16.1 defines one implementation model), the legacy_fragment type and its LF quarantine, the
+# imports reserved name, or the removed section 9.2 remedy adoption (its old tree, the old store's
+# files and the store being adopted into). Retired sentences that name none are not fragments, since a
+# future 2.x upgrade could state them again: "The owning writer or migration MUST derive each
+# inventory" and the containment and discovery sentences reworded for 2.0.0 (4.2), the 8.1 governance
+# note's last two sentences, the 1.1.0 delta's "The upgrade weakens nothing" and the generic rules of
+# the 1.3.0 delta (9.2), "The migration MUST refuse a store resolved outside the product root",
+# "Every destination MUST be digest-verified before its source is removed." and "Both kinds of
+# upgrade MUST run" (9.2), and "That in-place rewrite covers only a bump that ships an upgrade."
+# (17); and of the removal of the implementation classes, legacy state and legacy_fragment, among
+# others "LF MUST NOT be scaffolded.", "An importer MAY omit created_at" (8.3), "One exception is
+# defined so that the section 9.2 refusal" (8.6), "Their evidence inventories and readers remain
+# available" and "Old import and ingest orchestration MUST be retired" (14.1), "In a first
+# adoption, its apply also archives" (14.2), and the 16.1 and 17 sentences on classless
+# declarations, candidates, the recheck and the fixtures that name no retired term; and of the
+# removal of the section 9.2 remedy adoption, "Before that apply, every write of that adoption"
+# (9.2) and the narrowed archive-immutability wording "a file the store's own apply archived"
+# (14.2). Restored in
+# place of the current text they stay red through the pins they displace (the retired-run vectors
+# below); restored beside it, through the tiling equality, or, in untiled 9.1, not at all.
+# Untiled section 13 carries one fragment of its own, so the retired imported-series sentence
+# restored there is red under the default entry; every other untiled section stays the module
+# docstring's disclosed residual.
+_RETIRED = {
+    "4.2": (
+        "which requires the homes migration (opf upgrade) to be available.",
+        "The homes-2 requirements in sections 4.2, 9.2, 12, 14.1, 14.2, and 15 describe the target contract",
+        "Homes-2 init and upgrade MUST render this managed block",
+        "Legacy journal transport MUST preserve bytes through the migration's receipt binding.",
+        "the separate imported series on homes 1",
+        "The 1.3.0 requirements in sections",
+        "Activation MUST include deterministic doctor coverage",
+        "activation MUST also include the tested upgrade",
+        "Homes 2 is a separate, later activation",
+        "The homes-2 contract below is for",
+        "implements their homes-2 boundary checks",
+        "initializes legacy homes (generation 1",
+        "no homes-1 store is migrated to homes 2",
+        "describes the 1.3.0 target on legacy homes",
+        "and the section 9.2 refusal of a homes-1 store",
+        "legacy import report (pre-1.3.0 runs only",
+        "A 1.3.0 opf init and the section 9.2 upgrade MUST create",
+        "A 1.3.0 opf init MUST write at zero",
+        "In a store that declares spec_version 1.3.0 or later, enabling",
+        "requires the imported counter rows once the store declares spec_version 1.3.0",
+        "In homes 2, OPF MUST NOT write state outside",
+        "any upgrade of a store already at homes 2, MUST render",
+        "Under pre-1.3.0 tooling, a store that has not started an adoption",
+        "receives the adoption grading from the same pre-1.3.0 tooling",
+        "On homes 1 too, the apply side",
+        "tooling released before that ceiling grades such a store as legacy",
+        "Activated 1.3.0 tooling MUST register on homes 1",
+        "C-EVIDENCE-ENUM MUST NOT run or read anything until homes 2 is activated",
+        "once the tooling activates that generation",
+        "In homes 2, staging/ MUST be walked",
+        "For legacy stores, other kinds cannot substantiate partial import status",
+        "At 1.3.0, partial status is receipt-bound",
+        "a legacy store's transactions and recovery keep their legacy operand handling",
+        "no homes-1 journal is carried into journals/",
+        'enabled-type roster except legacy_fragment',
+        'for every enabled type except legacy_fragment',
+        'other than legacy_fragment later MUST create',
+        'legacy_fragment has no imported leaf',
+        'Enabling a further type or module other than legacy_fragment',
+        'imported records per enabled type except LF',
+        'an inventory in the recognized legacy format below, which is its named finding',
+        'a bundle without an inventory or an inventory in the recognized legacy format',
+        'The recognized legacy format opf.ingest.evidence-inventory/v1',
+        'refuses such an inventory earlier, as unsupported-legacy-state',
+        'The legacy imports/ exclusion remains registered',
+        "the one exception is a section 9.2 remedy adoption's disposition",
+        'A section 9.2 remedy adoption bounds this grading',
+    ),
+    "4.4": (
+        'The names imports, imported, archive',
+        'The legacy staging name imports remains reserved',
+    ),
+    "4.5": (
+        'the retired [devprocess] only to refuse that store',
+        'For a fresh-only implementation, a recognized legacy candidate',
+        'a recognized legacy candidate beside a matching store',
+        'A fresh-only implementation MUST NOT treat a zero-match outcome',
+        'it MUST run the section 16.1 legacy-state search',
+        'holds no recognized legacy candidate and no section 16.1 legacy-state item',
+        'so the section 9.2 remedy adoption over them is a section 14 first adoption',
+    ),
+    "8.1": (
+        "are baseline as of spec_version 1.1.0",
+        'Migration quarantine (importer-only) | legacy_fragment | LF',
+        'legacy_fragment (LF) is deprecated for new stores',
+        'verbatim unparsed text (section 8.3), not LF quarantine',
+        'provides no legacy LF validation',
+        'same enabled types except legacy_fragment',
+    ),
+    "8.2": (
+        "rows required once the store declares spec_version 1.3.0 or later",
+        "whether a 1.3.0 opf init or the section 9.2 upgrade created them",
+        "At homes 2 the claim additionally begins",
+        "applies per series key: at homes 2 the next ID",
+        'since new imports do not use LF quarantine',
+        'one for each enabled type except legacy_fragment',
+        'so the section 9.2 remedy adoption over it is a genuinely first adoption',
+    ),
+    "8.3": (
+        'This legacy permission does not replace',
+        'enter the legacy importer or module-schema deferral seam',
+    ),
+    "8.5": (
+        'legacy_fragment quarantined > resolved or ignored',
+    ),
+    "8.6": (
+        'written into the clean series by the pre-1.3.0 legacy importer',
+        'a legacy importer-authored receipt satisfies, as recorded history',
+        'only receipt as legacy importer-authored',
+        'That acceptance binds an upgrade-capable implementation',
+        'existing legacy importer-authored clean record MUST keep its bytes',
+    ),
+    "8.8": (
+        "That key was added while base 1.2.0 was still unreleased",
+        "uses the separate 1.3.0 imported model",
+        "At homes 1 the counters.toml advance",
+        "At homes 2 the claim is an irrevocable reservation",
+        "keeps that journal under .aiqt/record/journal at homes 1",
+        "The journal remains .aiqt/record/journal at homes 1",
+        'acting on imported or legacy importer-authored history',
+        'A fresh-only implementation (section 16.1) performs that reconciliation',
+    ),
+    "9": (
+        'spec_version = "1.3.0" # OPFiles base spec version',
+        'base_compat = ">=1.0.0 <2.0.0"',
+    ),
+    "9.1": (
+        'Implementation conformance classes (section 16.1) are defined by the base',
+        'A profile MAY require an upgrade-capable implementation',
+        "MUST NOT declare, grant, or relax an implementation's class",
+    ),
+    "9.2": (
+        "The homes-generation upgrade targets spec_version",
+        "denotes legacy homes for migration",
+        "The homes-generation target does not itself change",
+        "A homes-generation bump MUST additionally relocate OPF control areas",
+        "the homes-generation relocation path, the homes-2 path included",
+        "and a store is at homes 2 only when it is created there",
+        "Absent or 1 denotes legacy homes",
+        "The homes-2 declaration does not itself change",
+        "This section defines no homes-generation upgrade",
+        "has an upgrade path once that upgrade activates",
+        "The bump to the homes-2 declaration",
+        "MUST NOT apply the ceiling's homes-2 recognition",
+        "over the whole 1.0.0 origin family",
+        "For the 1.0.0 to 1.1.0 upgrade",
+        "Base spec 1.2.0 admits one new managed machine-store file",
+        "For the 1.1.0 to 1.2.0 upgrade",
+        "A 1.0.0 store takes the 1.0.0 delta",
+        "For the 1.2.0 to 1.3.0 upgrade",
+        "it does change what a legacy importer-authored clean record confers",
+        "An unresolved legacy import MUST be reconciled under its original contract",
+        "A completed legacy import upgrades in place",
+        "The bump also activates the homes-1 recognition",
+        "The 1.3.0 delta remains a target contract",
+        "the 1.2.0 reference validator that ships this ceiling",
+        "Only the reserved homes-2 declaration of section 4.2 stays recognized",
+        "tooling released before this ceiling treats an above-ceiling declaration as legacy",
+        "Both residuals end when pre-ceiling tooling leaves use and homes 2 activates",
+        'in at least one published upgrade-capable implementation',
+        'binds an upgrade-capable implementation; a fresh-only implementation implements none',
+        'a fresh-only implementation at its section 16.1 admission check',
+        'Unproven legacy .archive/ entries MUST remain in place',
+        "a fresh 2.0.0 store whose section 14 adoption gives the old store's files",
+        "the old tree's reserved-name children",
+        "a number the old tree's records carried can be issued again",
+        'and the remedy adoption above does not apply to it',
+        'the one exception is the section 14 adoption that the remedy above names',
+    ),
+    "11": (
+        'or that a pre-1.3.0 legacy import finished',
+        'the section 9.2 upgrade preserves that legacy status',
+        'nor preserved legacy import evidence substantiates',
+        'MUST NOT use the preserved-legacy-evidence route',
+        'The section 16.1 admission check belongs to neither layer above',
+    ),
+    "12": (
+        "The imported series MUST NOT rotate at 1.3.0",
+        'unresolved decisions, unresolved fragments, unexpired waivers',
+    ),
+    "13": (
+        "the separate imported series on homes 1",
+    ),
+    "14.1": (
+        "refuse with a pointer to adoption and the prompt pack when this contract activates",
+        "Clean-start adoption and import ship on homes 1",
+        'and the deprecated legacy_fragment',
+        'Legacy runs MAY occupy',
+        'A legacy import completed under the pre-1.3.0 contract',
+        "Preserved legacy run evidence is that run's durable archive",
+        'provides none of these legacy readers',
+        'Pending legacy review MUST NOT become implicit approval',
+        'every file of the old tree, its reserved-name children included',
+    ),
+    "14.2": (
+        "the section 9.2 upgrade into 1.3.0 refuses a store",
+        "homes 1 retains its legacy journal paths",
+        'by this rule, and by the section 16.1 admission check',
+        'A fresh-only implementation (section 16.1) performs that recovery',
+        "except where a section 9.2 remedy adoption's approved plan",
+        'Those rules protect the control area of the store being adopted into.',
+        'In the section 9.2 remedy adoption the refused manifest marks no store',
+        'likewise protect only what the store being adopted into wrote',
+        "The old tree's files under the reserved names are foreign content",
+    ),
+    "14.3": (
+        "This remains the historical-release path at 1.3.0",
+    ),
+    "15": (
+        "Only homes migration MAY read explicitly inventoried OPF artefacts from former .aiqt/ locations",
+        "In homes 2, .aiqt/ is AIQT-owned material",
+        "On a homes-2 store, OPF MUST NOT read OPF artefacts",
+    ),
+    "16.1": (
+        "carries a store from base 1.0.0 or 1.1.0 to base 1.2.0",
+        "the reserved homes-2 declaration (section 4.2) included",
+        'The base defines two implementation conformance classes',
+        'An upgrade-capable implementation meets every section 9.2 requirement',
+        'A fresh-only implementation supports exactly one base spec_version',
+        'the admission check over the store that run resolved included',
+        'a store its admission check refuses (the base-result part below)',
+        'or where its admission check, the pre-scan included, refused the store that run resolved',
+        'the fresh-only admission, lease, recovery, and sync conduct below included',
+        "or where that run's admission check, the pre-scan included, refused",
+        'A report a reference run emits over a store its admission check refuses',
+        'An implementation whose declaration lacks only its class MUST be treated as upgrade-capable',
+        'A fresh-only implementation MUST run an admission check',
+        "a fresh-only implementation's opf sync MUST NOT bring in",
+        'or whose base table is the retired [devprocess] (section 4.5)',
+        'upgrade the store with an upgrade-capable implementation, then retry',
+        'as unsupported-store-generation, a store whose homes or worklog storage generation differs',
+        'as unsupported-legacy-state, a store at the supported version that holds legacy state',
+        'Legacy state is this closed list',
+        'a legacy run archive outside .working/, for the reference tooling .aiqt/import-archive/',
+        'a .working/IMPORT-REPORT.md and a legacy .working/imports/ directory',
+        'the import_status item and the declared legacy_fragment type item do not apply',
+        'that match is contradictory where the file also carries a [devprocess] table',
+        'one that carries a [devprocess] table and no [opf] table is a recognized legacy candidate',
+        'never unsupported-legacy-state and never admission',
+        "A fresh-only implementation's own adoption writer MUST make its adoption receipt crash-durable",
+        "a fresh-only implementation's own section 14 adoption writer MUST NOT leave the store manifest",
+        'exactly as an upgrade-capable implementation does',
+        'every store-resolving command MUST run the admission check once as a pre-scan',
+        'The pre-scan MUST defer to the admission check that follows recovery',
+        'That deferral covers no refusal: the pre-scan MUST still refuse',
+        'Within that order a recovery bound applies: a fresh-only implementation MUST recover only',
+        'MUST read that journal in its pre-scan',
+        'whatever the admission check that follows it finds',
+        "the pre-scan's deferral of a candidate is not admission",
+        'a fresh-only implementation MUST NOT grade the rest of that store',
+        'A fresh-only implementation that provides an upgrade command',
+        'For a store its admission check refuses, a report MUST give the base result as indeterminate',
+        'A claim of the fresh-only class MUST cite refusal evidence',
+        "The recovery bound's fixtures MUST include",
+        'the admission check that follows MUST find no legacy-state item',
+        "The pre-scan's fixtures MUST include",
+        'MUST refuse as unsupported-legacy-state, each before any write',
+        'A fresh-only claim MUST NOT imply upgrade compatibility',
+    ),
+    "17": (
+        "On homes 1, under the section 4.2 target contract",
+        "This bullet discloses that target contract's residual",
+        "and activated 1.3.0 tooling's C-IMPORTED-PROVENANCE",
+        "The bump to the homes-2 declaration ships none",
+        "is recognized by opf upgrade, purely to carry a legacy store forward",
+        'The retired token devprocess is recognized by a fresh-only implementation',
+        'A fresh-only implementation (section 16.1) proves tested admission and refusal behaviour',
+        'the closed legacy-state list catches only what it lists',
+        'It does not list a legacy staging run',
+        'is partial or complete is refused as unsupported-legacy-state',
+        'A refusal at its pre-scan leaves a store unchanged',
+        'run after a read-only pre-scan and before the admission check that follows them',
+        'The pre-scan refuses, before any write',
+        'Within the section 16.1 recovery bound, a fresh-only implementation trusts',
+        'stays cannot-evaluate for every command of a fresh-only implementation',
+        'leaves a store that every command of a fresh-only implementation',
+        'the fresh-only admission, lease, recovery, and sync conduct included',
+    ),
+}
+# A retired fragment names one of these terms (lowercased), so a sentence on a future 2.x upgrade,
+# which names none of them, matches no fragment.
+_RETIRED_TERMS = ("homes", "legacy", "activat", "target contract", "pre-1.", "1.0.0", "1.1.0", "1.2.0",
+                  "1.3.0", "fresh-only", "upgrade-capable", "conformance class", "implementation's class",
+                  "devprocess", "admission check", "pre-scan", "recovery bound", "quarantine", "fragment",
+                  "except lf", "imports", "remedy adoption", "remedy above", "old tree", "old store's",
+                  "being adopted into")
+# Machine-subdirectory names the reference tooling still reserves (store.RESERVED_MACHINE_SUBDIRS) that
+# spec 4.4 no longer reserves: the legacy staging name imports, dropped from the spec by the maintainer
+# ruling of 2026-10-23 while the tooling keeps refusing a machine store so named until its own change.
+# The spec 4.4 reserved-name check skips these alone; the self-test pins this tuple and proves each
+# name is still a tooling reservation, so the exclusion is removed together with the tooling's.
+_TOOLING_ONLY_RESERVATIONS = ("imports",)
+
+# Plain-language surfaces restating the base 2.0.0 contract: sentence pins over tag-stripped,
+# whitespace-normalized text, so deleting or rewording a pinned sentence turns the gate red.
+# They are not specification sentences, so the section 2 keyword lint does not read them. The
+# quickstart, the disclosure page, the adopt page, the adoption guide and the core-files page
+# (with the record indexes it carries) state the one implementation model, the 2.0.0 file baseline, the
+# reference tooling's grading of a 2.0.0 manifest with homes = 2, that it defines no store
+# upgrade, what its scaffold still writes, and where its 1.2.0 behaviour diverges from the
+# specification. The self-test pins
+# this registry's shape, so dropping an entry turns the self-test red.
+_SURFACE = {
+    QUICKSTART: (
+        'Date: 2026-10-24 (UTC).',
+        'Create .working/toml/ by hand with manifest.toml declaring standard = "opf", spec_version = "2.0.0" and homes = 2 in its [opf] table, plus counters.toml (with the imported counter row of each enabled type beside its clean row), version.toml, worklog.toml, the eleven baseline .index.toml files (worklog is the exempt ledger listed above, not an index), the eleven .imported.index.toml leaves, and worklog.imported.toml, and create the root CHANGELOG.md (a required public deliverable, specification section 5.8), each holding exactly the starting contents under "Hand-start file contents" below, never a zero-byte file; specification sections 4, 8 and 9 give the full file baseline.',
+        "The reference tooling's opf init does not scaffold this store yet: its scaffold still writes a 1.2.0 store, a format the specification's validation refuses (specification section 9.2).",
+        'The specification defines one implementation model, with no conformance classes (OPF-SPEC section 16.1).',
+        'Base 2.0.0, with homes = 2, is the only base version the specification defines, and the reference tooling does not yet implement it.',
+        'The reference tooling\'s opf doctor grades a manifest declaring spec_version = "2.0.0" with homes = 2 under its 1.2.0 rules, so its VALID verdict on such a store says nothing about conformance to the specification; opf upgrade and opf record refuse such a store.',
+        'This supersedes the earlier aiqt-opf token; the interim devprocess token and [devprocess] table are retired by the OPFiles rebrand.',
+        "opf init also refuses when the git history of HEAD's first-parent line shows a prior store (specification section 8.2: counters never restart, so record ids are never reissued).",
+        'opf adopt is the path for re-adopting any prior ancestry.',
+        'The reference tooling defines no store upgrade: opf upgrade refuses every invocation with exit 2, reading and writing nothing.',
+    ),
+    DISCLOSURE: (
+        "Ordinary import is retired and refuses with exit 2, and nothing in the reference CLI creates legacy_fragment records; the type remains only for stores that already hold such records from the reference CLI's retired import path.",
+        "That reading is the reference tooling's 1.2.0 behaviour and diverges from the specification, whose section 9.2 validation refusals refuse a 1.2.0 manifest as a store.",
+        'A rename would be a store-breaking change the specification gives no path: every base-schema version bump stays additive and keeps the exact token, so no bump the specification permits renames it (specification sections 4.5 and 9.2).',
+        'Implementations (specification section 16.1): the specification defines one implementation model, with no conformance classes, and base 2.0.0, with homes = 2, is the only base version it defines.',
+        'The reference tooling does not yet implement base 2.0.0: it still initializes and validates stores at base 1.2.0, and it makes no claim of conformance to the specification.',
+        'The reference tooling\'s opf doctor grades a manifest declaring spec_version = "2.0.0" with homes = 2 under its 1.2.0 rules, so its VALID verdict on such a store says nothing about conformance to the specification; opf upgrade and opf record refuse such a store.',
+        'The reference tooling defines no store upgrade: opf upgrade refuses every invocation with exit 2, reading and writing nothing.',
+    ),
+    ADOPT_PAGE: (
+        "The reference tooling's opf init does not scaffold a 2.0.0 store yet: its scaffold still writes a 1.2.0 store, a format the standard's validation refuses (specification section 9.2).",
+        "The reference tooling's opf init does not scaffold this store yet: its scaffold still writes a 1.2.0 store, a format the standard's validation refuses (specification section 9.2).",
+        'It declares standard = "opf" (the exact discovery token) in its [opf] table, along with the base spec_version you conform to ("2.0.0"), the homes generation homes = 2, the storage layout, the enforcement posture, and import_status.',
+        'It holds the clean row and the imported counter row (the quoted key "imported:&lt;NS&gt;", at zero to start) of every enabled type.',
+        'The imported leaves: one &lt;type&gt;.imported.index.toml beside each of those eleven indexes, plus worklog.imported.toml for the worklog, each starting with no records in the same canonical form, never as a zero-byte file. The standard requires them in every store (OPF-SPEC.md sections 4.2 and 8.2).',
+        'The reference tooling does not yet implement spec 2.0.0, the only base version the standard defines; it validates spec 1.2.0 stores, as described above.',
+        'Its opf doctor grades a manifest declaring spec_version = "2.0.0" with homes = 2 under its 1.2.0 rules, so its VALID verdict on such a store says nothing about conformance to the standard; opf upgrade and opf record refuse such a store.',
+        'spec_version = "2.0.0" # the base spec version this store conforms to homes = 2 # the homes generation; required, and 2 is the only value',
+        'The shape of the manual path is short: create the store (write the files from the specification and schemas), commit it, generate the views with opf render --write for a supported store or your own renderer, and then work records-first.',
+        'The reference tooling defines no store upgrade: opf upgrade refuses every invocation with exit 2, reading and writing nothing.',
+    ),
+    ADOPT_GUIDE: (
+        "The reference tooling's opf init does not scaffold a 2.0.0 store yet: its scaffold still writes a 1.2.0 store, a format the standard's validation refuses (specification section 9.2).",
+        'Create the machine store at .working/toml/: manifest.toml (the control document: an [opf] table declaring standard = "opf", the base spec_version ("2.0.0"), the homes generation homes = 2, the storage layout, the enforcement posture, and import_status, plus a [types.] registration for every enabled type, the declared [views], and the other tables the standard defines; see section 9 of OPF-SPEC.md, linked from /standard), counters.toml (the per-namespace ID high-water marks), version.toml (the version and release ledger, numbers, dates, spans, and digests, never release prose), worklog.toml (the durable operational record: one entry per change, correctable before its span is released, frozen afterward, never deleted), and the eleven baseline typed indexes as .index.toml, each starting with no records in the canonical form the reference tooling writes, never as a zero-byte file, plus the imported leaves the standard requires in every store: one .imported.index.toml beside each of those indexes and worklog.imported.toml for the worklog, each starting the same way, with the imported counter row of each enabled type (the quoted key "imported:", at zero) beside its clean row in counters.toml (OPF-SPEC.md sections 4.2 and 8.2).',
+        'It does not yet implement spec 2.0.0, the only base version the standard defines.',
+        'Its opf doctor grades a manifest declaring spec_version = "2.0.0" with homes = 2 under its 1.2.0 rules, so its VALID verdict on such a store says nothing about conformance to the standard; opf upgrade and opf record refuse such a store.',
+        "Ordinary import is retired and refuses with exit 2, and nothing in the reference CLI creates legacy_fragment records; the type remains only for stores that already hold such records from the reference CLI's retired import path.",
+        'The reference tooling defines no store upgrade: opf upgrade refuses every invocation with exit 2, reading and writing nothing.',
+    ),
+    CORE_FILES: (
+        # The record indexes (the retired record-indexes page's pins).
+        "Created by opf init (empty index), by the ratified-done transition, and, as migrated history with provenance, by import (the reference CLI's retired importer, or post-adoption import, which the reference CLI does not implement yet); never updated, since records are immutable, though rotation relocates aged receipts to the archive; read by opf render (DONE.md and the mirror) and validated by opf doctor (schema, uniqueness, the one-to-one receipt link).",
+        'Reserved namespace No module toggle: the standard reserves LF unassigned, with no record type on it (spec section 8.1). The reference tooling still recognizes legacy_fragment (LF, quarantined &#8594; resolved | ignored) in stores that hold such records from its retired import path; nothing in the reference CLI creates it now.',
+        '(none) LF reserved unassigned; the reference tooling still recognizes legacy_fragment (quarantined &#8594; resolved | ignored) in stores holding such records from its retired import path',
+        'The standard reserves the LF namespace unassigned and defines no legacy_fragment type (spec section 8.1); the reference tooling still recognizes the type in existing stores and never scaffolds it.',
+        "Under the reference tooling's retired import contract, everything an import could not confidently map became quarantined fragment data with source path, digest, span, and run ID, so nothing was dropped.",
+        'Ordinary import is now retired and refuses with exit 2, nothing in the reference CLI creates legacy_fragment records, and the standard directs new imports to the imported series with verbatim unparsed text instead (spec section 8.1); the type remains in the tooling for existing stores and evidence.',
+        "A new store's counters file has no LF namespace; a store scaffolded by earlier reference tooling may carry LF (at zero, or higher if it imported records), and doctor and re-adoption accept it. That acceptance is the reference tooling's 1.2.0 behaviour and diverges from the standard, whose section 9.2 validation refuses a 1.2.0 manifest as a store.",
+        # The control files.
+        'The base [opf] table carries the exact discovery token standard = "opf", the spec version the store conforms to, and the homes generation. The base of a spec 2.0.0 store:',
+        'standard = "opf" spec_version = "2.0.0" homes = 2 layout = "inline"',
+        'The reference tooling does not yet implement spec 2.0.0: its scaffold still writes spec_version = "1.2.0" with no homes key.',
+        '[opf] standard, spec_version, homes (2), layout (inline | per-record), posture (off | warn | required), import_status (none | partial | complete)',
+    ),
+}
+# Retired surface wording: the disclosure page's fresh-only item, the quickstart's
+# conformance-class sentence, retired with the implementation classes (spec 16.1), the
+# record indexes' deleted importer-only legacy_fragment rows and counts, retired with the reserved
+# unassigned LF namespace (spec 8.1), and the quickstart's, the disclosure page's and the
+# record indexes' wording of the removed section 9.2 remedy adoption, retired with it (spec
+# 9.2 defines no path for a manifest below 2.0.0), and the disclosure page's and the record indexes'
+# description of a store upgrade the reference tooling no longer defines. The record indexes'
+# sentences are held on the core-files page, which carries the record indexes now. Each sentence
+# present in its file's normalized text is a finding.
+_SURFACE_RETIRED = {
+    QUICKSTART: (
+        'An implementation declares a conformance class: an upgrade-capable one carries older stores forward',
+        "the specification's section 9.2 remedy adoption starts a new store whose counters start at zero, so a number the old tree's records carried can appear again in the new store's own series",
+        'under the specification, a tree whose manifest declares a spec_version below 2.0.0 is foreign content for adoption, so adoption over it is a first adoption (specification sections 9.2 and 14.1), never a re-adoption.',
+    ),
+    DISCLOSURE: (
+        'A fresh-only implementation (specification section 16.1) proves tested admission and refusal behaviour, not authenticated history: it refuses by name an older store or one in which its admission check detects an item on the closed legacy-state list.',
+        "It runs that check once before any write, and a store refused there is left unchanged; only then does it recover, within a bound, its own interrupted writes and reconcile a dead run's leftover lease as the base rules require, and it runs the check again after them, so a store refused, or found cannot-evaluate, only by that second run can carry their effects.",
+        'That check searches only the files section 16.1 permits and the list catches only what it lists, so legacy state the list omits, or that sits where the check does not search, goes undetected; an input it cannot read is cannot-evaluate, never admitted.',
+        "For a partial or complete import status, where it cannot tell whether a file in the adoption evidence area is another implementation's adoption receipt, it reports cannot-evaluate rather than refusing the store as legacy, and it does not see an adoption receipt kept outside that area, so it can refuse as legacy a store whose recorded import status rests on such a receipt.",
+        'It offers no upgrade, repair, or continuity, so a store holding legacy state needs an upgrade-capable implementation.',
+        'The upgrade into base 1.3.0 is still a target that the reference tooling does not yet perform, and the reference-tooling residuals above name stores its current upgrade cannot carry.',
+        'A class claim is self-asserted until validation tooling ships.',
+        'a 1.2.0 store is one the section 9.2 validation refusals refuse, so an adoption over it is a first adoption under section 14.1, never a re-adoption.',
+        "An older store has no upgrade into 2.0.0; its remedy is a fresh 2.0.0 store whose adoption takes the old store's files as foreign content.",
+        'If an upgrade from 1.0.0 or 1.1.0 passes preflight, it applies the schema delta before failing at render, leaving the changes in place for recovery.',
+    ),
+    CORE_FILES: (
+        'Importer-only (no module toggle)',
+        'legacy_fragment LF quarantined &#8594; resolved | ignored',
+        '+ 1 importer-only',
+        'one importer-only type, and two reserved names or namespaces',
+        "a 1.2.0 store is one the standard's section 9.2 validation refuses, so an adoption over it is a first adoption under its section 14.1, never a re-adoption.",
+        'If an upgrade from 1.0.0 or 1.1.0 passes preflight, it applies the schema delta before failing at render, leaving the changes in place for recovery.',
+    ),
+}
+
+
+def _surface_name(path):
+    # A generated page is an index.html under its page directory, so it is named by that directory.
+    return "/".join(path.parts[-2:]) if path.name == "index.html" else path.name
+
+
+def _surface_text(text):
+    return " ".join(re.sub(r"<[^>]*>", "", text).replace("`", "").split())
+
+
+def surface_findings(texts=None):
+    texts = {path: path.read_text(encoding="utf-8") for path in _SURFACE} if texts is None else texts
+    findings = []
+    for path, fragments in _SURFACE.items():
+        body = _surface_text(texts[path])
+        for fragment in fragments:
+            if fragment not in body:
+                findings.append("surface {} missing contract: {}".format(_surface_name(path), fragment))
+        for fragment in _SURFACE_RETIRED.get(path, ()):
+            if fragment in body:
+                findings.append("surface {} restores retired text: {}".format(_surface_name(path), fragment))
+    return findings
+
+
+# A line the section splitter reads (_split_bounds): a heading-like line, "## " or "### " at
+# column 0, or a fence line, 0 to 3 spaces and a run of three or more backticks or tildes (group
+# 1) followed by the rest of the line (group 2). Lines end at LF, as the splitter reads them.
+_SPLIT_LINE = re.compile(r"^(?:#{2,3} .*| {0,3}(`{3,}|~{3,})(.*))$", re.MULTILINE)
+
+
+def _split_bounds(text):
+    # The heading-like lines that bound sections (_section_spans), as _SPLIT_LINE matches in
+    # source order.
+    bounds = []
+    fence = None  # (delimiter character, opening run length) of the open fence
+    for m in _SPLIT_LINE.finditer(text):
+        run, rest = m.group(1), m.group(2)
+        if run is None:
+            if fence is None:
+                bounds.append(m)
+        elif fence is None:
+            if run[0] == "~" or "`" not in rest:
+                fence = (run[0], len(run))
+        elif run[0] == fence[0] and len(run) >= fence[1] and not rest.strip(" \t"):
+            fence = None
+    return bounds
+
+
+def _section_spans(text):
+    # Every heading bounds a section, so a numbered section never swallows an appendix; the
+    # preamble before the first heading is registered as section "0", and an appendix under its
+    # letter ("E" for Appendix E). Each body is a (start, end) span of text. A heading-like line
+    # inside a fenced code block bounds nothing, the fence read as CommonMark reads one at the
+    # top level: it opens on 0 to 3 spaces and three or more backticks (an info string holding
+    # no backtick) or tildes, and closes on 0 to 3 spaces, a run of the same character at least
+    # as long, and nothing after it but spaces or tabs; a fence never closed runs to the end of
+    # the text, so no heading below it bounds a section and a registered section there is
+    # missing. Block quotes, list items and HTML blocks are not tracked (module docstring
+    # residual), so contract_findings checks these bounds against _heading_bounds.
+    bounds = _split_bounds(text)
+    spans = dict()
+    if bounds:
+        spans["0"] = (0, bounds[0].start())
+    for i, m in enumerate(bounds):
+        number = re.match(r"^#{2,3} (?:([0-9]+(?:\.[0-9]+)?)\.?|Appendix ([A-Z]):) ", m.group(0))
+        if number:
+            end = bounds[i + 1].start() if i + 1 < len(bounds) else len(text)
+            spans[number.group(1) or number.group(2)] = (m.end(), end)
+    return spans
+
+
+def _sections(text):
+    return {section: text[start:end] for section, (start, end) in _section_spans(text).items()}
+
+
+# The exact first line of a retired-text quotation block (module docstring).
+_RETIRED_QUOTATION = "> Retired text, quoted and not in force:"
+# What the pins read in place of a quotation block; a pin holding it is missing, so no pin spans one.
+_QUOTATION_JOINT = "[retired-text quotation]"
+# A line's leading block-quote markers, nested ones included. The retired-text check also reads
+# operative text with them removed, so a sentence wrapped across ">" lines is read joined.
+_QUOTE_MARKERS = re.compile(r"^(?:[ \t]*>)+", re.MULTILINE)
+# A block-quote line: ">" after at most three spaces (CommonMark), so a lead-in below one continues
+# that quote.
+_QUOTE_LINE = re.compile(r" {0,3}>")
+# A backslash escape (a backslash before ASCII punctuation) or hard line break (a backslash ending a
+# line). The retired-text check also reads operative text with each read as CommonMark renders it,
+# the escaped character or a line break, so a fragment holding one is read as rendered.
+_BACKSLASH = re.compile(r"\\([!-/:-@\[-`{-~]|\n)")
+
+
+def _normalized(text):
+    return " ".join(text.replace("`", "").split())
+
+
+def _rendered_lines(text):
+    # The offsets of the lines at which CommonMark opens a paragraph (_heading_bounds) with no line
+    # that the informative guard reports as raw HTML on an earlier line, so a lead-in there is
+    # rendered text: never code, a lazy continuation, or a line an HTML comment or another raw HTML
+    # block may hide. The guard reports every line that may open an HTML block, a URI autolink
+    # included, so this over-fires and fails closed. A text that holds no lead-in is not parsed.
+    if _RETIRED_QUOTATION not in text:
+        return frozenset()
+    _headings, html_lines, _unread, _titles, paragraphs, _top = _heading_bounds(text)
+    first_html = min(html_lines, default=None)
+    return frozenset(start for start, _texts, number in paragraphs
+                     if first_html is None or number < first_html)
+
+
+def _read_section(body, rendered):
+    # A section body's readings, each normalized: the pins' (each retired-text quotation block
+    # replaced by _QUOTATION_JOINT), the retired-text check's (each block removed, then read as
+    # written and with _QUOTE_MARKERS removed, each once more with _BACKSLASH read as rendered) and
+    # each block's. rendered holds the body offsets of the lines _rendered_lines admits. Each check
+    # fails closed: a pin split around a block is missing, and a fragment split around one is read
+    # joined.
+    lines = body.split("\n")
+    kept, blocks = [], []
+    i = at = 0
+    while i < len(lines):
+        if (lines[i] == _RETIRED_QUOTATION and at in rendered
+                and (i == 0 or not _QUOTE_LINE.match(lines[i - 1]))
+                and i + 1 < len(lines) and lines[i + 1].startswith(">")):
+            j = i + 1
+            while j < len(lines) and lines[j].startswith(">"):
+                j += 1
+            blocks.append(_normalized("\n".join(lines[i:j])))
+            kept.append(None)
+            at += sum(len(line) + 1 for line in lines[i:j])
+            i = j
+            continue
+        kept.append(lines[i])
+        at += len(lines[i]) + 1
+        i += 1
+    written = "\n".join("" if line is None else line for line in kept)
+    pins = _normalized("\n".join(_QUOTATION_JOINT if line is None else line for line in kept))
+    retired = tuple(_normalized(form) for reading in (written, _QUOTE_MARKERS.sub("", written))
+                    for form in (reading, _BACKSLASH.sub(r"\1", reading)))
+    return pins, retired, tuple(blocks)
+
+
+def _readings(text):
+    # Each section's readings (_read_section), keyed like _sections.
+    rendered = _rendered_lines(text)
+    return {section: _read_section(text[start:end], {at - start for at in rendered if start <= at < end})
+            for section, (start, end) in _section_spans(text).items()}
+
+
+def contract_findings(text):
+    sections = _sections(text)
+    readings = _readings(text)
+    findings = []
+    for section, fragments in list(_CONTRACT.items()) + list(_PINNED.items()):
+        pins, _retired, blocks = readings.get(section, _read_section("", ()))
+        for fragment in fragments:
+            if isinstance(fragment, _Quoted):
+                if fragment not in blocks:
+                    findings.append("spec {} missing retired-text quotation: {}".format(section, fragment))
+            elif fragment not in pins or _QUOTATION_JOINT in fragment:
+                findings.append("spec {} missing contract: {}".format(section, fragment))
+    for section, fragments in _RETIRED.items():
+        _pins, retired, _blocks = readings.get(section, _read_section("", ()))
+        for fragment in fragments:
+            if any(fragment in reading for reading in retired):
+                findings.append("spec {} restores retired text: {}".format(section, fragment))
+    # The splitter tracks no block quote, list item or HTML block (module docstring residual), so
+    # the default entry fails closed where it may misread a fence: its bounds must be exactly the
+    # level-2 and level-3 headings the block reading (_heading_bounds) finds outside any block
+    # quote or list item, and each line that reading reports as possibly opening a raw HTML block
+    # is a finding, since neither reader tracks an HTML block (the live spec holds none, so this
+    # over-fires and fails closed). So is each line that reading marks as not read (a line
+    # Markdown renderers read differently), once per line, since the two readers may agree there
+    # and both be wrong: a setext heading under a paragraph that opens like a link reference
+    # definition bounds nothing in either (the live spec holds none either, so this over-fires
+    # and fails closed too). Lines are numbered as _heading_bounds numbers them.
+    _headings, html_lines, unread, _titles, _paragraphs, top = _heading_bounds(text)
+    split = {m.start(): m.group(0) for m in _split_bounds(text)}
+    read = {start: level for start, level in top if level in (2, 3)}
+
+    def line_at(at):
+        return len(re.findall(r"\r\n|\r|\n", text[:at])) + 1
+    for at in sorted(set(split) - set(read)):
+        findings.append("spec section split: line {} bounds a section, where the block reading finds"
+                        " no level-2 or level-3 heading outside a container: {}".format(
+                            line_at(at), split[at]))
+    for at in sorted(set(read) - set(split)):
+        findings.append("spec section split: line {} holds a level-{} heading outside any container,"
+                        " where the splitter bounds no section: {}".format(
+                            line_at(at), read[at], re.compile(r"[^\r\n]*").match(text, at).group()))
+    findings.extend("spec section split: line {} may open a raw HTML block, which neither the splitter"
+                    " nor the block reading tracks".format(n) for n in html_lines)
+    findings.extend("spec section split: line {} is not read by the block reading, since Markdown"
+                    " renderers read it differently, so neither reader's section bounds there are"
+                    " checked".format(n) for n in dict.fromkeys(number for number, _why in unread))
+    layout = sections.get("4.2", "")
+    reservation = sections.get("4.4", "")
+    for name in store.RESERVED_MACHINE_SUBDIRS:
+        if name in _TOOLING_ONLY_RESERVATIONS:
+            continue
+        if "`{}`".format(name) not in reservation:
+            findings.append("spec 4.4 missing reserved name: " + name)
+    for name in store.STORE_TREE_CONTROL_DIRS:
+        if name + "/" not in layout:
+            findings.append("spec 4.2 missing control home: " + name)
+    for kind in store.JOURNAL_KINDS:
+        if "`{}`".format(kind) not in layout:
+            findings.append("spec 4.2 missing kind: " + kind)
+    blocks = re.findall(r"^```gitignore\n(.*?)^```$", layout, re.MULTILINE | re.DOTALL)
+    if len(blocks) != 1 or blocks[0] != store.render_homes_gitignore():
+        findings.append("spec 4.2 managed gitignore block differs from renderer")
+    return findings
+
+
+def keyword_findings(contract=None):
+    # Section 2 keyword lint over every tiled section (the sections the registry tiles) and
+    # every untiled sentence pin.
+    # Section 2 reads a sentence without MUST, MUST NOT, SHOULD or MAY as descriptive, so an
+    # unmarked keywordless pin is a requirement that states no requirement. Tiling ties each pin
+    # to its spec sentence, so the lint reads the registry.
+    contract = dict(_CONTRACT, **_PINNED) if contract is None else contract
+    findings = []
+    for section, fragments in contract.items():
+        for fragment in fragments:
+            if isinstance(fragment, _Quoted):
+                continue  # quoted text is not in force; the pin check matches it to its block
+            keyword = _KEYWORD.search(fragment) is not None
+            if isinstance(fragment, _Descriptive):
+                if keyword:
+                    findings.append("spec {} descriptive marker on a keyword sentence: {}".format(
+                        section, fragment))
+            elif not keyword:
+                findings.append("spec {} requirement without a section 2 keyword: {}".format(
+                    section, fragment))
+    return findings
+
+
+# Whole-word where a letter, digit or underscore bounds it, read through an underscore run
+# only where no letter or digit lies beyond the run, as CommonMark requires before an
+# underscore can open or close emphasis: _MUST_ and __MUST__ are read, while MUST_DO and
+# x_MUST_y, which CommonMark renders as written, are not. A run with no partner (_MUST alone)
+# is read too, an over-fire.
+_INFORMATIVE_KEYWORD = re.compile(
+    r"(?<!\w)_*(MUST|SHALL|REQUIRED|SHOULD|MAY|RECOMMENDED|OPTIONAL)_*(?!\w)")
+# An informative marker, matched in each reading form of a heading title (_INFORMATIVE_TITLE)
+# or a body (_INFORMATIVE_MARK), each form folded by the one case fold candidacy shares
+# (_fold_case), so any ASCII letter case is read; any whitespace run (a line break
+# included) reads as one space (_says_informative); a body is also read as its paragraphs'
+# text with their container markers removed (_informative_sections). A title and a body are
+# each read for both marker forms, the parenthesized marker (_INFORMATIVE_PARENTHESIZED) and
+# the declaration (_INFORMATIVE_DECLARATION), so neither form escapes by standing in the
+# other place (PR #481 QA round 10: a title "This section is informative" and a body
+# holding "(informative)" each marked nothing). A title is also read for the word set off as
+# a label (_INFORMATIVE_LABEL): "informative" between two edges, an edge being the title's
+# start or end or a character other than a letter, digit, underscore or whitespace, with only
+# whitespace between the word and each edge (Z - Informative, Informative: Z, and the
+# parenthesized marker as one case); the word among other words of a title (Informative
+# references) marks nothing, and a body is not read for the label, since prose sets the
+# word off by punctuation (a list, a clause) without marking anything. Each marker matches
+# wherever it stands, so a sentence that denies the declaration, or a body naming another
+# section's "(informative)", marks its section too, a disclosed over-fire.
+_INFORMATIVE_PARENTHESIZED = r"\(\s*informative\s*\)"
+_INFORMATIVE_DECLARATION = r"\bthis\s+(?:appendix|section|subsection)\s+is\s+informative\b"
+_INFORMATIVE_LABEL = r"(?:\A|[^\w\s])\s*informative\s*(?:[^\w\s]|\Z)"
+_INFORMATIVE_TITLE = re.compile(_INFORMATIVE_LABEL + "|" + _INFORMATIVE_DECLARATION)
+_INFORMATIVE_MARK = re.compile(_INFORMATIVE_PARENTHESIZED + "|" + _INFORMATIVE_DECLARATION)
+# The one exempt quotation form: a code span holding exactly one keyword, preceded by
+# "the keyword" or "the term" (sentence case allowed). Every other uppercase occurrence in an
+# informative section, inside any other code span or a fenced block included, is a finding.
+_INFORMATIVE_QUOTED = re.compile(
+    r"\b[Tt]he (?:keyword|term) `(?:MUST(?: NOT)?|SHALL(?: NOT)?|SHOULD(?: NOT)?|MAY"
+    r"|REQUIRED|RECOMMENDED|NOT RECOMMENDED|OPTIONAL)`")
+# Inline markup that can split a keyword's letters while it renders as one word: an underscore
+# run CommonMark could read as emphasis (no letter or digit on one side of it), a link or image
+# target in its plain form, then each emphasis, strikethrough, code-span, bracket and
+# backslash character. A plain target is "](", a destination with no space, parenthesis,
+# quote, angle bracket or backslash, optionally a title in double or single quotes holding no
+# quote, parenthesis or backslash (spaces and angle brackets allowed), then ")"; or "][", a
+# reference label with no bracket or backslash, then "]". Every other "](" or "][" in an
+# informative section is a finding (_LINK_SYNTAX), as is a "<" that may open inline HTML
+# other than a URI autolink (_AUTOLINK), since a tag can hide or reorder text; a declaration
+# candidate refuses every "[", "]" and "<" outright (_plain_prose). The kept form removes
+# only the emphasis, strikethrough and code-span characters (_INLINE_EMPHASIS), since a "](" or
+# "][" that opens no link shows its text, target included.
+_INLINE_TARGET = re.compile(
+    r"\]\(\s*[^\s()<>\"'\\]*(?:\s+(?:\"[^\"'()\\]*\"|'[^\"'()\\]*'))?\s*\)|\]\[[^\[\]\\]*\]")
+_LINK_SYNTAX = re.compile(r"\][(\[]")
+_AUTOLINK = re.compile(r"<[A-Za-z][A-Za-z0-9+.\-]{1,31}:[^\s<>]*>")
+_INLINE_UNDERSCORE = re.compile(r"(?<!\w)_+|_+(?!\w)")
+_INLINE_MARKUP = re.compile(r"[*~`\[\]!\\]")
+_INLINE_EMPHASIS = re.compile(r"[*~`]")
+# A character reference in its CommonMark shape; one the guard does not decode (html.unescape
+# leaves it unchanged) is refused wherever it stands in an informative section, since a
+# renderer that reads it could show text the guard did not (_inline_unread_at); a
+# declaration candidate refuses every "&" outright (_plain_prose). The guard reads no
+# inline HTML tag anywhere: a "<" that may open one is refused the same way, so no tag
+# form needs enumerating.
+_REFERENCE_SHAPE = re.compile(r"&(?:#[0-9]+|#[xX][0-9A-Fa-f]+|[A-Za-z][A-Za-z0-9]*);")
+# Characters that render invisibly or only modify the character before them: format,
+# nonspacing and enclosing marks, unassigned, private-use and surrogate code points, control
+# characters other than whitespace, and the Hangul fillers.
+_INVISIBLE_CATEGORIES = frozenset(("Cf", "Mn", "Me", "Cn", "Co", "Cs"))
+_INVISIBLE_FILLERS = "\u115f\u1160\u3164\uffa0"
+_ASCII_CONTROL = re.compile(r"[\x00-\x08\x0e-\x1f\x7f]")
+# Compatibility forms read as a space in the split fold (_folded): a footnote mark ends a word.
+_WORD_ENDING_FORMS = ("<super>", "<sub>", "<circle>")
+
+
+def _visible(text):
+    if text.isascii():
+        return _ASCII_CONTROL.sub("", text)
+    return "".join(ch for ch in text if not (
+        unicodedata.category(ch) in _INVISIBLE_CATEGORIES or ch in _INVISIBLE_FILLERS
+        or (unicodedata.category(ch) == "Cc" and ch not in "\t\n\r\x0b\x0c")))
+
+
+def _folded(text):
+    # text with its character references decoded and invisible characters dropped, then
+    # folded (NFKC) twice: as it stands, and split, with each superscript, subscript or circled
+    # form read as a space (_WORD_ENDING_FORMS), so MUST followed by a footnote mark is read.
+    text = _visible(html.unescape(text))
+    split = text if text.isascii() else "".join(
+        " " if unicodedata.decomposition(ch).startswith(_WORD_ENDING_FORMS) else ch for ch in text)
+    return [_visible(unicodedata.normalize("NFKC", form)) for form in (text, split)]
+
+
+_ASCII_LOWER = str.maketrans("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")
+
+
+def _fold_case(text):
+    # The one case fold candidacy (_declaration_candidate) and the declaration reader
+    # (_says_informative) share: ASCII letters lowercased, every other character kept, so
+    # it maps each character to one and never expands or drops one. A Unicode fold can:
+    # str.casefold reads U+0130 (dotted capital I) as "i" and a combining dot, which kept a
+    # plain declaration from being read while nothing refused it (PR #481 QA round 9). No
+    # non-ASCII letter is folded: candidacy reads each as any letter of the word
+    # (_runs_show_word) and a candidate refuses each (_plain_prose), so no fold is needed
+    # to find or refuse a declaration that holds one.
+    return text.translate(_ASCII_LOWER)
+
+
+def _reading_forms(text):
+    # The forms of text the guard reads: as written, with its character references decoded,
+    # and two normalized forms, each folded (_folded). joined: its plain link targets and
+    # inline markup removed (_INLINE_UNDERSCORE judged on the text as written, then
+    # _INLINE_TARGET and _INLINE_MARKUP). kept: the same underscore runs and only the
+    # emphasis, strikethrough and code-span characters removed (_INLINE_EMPHASIS), brackets,
+    # link targets and backslashes kept, since a "](" or "][" that opens no link shows them.
+    # A URI autolink shows its URI as its text, so the same forms are read once more with
+    # each autolink replaced by its URI; reading more forms only adds findings.
+    bases = [text]
+    if "<" in text:
+        unlinked = _AUTOLINK.sub(lambda m: m.group(0)[1:-1], text)
+        if unlinked != text:
+            bases.append(unlinked)
+    forms = []
+    for base in bases:
+        plain = _INLINE_UNDERSCORE.sub("", base)
+        joined = _INLINE_MARKUP.sub("", _INLINE_TARGET.sub("", plain))
+        forms += [base, html.unescape(base)] + _folded(joined) + _folded(
+            _INLINE_EMPHASIS.sub("", plain))
+    return list(dict.fromkeys(forms))
+
+
+def _informative_keywords(text):
+    # The keywords text carries in any of its reading forms (_reading_forms). Reading more
+    # forms only adds findings; the forms the guard cannot read are findings of their own
+    # (informative_findings).
+    return {word for form in _reading_forms(text) for word in _INFORMATIVE_KEYWORD.findall(form)}
+
+
+def _says_informative(text, mark):
+    # Whether text marks itself informative (mark is _INFORMATIVE_TITLE for a heading title:
+    # the label form, "(informative)" included, or the declaration; _INFORMATIVE_MARK for a
+    # body: "(informative)" or the declaration): in any plain reading form (_reading_forms),
+    # each form folded by the one case fold candidacy uses too (_fold_case). So a marker
+    # written in any ASCII letter case, with decoded character references, split by markup
+    # the forms remove, by invisible characters or by a line break, in compatibility forms,
+    # or shown by a URI autolink is read as the page shows it; reading more forms only
+    # marks more sections informative, so the guard scans more. The plain forms are
+    # complete for plain text and read no inline HTML tag and no undecoded reference: a
+    # declaration candidate holding any character outside plain prose is refused where it
+    # stands (_unread_markup_at), never silently skipped, so an unreadable declaration is a
+    # finding, not a silent skip.
+    return any(mark.search(_fold_case(form)) for form in _reading_forms(text))
+
+
+def _inline_unread(text):
+    # The inline syntax in text that the guard does not read: each "](" or "][" that opens no
+    # plain link target, each "<" that may open inline HTML (a letter, "/", "!" or "?"
+    # after it) other than a URI autolink, even in a code span or fenced block, and each
+    # character reference the guard does not decode; plain text shaped like a tag (a<b) or
+    # like such a reference is named the same way, an over-fire.
+    return [form for _at, form in _inline_unread_at(text)]
+
+
+def _shown(text, at):
+    # The start of text at offset at, for a finding that names a construct.
+    return repr(text[at:].split("\n", 1)[0][:40])
+
+
+def _inline_unread_at(text):
+    # (offset, form) for each form _inline_unread names, in the same order.
+    out = [(m.start(), "a link or image target " + _shown(text, m.start()))
+           for m in _LINK_SYNTAX.finditer(text) if not _INLINE_TARGET.match(text, m.start())]
+    out.extend((m.start(), 'a "<" that may open inline HTML ' + _shown(text, m.start()))
+               for m in _HTML_START.finditer(text)
+               if not _AUTOLINK.match(text, m.start()))
+    out.extend((m.start(), "a character reference the guard does not decode "
+                + _shown(text, m.start()))
+               for m in _REFERENCE_SHAPE.finditer(text)
+               if html.unescape(m.group()) == m.group())
+    return out
+
+
+# A declaration candidate is found from its letters: the letters of "informative" can be
+# assembled, in order, from the letter runs of the text in a folded reading form (_folded:
+# character references decoded, invisible characters dropped, compatibility forms folded),
+# case folded by the shared fold (_fold_case), each non-ASCII letter standing for any
+# letter of the word (a reader may take it for one: a dotted or dotless i, an accented
+# letter, a look-alike of another script). Rendering deletes or hides only regions
+# delimited by non-letter characters (a tag or comment between "<" and ">", a code-span
+# or emphasis delimiter, a link target behind "](" or "][", an autolink's angle
+# brackets, a backslash), decodes character references, and drops invisible characters, so
+# whatever markup a renderer removes around or inside the word, the letters a reader would
+# see stand in the raw text as such runs, and the text is a candidate; a text that is no
+# candidate holds no assembly of the word and is never scanned (_unread_markup_at runs on
+# candidates alone); what a renderer generates beyond the source text is a named residual
+# (module docstring).
+_CANDIDATE_WORD = "informative"
+_LETTER_RUN = re.compile(r"[^\W\d_]+")
+
+
+def _spells(piece, part):
+    # Whether piece (a letter run or a slice of one) spells part (a slice of the word):
+    # the same length, each ASCII letter equal and each non-ASCII letter standing for any
+    # letter, so a letter no fold reads as one of the word's still spells it.
+    if piece.isascii():
+        return piece == part
+    return len(piece) == len(part) and all(
+        mine == theirs or not mine.isascii() for mine, theirs in zip(piece, part))
+
+
+def _runs_show_word(runs, word):
+    # Whether word can be assembled, in order, from runs (_spells): a run inside the word
+    # used whole, runs between the pieces skipped, the first piece a suffix and the last a
+    # prefix of their runs (the word inside one run included). reached holds each offset
+    # into word that some assembly of the runs so far has spelled.
+    reached = set()
+    width = len(word)
+    for run in runs:
+        if (word in run) if run.isascii() else any(
+                _spells(run[at:at + width], word) for at in range(len(run) - width + 1)):
+            return True
+        grown = set()
+        for at in reached:
+            rest = word[at:]
+            if _spells(run[:len(rest)], rest):
+                return True
+            if _spells(run, rest[:len(run)]):
+                grown.add(at + len(run))
+        grown.update(length for length in range(1, min(len(run), width - 1) + 1)
+                     if _spells(run[-length:], word[:length]))
+        reached |= grown
+    return False
+
+
+def _declaration_candidate(text):
+    # Whether text (a heading title or a paragraph) could show "informative" after a
+    # renderer removes markup the guard does not parse: its letters hold the word's letters
+    # as runs in order (_runs_show_word), in either folded form, case folded by the fold the
+    # declaration reader uses (_fold_case), so what is read plain is a candidate when split,
+    # and each non-ASCII letter stands for any letter of the word, so no letter a reader
+    # takes for one of the word's keeps the text from being a candidate. The split fold only
+    # cuts runs at a superscript, subscript or circled form, so reading it too only widens
+    # candidacy; widening only refuses more, never hides.
+    return any(_runs_show_word(_LETTER_RUN.findall(_fold_case(form)), _CANDIDATE_WORD)
+               for form in _folded(text))
+
+
+# The plain prose a declaration candidate may hold: ASCII letters, ASCII digits, the space
+# and the line feed that joins a paragraph's lines, and the sentence marks below (the
+# marker's own parentheses and the punctuation the spec's declaration paragraphs use; a
+# bare "!" is plain, and the image form "![" is refused through its "["). Every other
+# character is refused (_unread_markup_at): each markup lead-in ("<", ">", "[", "]", the
+# backtick, "*", "_", "~", a backslash, "&"), each control or format character (it
+# renders invisibly or not at all, so it could split or hide the word unseen), each other
+# ASCII mark, and every non-ASCII character, letters included: a letter a Unicode case
+# fold expands (U+0130, sharp s U+00DF, a ligature such as U+FB01), one a reader takes
+# for an ASCII letter (dotless i, an accented letter, a look-alike of another script),
+# and the Hangul fillers (U+115F, U+1160, U+3164, U+FFA0), letters that render as blank
+# space and that the reading forms drop, so one could stand unseen for the space between
+# two words of the declaration. An allowlist, not a list of markup forms, decides it, so
+# no markup form is left to enumerate: every inline construct that can hide, replace or
+# reorder text opens with a character outside the set, except a GitHub emoji shortcode
+# (:m: shows an emoji), which opens with an allowed colon and is refused by its shape
+# (_SHORTCODE); a time or ratio of that shape (10:30:00) is refused too, an over-fire.
+_PLAIN_PROSE_MARKS = " \n.,;:'\"()-?!/"
+_SHORTCODE = re.compile(r":[A-Za-z0-9-]+:")
+
+
+def _plain_prose(ch):
+    # Whether a declaration candidate may hold ch (the allowlist above): ASCII alone, so
+    # no non-ASCII letter is admitted.
+    return ch.isascii() and (ch.isalnum() or ch in _PLAIN_PROSE_MARKS)
+
+
+def _char_label(ch):
+    # The refused character, named with its code point so an invisible or look-alike
+    # character is identifiable from the finding text alone.
+    return "the character {!r} (U+{:04X})".format(ch, ord(ch))
+
+
+def _unread_markup_at(text):
+    # (offset, name) for each distinct character of a declaration candidate outside the
+    # plain-prose allowlist (_plain_prose), each named at its first occurrence, in text
+    # order, with nothing masked: no code span, autolink or link target shields a character
+    # from the scan, so no pairing or matching divergence from a Markdown renderer can hide
+    # one construct behind another, and paragraphs and heading titles (title_forms) are
+    # held to the same set by this one scan. Each distinct emoji shortcode (_SHORTCODE),
+    # the one replacing construct built from allowed characters, is named the same way.
+    first = {}
+    for at, ch in enumerate(text):
+        if ch not in first and not _plain_prose(ch):
+            first[ch] = at
+    shortcodes = {}
+    for match in _SHORTCODE.finditer(text):
+        shortcodes.setdefault(match.group(), match.start())
+    return sorted([(at, _char_label(ch) + " " + _shown(text, at)) for ch, at in first.items()]
+                  + [(at, "an emoji shortcode " + _shown(text, at))
+                     for at in shortcodes.values()])
+
+
+# Block structure as CommonMark reads it, for the informative guard, the retired-text lead-in
+# check (_rendered_lines) and the section-split cross-check (contract_findings). Lines end at
+# LF, CR LF or CR only; a tab advances to the next multiple of four columns.
+_ATX = re.compile(r"(#{1,6})(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*\Z")
+_SETEXT = re.compile(r"(=+|-+)[ \t]*\Z")
+_THEMATIC = re.compile(r"(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})\Z")
+_FENCE_OPEN = re.compile(r"(`{3,})[^`]*\Z|(~{3,})")
+_LIST_MARK = re.compile(r"(?:[-+*]|([0-9]{1,9})[.)])(?=[ \t]|\Z)")
+# A list marker numbered with at least one decimal digit other than ASCII 0-9 (\d is Unicode
+# here on purpose): CommonMark reads it as text, a renderer that reads \d as a digit opens a
+# list.
+_OTHER_DIGIT_MARK = re.compile(r"\d*(?![0-9])\d\d*[.)](?=[ \t]|\Z)")
+# Why a line is not read (_heading_bounds); each finding names the form and its fix.
+_UNREAD_QUOTE = 'a ">" at 4 or more columns inside a block quote; indent it 0 to 3 columns'
+_UNREAD_LAZY = ("a lazy continuation at 4 or more columns shaped like a block; indent it under"
+                " its container or put a blank line before it")
+_UNREAD_REFERENCE = "a paragraph that opens like a link reference definition; reword its start"
+_UNREAD_DIGIT = "a list marker with digits other than ASCII 0-9; number it with 0-9 or reword it"
+_UNREAD_TAB = "a tab before the content of a block quote or list item line; indent with spaces"
+# A line that may open a link reference definition: a label (escapes allowed) closed by "]:",
+# or left open at the line end, since a label may run onto the next line.
+_REFERENCE_DEF = re.compile(r"\[(?:[^\]\\]|\\.)*(?:\]:|\\?\Z)")
+# Read broadly, so every CommonMark HTML block type is caught however its tag ends (a quoted
+# attribute may hold ">"): content opening with "<" then a letter, "/", "!" or "?".
+_HTML_START = re.compile(r"<[A-Za-z/!?]")
+
+
+def _expand(line):
+    # The line with each tab replaced by the spaces up to the next multiple of four columns.
+    if "\t" not in line:
+        return line
+    out, col = [], 0
+    for ch in line:
+        piece = " " * (4 - col % 4) if ch == "\t" else ch
+        out.append(piece)
+        col += len(piece)
+    return "".join(out)
+
+
+def _indent(line, pos):
+    # The columns of space at pos (tabs already expanded).
+    return len(line) - pos - len(line[pos:].lstrip(" "))
+
+
+def _tab_before(raw, col):
+    # Whether the unexpanded line holds a tab that starts before expanded column col.
+    for at, ch in enumerate(raw):
+        if at >= col:
+            return False
+        if ch == "\t":
+            return True
+    return False
+
+
+def _atx_title(m):
+    return (m.group(2) or "").strip()
+
+
+def _heading_bounds(text):
+    # Headings at every level as CommonMark reads them, and the lines that open a raw HTML
+    # block, by CommonMark's block algorithm over block quotes and list items. A line first
+    # continues the open containers in order: a block quote takes 0 to 3 columns, ">" and one
+    # space after it; a list item takes its content column, or a blank line unless it opened
+    # blank and holds nothing yet. A fully continued fenced code block takes the line (it
+    # closes on 0 to 3 columns, a run of its character at least as long, then spaces or tabs
+    # alone); a fence in an unmatched container closes with it.
+    # Block starts are then read in the innermost continued container: block quote, ATX
+    # heading, fence (three or more tildes, or backticks with no backtick in the info string),
+    # setext underline (under that container's own paragraph alone, never a lazy line),
+    # thematic break, list item (ASCII digits 0-9 alone when ordered, interrupting a paragraph
+    # only where it holds content and, when ordered, starts at 1), then indented code (4 or more
+    # columns, never inside a paragraph; each such line opens or continues it, so no state is
+    # kept). A list item's content column is its marker's end plus the 1 to 4 columns
+    # after it, or plus one where 5 or more follow or the item opens blank. A line that starts
+    # no block continues the open paragraph (lazily where containers stay unmatched) or opens
+    # one. A heading in no container bounds a section; one inside a list item or block quote,
+    # or a setext heading under a paragraph that opens like a reference definition, bounds
+    # nothing and is kept only where its title says "(informative)" (_says_informative). A line
+    # Markdown renderers read differently is not read: a ">" at 4 or more columns inside a
+    # block quote, a lazy block-shaped line at 4 or more columns, a paragraph opening like a
+    # reference definition, a list marker with digits other than ASCII 0-9, and a non-blank
+    # line inside or opening a block quote or list item with a tab before its content. Every
+    # heading title that is a declaration candidate (_declaration_candidate) and holds a
+    # character outside plain prose (_unread_markup_at) is listed too, at the title line
+    # holding it, since such a character could hide an "(informative)" marker; a title
+    # that is no candidate holds no assembly of the word and is not scanned. Each paragraph
+    # is kept as its lines' text with their container markers removed (a block quote's ">"
+    # on every line, nested ones included), so a declaration continued across quoted lines
+    # is read (_informative_sections).
+    headings = []
+    html_lines = []
+    unread = []  # (line, reason) for each line that Markdown renderers read differently
+    titles = []  # (line, name) for each refused character in a candidate heading title
+    paragraphs = []  # [start, texts, first line] of each paragraph, in source order
+    top = []  # (start, level) of each heading in no container, the bounds contract_findings checks
+    containers = []  # open block quotes (None) and list items ([content column, holds a block])
+    para = None  # [start, texts, first line] of the innermost container's open paragraph
+    fence = None  # (delimiter character, opening run length) of the innermost open fence
+
+    def not_read(number, reason):
+        if (number, reason) not in unread:
+            unread.append((number, reason))
+
+    def title_forms(title, first, texts):
+        # Each refused character in a candidate title (_declaration_candidate,
+        # _unread_markup_at) joined by spaces from texts (one per line, the first at line
+        # first), at the line holding it; a title that is no candidate holds no assembly of
+        # the word and is not scanned.
+        if not _declaration_candidate(title):
+            return
+        bounds, at = [], 0
+        for piece in texts:
+            bounds.append(at)
+            at += len(piece) + 1
+        titles.extend((first + sum(1 for b in bounds[1:] if b <= offset), form)
+                      for offset, form in _unread_markup_at(title))
+
+    def marked(end, level, title, start, first, texts):
+        title_forms(title, first, texts)
+        if _says_informative(title, _INFORMATIVE_TITLE):
+            headings.append((end, level, title, start))
+
+    def heading(end, level, title, start, first, texts):
+        if containers:
+            marked(end, level, title, start, first, texts)
+        else:
+            title_forms(title, first, texts)
+            headings.append((end, level, title, start))
+            top.append((start, level))
+
+    def holds(matched):
+        # Close the unmatched containers; the innermost one left receives a block.
+        del containers[matched:]
+        if containers and containers[-1] is not None:
+            containers[-1][1] = True
+
+    lines = re.finditer(r"[^\r\n]*(?:\r\n|\r|\n)|[^\r\n]+", text)
+    for number, found in enumerate(lines, 1):
+        start = found.start()
+        raw = found.group().rstrip("\r\n")
+        end = start + len(raw)
+        line = _expand(raw)
+        pos = matched = 0
+        for container in containers:
+            indent = _indent(line, pos)
+            if container is None:
+                if indent > 3 or not line.startswith(">", pos + indent):
+                    if line.startswith(">", pos + indent):
+                        # CommonMark ends the quote here; some renderers continue it.
+                        not_read(number, _UNREAD_QUOTE)
+                    break
+                pos += indent + 1
+                pos += line.startswith(" ", pos)
+            elif pos + indent == len(line):
+                if not container[1]:
+                    break
+                pos = len(line)
+            elif indent >= container[0]:
+                pos += container[0]
+            else:
+                break
+            matched += 1
+        if containers and raw.strip(" \t") and _tab_before(raw, pos + _indent(line, pos)):
+            # Renderers place a tab inside container indentation differently.
+            not_read(number, _UNREAD_TAB)
+        if matched < len(containers):
+            fence = None
+        elif fence is not None:
+            indent = _indent(line, pos)
+            if indent <= 3 and re.fullmatch(
+                    re.escape(fence[0]) + "{%d,}[ \t]*" % fence[1], line[pos + indent:]):
+                fence = None
+            continue
+        # The line meets the open paragraph in that paragraph's own container.
+        interrupts = para is not None and matched == len(containers)
+        consumed = False
+        while True:
+            indent = _indent(line, pos)
+            rest = line[pos + indent:]
+            if not rest:
+                break
+            if indent >= 4:
+                if para is None:
+                    holds(matched)
+                    consumed = True
+                elif matched < len(containers) and (rest.startswith(">") or any(
+                        p.match(rest) for p in (_ATX, _FENCE_OPEN, _HTML_START, _THEMATIC,
+                                                _LIST_MARK))):
+                    # CommonMark continues the paragraph lazily here; some renderers close
+                    # the container and open the block instead, so the line is not read.
+                    not_read(number, _UNREAD_LAZY)
+                break
+            if rest.startswith(">"):
+                holds(matched)
+                containers.append(None)
+                matched = len(containers)
+                para, interrupts = None, False
+                pos += indent + 1
+                pos += line.startswith(" ", pos)
+                if _tab_before(raw, pos + _indent(line, pos)):
+                    not_read(number, _UNREAD_TAB)
+                continue
+            m = _ATX.match(rest)
+            if m:
+                holds(matched)
+                para = None
+                title = _atx_title(m)
+                heading(end, len(m.group(1)), title, start, number, [title])
+                consumed = True
+                break
+            m = _FENCE_OPEN.match(rest)
+            if m:
+                holds(matched)
+                para = None
+                fence = (rest[0], len(m.group(1) or m.group(2)))
+                consumed = True
+                break
+            if _HTML_START.match(rest):
+                html_lines.append(number)
+            m = _SETEXT.match(rest) if interrupts else None
+            if m:
+                level = 1 if m.group(1)[0] == "=" else 2
+                title = " ".join(para[1]).strip()
+                if _REFERENCE_DEF.match(para[1][0]):
+                    marked(end, level, title, para[0], para[2], para[1])
+                else:
+                    heading(end, level, title, para[0], para[2], para[1])
+                para = None
+                consumed = True
+                break
+            if _THEMATIC.match(rest):
+                holds(matched)
+                para = None
+                consumed = True
+                break
+            m = _LIST_MARK.match(rest)
+            if m is None:
+                if _OTHER_DIGIT_MARK.match(rest):
+                    not_read(number, _UNREAD_DIGIT)
+                break
+            after = rest[m.end():]
+            gap = _indent(after, 0)
+            empty = gap == len(after)
+            if interrupts and (empty or (m.group(1) is not None and int(m.group(1)) != 1)):
+                break
+            holds(matched)
+            width = 1 if empty or gap >= 5 else gap
+            containers.append([indent + m.end() + width, not empty])
+            matched = len(containers)
+            para, interrupts = None, False
+            pos += indent + m.end() + (gap if empty else width)
+            if _tab_before(raw, pos + _indent(line, pos)):
+                not_read(number, _UNREAD_TAB)
+        if consumed:
+            continue
+        rest = line[pos:].lstrip(" ")
+        if not rest:
+            del containers[matched:]
+            para = None
+        elif para is not None:
+            para[1].append(rest)
+        else:
+            holds(matched)
+            para = [start, [rest], number]
+            paragraphs.append(para)
+            if _REFERENCE_DEF.match(rest):
+                # Renderers differ on the lines after a reference definition, so it is not read.
+                not_read(number, _UNREAD_REFERENCE)
+    return headings, html_lines, unread, titles, paragraphs, top
+
+
+def _informative_sections(text):
+    # A heading is informative where its title holds a title marker (_INFORMATIVE_TITLE: the
+    # word set off as a label, "(informative)" included, or the declaration) or its own body
+    # (to the next heading at any level) holds a body marker (_INFORMATIVE_MARK:
+    # "(informative)" or the declaration), the body read as written and as the text of each
+    # of its paragraphs with their container markers removed (_heading_bounds), so a quote
+    # marker cannot hide a marker; every own paragraph
+    # is read, none is skipped, each after the normalization the keyword scan uses
+    # (_says_informative), and informative status is inherited by every descendant heading at
+    # any deeper level, until the next heading at the same or a shallower level. Returns
+    # (title, own body) pairs; the guard scans the title with the body, so a keyword in a
+    # heading cannot hide.
+    headings, _html, _unread, _titles, paragraphs, _top = _heading_bounds(text)
+    out = []
+    informative_level = None
+    for i, (end, level, title, _start) in enumerate(headings):
+        body_end = headings[i + 1][3] if i + 1 < len(headings) else len(text)
+        body = text[end:body_end]
+        if informative_level is not None and level <= informative_level:
+            informative_level = None
+        own_paragraphs = ("\n".join(texts) for start, texts, _first in paragraphs
+                          if end <= start < body_end)
+        own = (_says_informative(title, _INFORMATIVE_TITLE)
+               or _says_informative(body, _INFORMATIVE_MARK)
+               or any(_says_informative(paragraph, _INFORMATIVE_MARK)
+                      for paragraph in own_paragraphs))
+        if own and informative_level is None:
+            informative_level = level
+        if own or informative_level is not None:
+            out.append((title, body))
+    return out
+
+
+def informative_findings(text):
+    # An informative section adds no requirement (Appendix E says so itself), so a section 2
+    # requirement keyword there, or SHALL, REQUIRED, RECOMMENDED or OPTIONAL read as one, is
+    # drift: a removed MUST could regain force there unnoticed. The one exempt form is the
+    # quotation _INFORMATIVE_QUOTED names; every other uppercase occurrence, in a bare code
+    # span or a fenced block included, is a finding, so an operative keyword cannot hide in
+    # markup or in a heading title (the guard fails closed on quoting in any other form; the
+    # title of every informative heading is scanned like its body). Residual: the guard reads
+    # uppercase keywords, so a lowercase restatement that a reader takes as binding stays
+    # green; review catches that.
+    # A raw HTML block is a finding wherever it opens outside fenced or indented code: the guard
+    # reads no HTML (a heading there, or a section boundary it hides, stays unseen), so it fails
+    # closed; so is each line that Markdown renderers read differently (_heading_bounds), each
+    # candidate heading title holding a character outside plain prose, which could hide an
+    # "(informative)" marker, each declaration-candidate paragraph holding one (below), and,
+    # in an informative section, each link target, "<" that may open inline
+    # HTML or undecoded character reference it does not read (_inline_unread).
+    headings, html_lines, unread, titles, paragraphs, _top = _heading_bounds(text)
+    findings = ["spec informative guard: raw HTML block at line {} is not read".format(n)
+                for n in html_lines]
+    findings.extend("spec informative guard: line {} is read differently by Markdown "
+                    "renderers and is not read: {}".format(n, why) for n, why in unread)
+    findings.extend("spec informative guard: heading at line {} carries {}, which the guard does"
+                    " not read and which could hide an \"(informative)\" marker; write the title"
+                    " plainly".format(n, form) for n, form in titles)
+    # Every declaration candidate is held to plain prose or refused: a paragraph
+    # (block-quoted or not, in any section) whose letters hold the letters of "informative"
+    # as runs in order (_declaration_candidate) is scanned with nothing masked, and each
+    # character in it outside the plain-prose allowlist, and each emoji shortcode
+    # (_unread_markup_at), is a finding naming the section and the form, whatever the
+    # section's classification, so no markup form, named or not, can hide a marker by making
+    # it unreadable; a paragraph that is no candidate holds no assembly of the word and is
+    # not scanned; heading titles are held to the same set through the title findings above
+    # (title_forms shares the scan). Holding a candidate to plain prose reads no marker: what
+    # marks a section is read separately (_informative_sections), a title for the label
+    # form ("(informative)" included) or the declaration (_INFORMATIVE_TITLE), a body and
+    # each of its paragraphs for "(informative)" or the declaration (_INFORMATIVE_MARK), so
+    # a plain candidate that holds no marker (Z (informed by the informative note)) marks
+    # nothing.
+    for start, texts, first in paragraphs:
+        joined = "\n".join(texts)
+        if not _declaration_candidate(joined):
+            continue
+        section = "(preamble)"
+        for _end, _level, heading_title, heading_start in headings:
+            if heading_start > start:
+                break
+            section = heading_title
+        for at, form in _unread_markup_at(joined):
+            findings.append(
+                "spec informative guard: section {} paragraph at line {} carries {}, which the"
+                " guard does not read and which could hide an informative declaration; write"
+                " it plainly".format(section, first + joined.count("\n", 0, at), form))
+    sections = _informative_sections(text)
+    if not any(title.startswith("Appendix E") for title, _ in sections):
+        findings.append("spec informative guard: Appendix E not marked informative")
+    for title, body in sections:
+        scanned = _INFORMATIVE_QUOTED.sub(" ", title + "\n" + body)
+        for form in _inline_unread(scanned):
+            findings.append("spec informative section {} carries {}, which the guard does not"
+                            " read; write the text and any keyword plainly or move it out of"
+                            " the informative section".format(title, form))
+        for word in sorted(_informative_keywords(scanned)):
+            findings.append("spec informative section {} carries requirement keyword {}".format(
+                title, word))
+    return findings
+
+
+def boundary_self_test():
+    """Exercise the read-only boundaries with explicit in-memory filesystem observations."""
+    import contextlib
+    import copy
+    import hashlib
+    import inspect
+    import os
+    from types import SimpleNamespace
+    from unittest.mock import patch
+    import _journal as journal
+    import _opf_adopt as adopt
+    import _opf_check as doctor
+    import _opf_journal as home_journal
+    import _opf_views as views
+
+    failures = []
+    checked = []
+
+    def check(name, thunk):
+        checked.append(name)
+        try:
+            if not thunk():
+                failures.append(name)
+        except Exception as exc:
+            failures.append("{} ({})".format(name, exc))
+
+    def refuses(thunk):
+        try:
+            thunk()
+        except (ValueError, journal.JournalError, views.ViewsError):
+            return True
+        return False
+
+    def refusal(thunk):
+        # The refusal message, or None when the thunk completed; any other exception propagates.
+        try:
+            thunk()
+        except (ValueError, journal.JournalError, views.ViewsError) as exc:
+            return str(exc)
+        return None
+
+    class _Reached(Exception):
+        """A mocked first I/O was reached: nothing refused the operation before it."""
+
+    run = "imp-20260917T120000Z-0123456789abcdef"
+    adopt_run = "adopt-20260917T120000Z-0123456789abcdef"
+    machine = ".working/toml"
+    manifest = {"opf": {"layout": "inline"}, "types": {}, "views": {}}
+    manifest2 = {"opf": {"layout": "inline", "homes": 2, "spec_version": "2.0.0"}, "types": {}, "views": {}}
+    homes = tuple(".working/" + name for name in ("imports", "imported", "archive", "staging", "journals"))
+    legacy_root = homes[0]
+
+    def active():
+        # Homes 2 is activated only inside the fixture; shipped tooling grades every store as legacy.
+        return patch.object(store, "SUPPORTED_HOMES", 2)
+
+    # Discovery precedes the manifest: a candidate under journals/ still fails closed as ambiguous.
+    with patch.object(store, "_immediate_subdirs", return_value=["journals", "toml"]), \
+            patch.object(store, "_read_toml_contained", return_value={"opf": {"standard": store.STANDARD_TOKEN}}):
+        check("discovery-journals-candidate-ambiguous",
+              lambda: store.discover_machine_store(-1, "/store")[0] == "multiple")
+    cls = doctor.classify_containment(manifest, machine)
+    check("classifier-legacy-roster", lambda: cls.homes == 1 and cls.control_roots == (legacy_root,)
+          and cls.evidence_roots == ())
+    check("classifier-declaration-inert", lambda: doctor.classify_containment(manifest2, machine).homes == 1)
+    # Latent activation is gated: raising SUPPORTED_HOMES activates only a store declaring both homes 2
+    # and spec_version 2.0.0, never a current-version store or a non-integer declaration.
+    with active():
+        check("activation-homes2-declared", lambda: store.homes_generation(manifest2) == 2)
+        for label, opf in (("current-version", {"homes": 2, "spec_version": "1.1.0"}),
+                           ("no-version", {"homes": 2}), ("boolean", {"homes": True, "spec_version": "2.0.0"}),
+                           ("string", {"homes": "2", "spec_version": "2.0.0"})):
+            check("activation-gated-" + label, lambda o=opf: store.homes_generation({"opf": o}) == 1)
+    with active():
+        check("classifier-activated-legacy", lambda: doctor.classify_containment(manifest, machine).homes == 1)
+        cls2 = doctor.classify_containment(manifest2, machine)
+        check("classifier-roster", lambda: cls2.homes == 2 and cls2.control_roots == homes)
+        check("evidence-roots-disjoint", lambda: cls2.evidence_roots ==
+              (".working/imported", ".working/archive") and cls2.archive_root not in cls2.evidence_roots)
+        for home in homes:
+            for operand in (home, home + "/child", ".working", "./" + home + "/"):
+                altered = dict(manifest2, unmanaged={"paths": [operand]})
+                check("unmanaged-collision-" + operand,
+                      lambda m=altered: bool(doctor.classify_containment(m, machine).colliding)
+                      and not doctor.classify_containment(m, machine).valid_unmanaged)
+        # Homes 2 registers .working/.gitignore as a managed control file (spec 4.2) at that exact
+        # path only, so an [unmanaged] declaration of it collides like any managed path.
+        control = ".working/.gitignore"
+        check("classifier-gitignore-managed", lambda: cls2.managed_file(control))
+        check("classifier-gitignore-legacy-stray",
+              lambda: not doctor.classify_containment(manifest, machine).managed_file(control))
+        check("classifier-gitignore-deeper-stray", lambda: not cls2.managed_file(machine + "/.gitignore")
+              and not cls2.managed_file(".working/staging/.gitignore"))
+        altered = dict(manifest2, unmanaged={"paths": [control]})
+        check("unmanaged-collision-" + control,
+              lambda m=altered: bool(doctor.classify_containment(m, machine).colliding)
+              and not doctor.classify_containment(m, machine).valid_unmanaged)
+    check("classifier-gitignore-inert-declaration",
+          lambda: not doctor.classify_containment(manifest2, machine).managed_file(".working/.gitignore"))
+    for home in homes[1:]:
+        for operand in (home, home + "/child"):
+            check("unmanaged-legacy-valid-" + operand, lambda o=operand: doctor.classify_containment(
+                dict(manifest, unmanaged={"paths": [o]}), machine).valid_unmanaged == [o])
+    check("unmanaged-legacy-imports-collision", lambda: bool(doctor.classify_containment(
+        dict(manifest, unmanaged={"paths": [legacy_root]}), machine).colliding))
+    ledger = machine + "/evidence.toml"
+    check("unmanaged-legacy-evidence-ledger", lambda: doctor.classify_containment(
+        dict(manifest, unmanaged={"paths": [ledger]}), machine).valid_unmanaged == [ledger])
+    import stat
+
+    files = {}
+    directories = {".working"}
+    listed = []
+    unreadable = set()
+    vanished = set()
+    inventories = {}
+
+    # The one journal read doctor makes: it lists the id reservation home of each kind and reads the
+    # reservation files directly inside one, for the reserved numbers alone.
+    allocation_homes = tuple(".working/journals/{}/allocations".format(kind)
+                             for kind in ("import", "ingest", "adoption", "layout", "preview", "record"))
+
+    def listing(_fd, rel):
+        listed.append(rel)
+        if (rel == ".working/journals" or rel.startswith(".working/journals/")) and rel not in allocation_homes:
+            raise AssertionError("doctor read journals")
+        if rel in unreadable or rel in files:
+            raise store.StoreError("unreadable or wrong-type input: " + rel)
+        if rel not in directories or rel in vanished:
+            return None, None
+        prefix = rel + "/"
+        dirs = sorted(d[len(prefix):] for d in directories if d.startswith(prefix) and "/" not in d[len(prefix):])
+        leaves = sorted(d[len(prefix):] for d in files if d.startswith(prefix) and "/" not in d[len(prefix):])
+        return dirs, leaves
+
+    def add(path, raw=b"x"):
+        files[path] = raw
+        parts = path.split("/")
+        directories.update("/".join(parts[:n]) for n in range(1, len(parts)))
+
+    def reset():
+        files.clear()
+        directories.clear()
+        directories.add(".working")
+        inventories.clear()
+        unreadable.clear()
+        vanished.clear()
+
+    def read_toml(_fd, rel, rep):
+        if rel.startswith(".working/journals/") or not store.is_evidence_inventory_name(rel.rsplit("/", 1)[-1]):
+            raise AssertionError("unexpected inventory authority: " + rel)
+        if rel in unreadable:
+            rep.cant("unreadable " + rel)
+            return None, "error"
+        return (copy.deepcopy(inventories[rel]), "ok") if rel in inventories else (None, "absent")
+
+    def read_bytes(_fd, rel, rep):
+        if (rel == ".working/journals" or rel.startswith(".working/journals/")) and rel.rsplit("/", 1)[0] not in \
+                allocation_homes:
+            raise AssertionError("doctor read journal bytes outside the reservation files: " + rel)
+        if rel in unreadable:
+            rep.cant("unreadable " + rel)
+            return None, "error"
+        return (files[rel], "ok") if rel in files else (None, "absent")
+
+    def containment(partial=False, model=None):
+        report = doctor._Report()
+        report.ran("C-CONTAINMENT")
+        doctor._check_containment(0, machine, model or manifest, "partial" if partial else "complete", report)
+        return report
+
+    def evidence(generation=2):
+        report = doctor._Report()
+        report.ran("C-EVIDENCE-ENUM")
+        doctor._check_evidence(0, generation, report)
+        return report
+
+    def doc(*rows):
+        return {"format": "opf.evidence.inventory/v1", "file": list(rows)}
+
+    import _opf_emit
+
+    def sealed_plan(body):
+        # A plan sealed as the planner seals it: plan_digest is the digest of its canonical emission
+        # without that field (spec 4.2, 14.1).
+        digest = "sha256:" + hashlib.sha256(_opf_emit.emit_checked(body).encode("utf-8")).hexdigest()
+        return _opf_emit.emit_checked(dict(body, plan_digest=digest)).encode("utf-8"), digest
+
+    plan_bytes, plan_digest = sealed_plan(dict(format="opf.adoption.plan/v2", run_id=adopt_run))
+
+    def adoc(*rows, phase="base", digest=None):
+        # An adoption bundle's inventory carries the [adoption] identity table (spec 4.2), naming the
+        # bundle's own sealed plan.toml digest unless a vector passes another.
+        out = doc(*rows)
+        out["adoption"] = dict(run_id=adopt_run, phase=phase,
+                               plan_digest=plan_digest if digest is None else digest)
+        return out
+
+    def row(path, raw=b"retained"):
+        return {"path": path, "size": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
+
+    def graded(report, path):
+        return any(repr(path) in message for message in report.findings)
+
+    # This tooling's adoption journal home. Containment decides a legacy store has started an adoption
+    # from ONE probe of it (an lstat in the shipped helper, answered here from the fixture), never by
+    # listing journals/ (the listing mock above refuses that).
+    adoption_journal = store.journal_root("adoption").rsplit("/", 1)[0]
+    probed = []
+
+    def journal_probe(_fd):
+        probed.append(adoption_journal)
+        return adoption_journal in directories
+
+    def drop(path, depth):
+        # Remove one fixture file and the `depth` directories beneath it that add() created for it.
+        del files[path]
+        directories.difference_update(path.rsplit("/", n)[0] for n in range(1, depth + 1))
+
+    with patch.object(doctor, "_list_contained", listing), patch.object(doctor, "_read_toml", read_toml), \
+            patch.object(doctor, "_read_bytes", read_bytes), \
+            patch.object(doctor, "_adoption_journal_present", journal_probe):
+        stage = ".working/staging/import/" + run + "/plan.toml"
+        add(stage)
+        add(".working/journals/import/journal/inflight/frames.log", b"torn")
+        # A legacy store that has started no adoption keeps its legacy grading (spec 4.2): each homes-2
+        # name, journals/ included, is one unregistered path.
+        check("legacy-staging-graded", lambda: graded(containment(), ".working/staging"))
+        check("legacy-journals-graded", lambda: graded(containment(), ".working/journals"))
+        # Once this tooling's adoption journal home is a directory the store has started an adoption: its
+        # journals/ is left out unlisted, decided by the probe alone. The same name as a FILE is no
+        # journal home, so journals/ is graded again.
+        txn = adoption_journal + "/journal/" + adopt_run + "/frames.log"
+        add(txn, b"torn")
+        del probed[:]
+        check("legacy-adoption-journal-excluded", lambda: not graded(containment(), ".working/journals")
+              and not any("journals" in m for m in containment().cannot)
+              and probed != [] and ".working/journals" not in listed)
+        drop(txn, 3)
+        add(adoption_journal, b"not a journal home")
+        check("legacy-adoption-journal-file-graded", lambda: graded(containment(), ".working/journals"))
+        drop(adoption_journal, 0)
+        check("legacy-staging-not-partial", lambda: not containment(True).triage
+              and any("no active" in message for message in containment(True).findings))
+        with active():
+            check("staging-steady-finding", lambda: any(stage in s for s in containment(model=manifest2).findings))
+            check("staging-substantiated-triage", lambda: bool(containment(True, manifest2).triage)
+                  and not containment(True, manifest2).findings)
+            del files[stage]
+            check("empty-run-grades", lambda: any(run in s for s in containment(model=manifest2).findings))
+            check("empty-run-not-partial", lambda: bool(containment(True, manifest2).findings)
+                  and not containment(True, manifest2).triage)
+            add(stage)
+            add(".working/staging/unknown/run/file")
+            check("unknown-kind-always-finding", lambda: any("invalid staging kind" in s
+                                                           for s in containment(True, manifest2).findings))
+            # The journal-only record kind (spec 4.2): a record staging run is NOT admitted by the
+            # homes-2 walk, exactly as any unknown kind (option ii, adding record to STAGING_KINDS,
+            # turns this red).
+            add(".working/staging/record/run/file")
+            check("record-staging-kind-invalid", lambda: any("invalid staging kind 'record'" in s
+                                                            for s in containment(True, manifest2).findings))
+            reset()
+            directories.add(".working/journals")
+            del listed[:]
+            check("journals-pruned", lambda: not containment(model=manifest2).findings
+                  and not containment(model=manifest2).cannot)
+            check("journals-never-listed", lambda: ".working/journals" not in listed)
+            check("evidence-absent-clean", lambda: not evidence().findings and not evidence().cannot)
+            bundle = ".working/imported/import/" + run
+            adoption = ".working/imported/adoption/" + adopt_run
+            source = bundle + "/sources/notes.txt"
+            moved = ".working/archive/moved/old/notes.txt"
+            receipt = adoption + "/receipt.toml"
+            plan = adoption + "/plan.toml"
+            preimage = ".working/archive/adoption/" + adopt_run + "/AGENTS.md"
+            members = (source, moved, receipt, preimage)
+            for path in members:
+                add(path, b"retained")
+            add(plan, plan_bytes)
+            for inventory, built in ((bundle + "/inventory.toml", doc(row(source), row(moved))),
+                                     (adoption + "/inventory.toml",
+                                      adoc(row(receipt), row(preimage), row(plan, plan_bytes)))):
+                add(inventory, b"")
+                inventories[inventory] = built
+            check("evidence-members-match", lambda: not evidence().findings and not evidence().cannot)
+            check("evidence-not-containment-graded", lambda: not containment(model=manifest2).findings)
+        # Nothing reads a homes-1 store's evidence homes; its containment walk grades them as before.
+        def legacy_reads_nothing():
+            count = len(listed)
+            with patch.object(doctor, "_read_toml", side_effect=AssertionError("legacy inventory read")), \
+                    patch.object(doctor, "_read_bytes", side_effect=AssertionError("legacy evidence read")):
+                legacy = evidence(1)
+            return not legacy.findings and not legacy.cannot and len(listed) == count
+
+        check("evidence-legacy-reads-nothing", legacy_reads_nothing)
+        check("evidence-legacy-contained", lambda: graded(containment(), ".working/imported")
+              and graded(containment(), ".working/archive"))
+        with active():
+            for path in members:
+                files[path + ".stray"] = b"rogue"
+                check("evidence-off-inventory-" + path, lambda p=path: graded(evidence(), p + ".stray"))
+                del files[path + ".stray"]
+                del files[path]
+                check("evidence-missing-" + path, lambda p=path: graded(evidence(), p))
+                files[path] = b"tampered"
+                check("evidence-digest-" + path, lambda: any("mismatch" in s for s in evidence().findings))
+                files[path] = b"retained"
+                unreadable.add(path)
+                check("evidence-unreadable-" + path, lambda: bool(evidence().cannot))
+                unreadable.clear()
+            for extra in (".working/archive/empty-stray", bundle + "/empty", ".working/imported/other",
+                          ".working/imported/import/not-a-run", ".working/archive/adoption/" + run):
+                directories.add(extra)
+                check("evidence-stray-directory-" + extra, lambda: bool(evidence().findings)
+                      and not evidence().cannot)
+                directories.remove(extra)
+            orphan = ".working/imported/import/" + run.replace("0123", "4567")
+            add(orphan + "/file")
+            check("evidence-bundle-without-inventory", lambda: any("has no inventory" in s
+                                                                 for s in evidence().findings))
+            del files[orphan + "/file"]
+            directories.discard(orphan)
+            # A bundle its parent listed but that is gone when it is listed itself is a race, not an
+            # empty bundle: its claims are unknown, so the walk cannot evaluate rather than pass.
+            raced = ".working/imported/import/" + run.replace("0123", "89ab")
+            directories.add(raced)
+            vanished.add(raced)
+            check("evidence-bundle-vanished-cannot", lambda: any(
+                "vanished" in s for s in evidence().cannot) and not evidence().findings)
+            vanished.clear()
+            directories.discard(raced)
+            probe = adoption + "/probe.toml"
+            add(probe, b"retained")
+            check("evidence-unclaimed-phase-member", lambda: graded(evidence(), probe))
+            add(adoption + "/inventory-evidence.toml", b"")
+            inventories[adoption + "/inventory-evidence.toml"] = adoc(row(probe), phase="evidence")
+            check("evidence-phase-inventory", lambda: not evidence().findings and not evidence().cannot)
+            # The [adoption] identity binds each inventory to its run and its phase (spec 4.2): a
+            # foreign run id, a phase other than the file name's, a later phase named base, a missing
+            # identity, and an identity on a non-adoption inventory are each cannot-evaluate.
+            good_phase = copy.deepcopy(inventories[adoption + "/inventory-evidence.toml"])
+            foreign = adoc(row(probe), phase="evidence")
+            foreign["adoption"] = dict(foreign["adoption"],
+                                           run_id=adopt_run.replace("0123", "4567"))
+            for label, broken in (("foreign-run", foreign),
+                                  ("foreign-phase", adoc(row(probe), phase="completion")),
+                                  ("base-phase-name", adoc(row(probe), phase="base")),
+                                  ("missing-identity", doc(row(probe))),
+                                  ("phase-foreign-plan-digest", adoc(row(probe), phase="evidence",
+                                                                     digest="sha256:" + "0" * 64))):
+                inventories[adoption + "/inventory-evidence.toml"] = broken
+                check("evidence-identity-" + label, lambda: bool(evidence().cannot)
+                      and not evidence().findings)
+            inventories[adoption + "/inventory-evidence.toml"] = good_phase
+            # The plan digest binds each adoption inventory to its bundle's own sealed plan.toml
+            # (spec 4.2): a well-formed foreign digest on the base inventory, a bundle with no plan, an
+            # edited plan whose digest no longer seals it, and a sealed plan of another run each cannot
+            # evaluate, even when every member's row matches its bytes.
+            first = adoption + "/inventory.toml"
+            good_first = copy.deepcopy(inventories[first])
+            inventories[first] = dict(good_first, adoption=dict(good_first["adoption"],
+                                                                plan_digest="sha256:" + "0" * 64))
+            check("evidence-identity-base-foreign-plan-digest", lambda: any(
+                "plan digest" in s for s in evidence().cannot) and not evidence().findings)
+            del files[plan]
+            inventories[first] = adoc(*(r for r in good_first["file"] if r["path"] != plan))
+            check("evidence-identity-missing-plan", lambda: any(
+                "no plan.toml" in s for s in evidence().cannot) and not evidence().findings)
+            edited = plan_bytes.replace(b"opf.adoption.plan/v2", b"opf.adoption.plan/v9")
+            alien_bytes, alien_digest = sealed_plan(dict(format="opf.adoption.plan/v2",
+                                                         run_id=adopt_run.replace("0123", "4567")))
+            for label, raw, digest in (("plan-not-sealed", edited, plan_digest),
+                                       ("plan-of-another-run", alien_bytes, alien_digest)):
+                add(plan, raw)
+                inventories[first] = adoc(*(r for r in good_first["file"] if r["path"] != plan),
+                                          row(plan, raw), digest=digest)
+                inventories[adoption + "/inventory-evidence.toml"] = adoc(row(probe), phase="evidence",
+                                                                           digest=digest)
+                check("evidence-identity-" + label, lambda: bool(evidence().cannot)
+                      and not evidence().findings)
+            # Each clause of the plan proof alone (spec 4.2), with every inventory naming the plan's
+            # RECOMPUTED seal, so only that clause refuses: an edited canonical plan whose plan_digest no
+            # longer re-seals it, a sealed plan that is not canonical (a trailing comment), and a plan.toml
+            # that is not a regular file (an unreadable plan proves nothing, never a crash).
+            edited_seal = sealed_plan(dict(format="opf.adoption.plan/v9", run_id=adopt_run))[1]
+            for label, raw, digest, needle in (
+                    ("plan-edited-recomputed-seal", edited, edited_seal, "seals its own bytes"),
+                    ("plan-not-canonical", plan_bytes + b"# trailing comment\n", plan_digest,
+                     "seals its own bytes"),
+                    ("plan-not-regular", plan_bytes, plan_digest, "is unreadable")):
+                add(plan, raw)
+                inventories[first] = adoc(*(r for r in good_first["file"] if r["path"] != plan),
+                                          row(plan, raw), digest=digest)
+                inventories[adoption + "/inventory-evidence.toml"] = adoc(row(probe), phase="evidence",
+                                                                           digest=digest)
+                if label == "plan-not-regular":
+                    unreadable.add(plan)
+                check("evidence-identity-" + label, lambda n=needle: any(
+                    "plan.toml" in s and n in s for s in evidence().cannot) and not evidence().findings)
+                unreadable.clear()
+            add(plan, plan_bytes)
+            inventories[first] = good_first
+            inventories[adoption + "/inventory-evidence.toml"] = good_phase
+            check("evidence-identity-plan-restored", lambda: not evidence().findings
+                  and not evidence().cannot)
+            # ONE read of plan.toml per bundle (spec 4.2): plan A is swapped for B (A plus a newline)
+            # between the seal proof's read and the membership check, under a base inventory whose plan
+            # row names B. The seal proof reads A; the row is checked against those same bytes, so the
+            # swap is the plan's digest mismatch, never a clean result built from two reads.
+            swapped = plan_bytes + b"\n"
+            inventories[first] = adoc(*(r for r in good_first["file"] if r["path"] != plan),
+                                      row(plan, swapped))
+            plan_reads = []
+
+            def swapping_read(_fd, rel, rep):
+                answer = read_bytes(_fd, rel, rep)
+                if rel == plan:
+                    plan_reads.append(answer[0])
+                    files[plan] = swapped
+                return answer
+
+            def swap_between_reads():
+                del plan_reads[:]
+                add(plan, plan_bytes)
+                with patch.object(doctor, "_read_bytes", swapping_read):
+                    report = evidence()
+                return (not report.cannot and any("mismatch" in s and repr(plan) in s for s in report.findings)
+                        and plan_reads == [plan_bytes])
+
+            check("evidence-plan-swapped-between-reads", swap_between_reads)
+            add(plan, plan_bytes)
+            inventories[first] = good_first
+            check("evidence-identity-plan-restored-after-swap", lambda: not evidence().findings
+                  and not evidence().cannot)
+            crossed_kind = doc(row(source), row(moved))
+            crossed_kind["adoption"] = dict(good_phase["adoption"])
+            inventories[bundle + "/inventory.toml"] = crossed_kind
+            check("evidence-identity-foreign-kind", lambda: bool(evidence().cannot)
+                  and not evidence().findings)
+            inventories[bundle + "/inventory.toml"] = doc(row(source), row(moved))
+            check("evidence-identity-restored", lambda: not evidence().findings and not evidence().cannot)
+            # A phase inventory never substitutes for a missing inventory.toml: the founding claims are
+            # unknown, so the bundle cannot evaluate, even when the phase inventory lists every member.
+            first = adoption + "/inventory.toml"
+            founding = inventories.pop(first)
+            del files[first]
+            inventories[adoption + "/inventory-evidence.toml"] = adoc(row(probe), *founding["file"],
+                                                                       phase="evidence")
+            check("evidence-phase-without-first-cannot", lambda: any(
+                "no inventory.toml" in s for s in evidence().cannot) and not evidence().findings)
+            add(first, b"")
+            inventories[first] = founding
+            inventories[adoption + "/inventory-evidence.toml"] = adoc(row(probe), phase="evidence")
+            check("evidence-phase-restored", lambda: not evidence().findings and not evidence().cannot)
+            inventory = bundle + "/inventory.toml"
+            good = copy.deepcopy(inventories)
+            # A claim on another bundle's member or another run's preimage is refused on its own, so the
+            # rightful owner's inventory drops that row here rather than masking it as a duplicate claim.
+            # An import bundle claiming a preimage path under its OWN run id is refused by its kind alone.
+            sole = {"cross-bundle": adoc(row(preimage)), "foreign-preimage": adoc(row(receipt))}
+            own_preimage = ".working/archive/adoption/" + run + "/file"
+            # Every malformed or unreadable inventory is cannot-evaluate and grades nothing partially.
+            for label, broken in (
+                    ("format", dict(doc(), format="unsupported")),
+                    ("extra-key", dict(doc(row(source), row(moved)), note="x")),
+                    ("no-file-array", {"format": "opf.evidence.inventory/v1"}),
+                    ("row-not-table", doc("x")),
+                    ("row-extra-key", doc(dict(row(source), note="x"), row(moved))),
+                    ("foreign-kind", doc(dict(row(source), path=".working/imported/other/" + run + "/x"))),
+                    ("wrong-prefix", doc(dict(row(source), path=source[len(".working/"):]), row(moved))),
+                    ("cross-bundle", doc(row(source), row(moved), row(receipt))),
+                    ("foreign-preimage", doc(row(source), row(moved), row(preimage))),
+                    ("import-own-run-preimage", doc(row(source), row(moved), row(own_preimage))),
+                    ("lists-inventory", doc(row(source), row(moved), row(inventory))),
+                    ("boolean-size", doc(dict(row(source), size=True), row(moved))),
+                    ("negative-size", doc(dict(row(source), size=-1), row(moved))),
+                    ("uppercase-digest", doc(dict(row(source), sha256=row(source)["sha256"].upper()), row(moved))),
+                    ("duplicate", doc(row(source), row(source), row(moved)))):
+                inventories[inventory] = broken
+                inventories[adoption + "/inventory.toml"] = sole.get(label, good[adoption + "/inventory.toml"])
+                check("evidence-malformed-" + label, lambda: bool(evidence().cannot) and not evidence().findings)
+            inventories.update(copy.deepcopy(good))
+            inventories[adoption + "/inventory.toml"] = adoc(row(receipt), row(preimage), row(moved))
+            check("evidence-cross-duplicate-refused", lambda: bool(evidence().cannot))
+            inventories.update(copy.deepcopy(good))
+            # An unreadable or vanished inventory leaves its bundle's claims unknown: cannot-evaluate
+            # only, never a partial reconciliation grading the rest of the homes without those claims.
+            unreadable.add(inventory)
+            check("evidence-unreadable-inventory", lambda: bool(evidence().cannot) and not evidence().findings)
+            unreadable.clear()
+            del inventories[inventory]
+            check("evidence-vanished-inventory", lambda: bool(evidence().cannot) and not evidence().findings)
+            inventories.update(copy.deepcopy(good))
+            unreadable.add(".working/imported")
+            check("evidence-unreadable-root", lambda: bool(evidence().cannot))
+            unreadable.clear()
+
+    import _opf_init as init
+    full_manifest = init._manifest_model()
+    full_manifest["views"] = {}
+    full_manifest2 = copy.deepcopy(full_manifest)
+    full_manifest2["opf"]["homes"] = 2
+    full_manifest2["opf"]["spec_version"] = "2.0.0"
+    reset()
+    add(".working/imported/import/" + run + "/sources/notes.txt")
+    # A journal on disk: legacy grades it as an ordinary path, homes 2 must skip it unread.
+    add(".working/journals/import/journal/" + run + "/frames.log", b"torn")
+
+    def dispatch(model):
+        def doctor_toml(_fd, rel, _rep):
+            if rel == machine + "/manifest.toml":
+                return copy.deepcopy(model), "ok"
+            if rel.startswith(".working/journals/"):
+                raise AssertionError("doctor read a journal record")
+            return None, "absent"
+
+        # Worklog intake reopens the manifest through the shared contained reader.
+        # Give that read the SAME filesystem observation as doctor's initial read;
+        # a real read through this fixture's fd 0 is a manifest fault, not a homes test.
+        def worklog_toml(fd, rel, *, with_raw=False):
+            data, _status = doctor_toml(fd, rel, None)
+            return (b"", data) if with_raw and data is not None else data
+
+        def worklog_stat(_fd, rel):
+            if rel != machine + "/worklog":
+                raise AssertionError("unexpected worklog shape probe: " + rel)
+            return None                         # no conflicting generation-2 directory
+
+        del listed[:]
+        with patch.object(doctor, "_list_contained", listing), patch.object(doctor, "_read_toml", doctor_toml), \
+                patch.object(store, "_read_toml_contained", side_effect=worklog_toml), \
+                patch.object(journal, "_lstat_contained", side_effect=worklog_stat), \
+                patch.object(doctor, "_read_bytes", read_bytes), \
+                patch.object(doctor, "_adoption_journal_present", journal_probe):
+            report = doctor._Report()
+            doctor._validate_opened_store(0, None, machine, None, {}, None, "default", True, report)
+        return report.result(), list(listed)
+
+    def contained(result, path):
+        return any(repr(path) in message for message in result.by_check.get("C-CONTAINMENT", []))
+
+    # A legacy (homes 1) report keeps the legacy roster, order and count and the pinned legacy residual
+    # text, with the homes-2 names graded as ordinary paths and no evidence read.
+    legacy_report, legacy_listed = dispatch(full_manifest)
+    # The roster is pinned independently of the live REQUIRED_CHECKS constant: sha256 over the 28 legacy check
+    # ids in report order joined by a newline, UTF-8, so an added, removed or reordered check changes it.
+    legacy_roster_sha256 = "21302b2c175604ab67307443e85a85fac592eff17cc4c2bf334948801adbce5f"
+
+    def legacy_roster(rep):
+        return len(rep.checks) == 28 and hashlib.sha256("\n".join(rep.checks).encode("utf-8")).hexdigest() \
+            == legacy_roster_sha256
+    check("doctor-legacy-roster-exact", lambda: legacy_roster(legacy_report)
+          and tuple(legacy_report.checks) == doctor.REQUIRED_CHECKS and "C-EVIDENCE-ENUM" not in doctor.REQUIRED_CHECKS)
+    # The pin is independent of the live _RESIDUALS constant: sha256 over the 12 legacy residuals joined by
+    # a newline, UTF-8. Any added, removed, reordered or reworded legacy residual changes it.
+    legacy_residuals_sha256 = "6901f8734d2293e714c521e9b74836a188627839d7d8a08a3888b4a9cc7a8a0b"
+    check("doctor-legacy-residuals-unchanged", lambda: len(legacy_report.residuals) == 12
+          and hashlib.sha256("\n".join(legacy_report.residuals).encode("utf-8")).hexdigest()
+          == legacy_residuals_sha256
+          and not any(r in legacy_report.residuals for r in doctor._HOMES2_RESIDUALS))
+    check("doctor-legacy-evidence-inert", lambda: not any(
+        path.startswith(".working/imported/") for path in legacy_listed))
+    check("doctor-legacy-contains-homes", lambda: contained(legacy_report, ".working/imported")
+          and contained(legacy_report, ".working/journals"))
+    with active():
+        report, homes2_listed = dispatch(full_manifest2)
+    check("doctor-homes2-roster", lambda: tuple(report.checks) == doctor.required_checks(2)
+          and len(report.checks) == 29)
+    check("doctor-dispatches-evidence", lambda: report.checks.get("C-EVIDENCE-ENUM") == "FINDING")
+    check("doctor-homes2-residual", lambda: all(r in report.residuals for r in doctor._HOMES2_RESIDUALS))
+    # The reservation read is disclosed as the exception spec 4.2 makes, not as awaiting a revision.
+    check("doctor-homes2-residual-reservation-read", lambda: "that read is the one exception spec section "
+          "4.2 makes to doctor excluding journals" in doctor._HOMES2_RESIDUALS[0]
+          and not any("revision of spec" in r for r in doctor._HOMES2_RESIDUALS))
+    # Homes 2 lists nothing under journals/ but the id reservation home of each kind (the read_bytes mock
+    # refuses any journal byte read outside a reservation file), and a legacy store lists none of it.
+    check("doctor-skips-journals", lambda: not contained(report, ".working/journals")
+          and not any((p == ".working/journals" or p.startswith(".working/journals/"))
+                      and p not in allocation_homes for p in homes2_listed))
+    check("doctor-lists-allocation-homes", lambda: sorted(
+        p for p in homes2_listed if p.startswith(".working/journals/")) == sorted(allocation_homes))
+    check("doctor-legacy-reads-no-reservations", lambda: not any(
+        p == ".working/journals" or p.startswith(".working/journals/") for p in legacy_listed))
+    # Activated tooling alone widens nothing: a legacy manifest keeps the legacy roster and residuals.
+    with active():
+        activated_legacy, _ = dispatch(full_manifest)
+    check("doctor-activated-legacy-roster", lambda: legacy_roster(activated_legacy)
+          and activated_legacy.residuals == legacy_report.residuals)
+    # A legacy store holding this tooling's adoption journal home has started an adoption: the doctor
+    # leaves its journals/ out, lists none of it, still grades the other homes-2 names and keeps the
+    # legacy roster and residuals.
+    txn = adoption_journal + "/journal/" + adopt_run + "/frames.log"
+    add(txn, b"torn")
+    adopting_report, adopting_listed = dispatch(full_manifest)
+    drop(txn, 3)
+    check("doctor-legacy-adoption-journal-excluded", lambda: not contained(adopting_report, ".working/journals")
+          and contained(adopting_report, ".working/imported")
+          and not any(p == ".working/journals" or p.startswith(".working/journals/") for p in adopting_listed)
+          and legacy_roster(adopting_report) and adopting_report.residuals == legacy_report.residuals)
+
+    # The shipped probe over a real tree: one no-follow lstat of the adoption journal home, never a listing,
+    # True only for a real directory there (a file, a symlink to a directory, a sibling kind and an absent
+    # journals/ each read False, so journals/ keeps its legacy grading).
+    def probe_tree(plant):
+        with tempfile.TemporaryDirectory(prefix="opf-homes-probe-") as tmp:
+            plant(Path(tmp))
+            fd = os.open(tmp, os.O_RDONLY | os.O_DIRECTORY)
+            seen = []
+            real_lstat = journal._lstat_contained
+            try:
+                with patch.object(journal, "_lstat_contained", lambda f, rel: seen.append(rel) or real_lstat(f, rel)), \
+                        patch.object(doctor, "_list_contained", side_effect=AssertionError("journals listed")):
+                    return doctor._adoption_journal_present(fd), seen
+            finally:
+                os.close(fd)
+
+    def home_dir(root):
+        (root / adoption_journal / "journal").mkdir(parents=True)
+
+    def home_file(root):
+        (root / adoption_journal).parent.mkdir(parents=True)
+        (root / adoption_journal).write_bytes(b"not a journal home\n")
+
+    def home_symlink(root):
+        (root / ".working/elsewhere").mkdir(parents=True)
+        (root / adoption_journal).parent.mkdir(parents=True)
+        os.symlink("../elsewhere", str(root / adoption_journal))
+
+    def sibling_kind(root):
+        (root / ".working/journals/import/journal").mkdir(parents=True)
+
+    for label, plant, want in (("directory", home_dir, True), ("file", home_file, False),
+                               ("symlink", home_symlink, False), ("sibling-kind", sibling_kind, False),
+                               ("absent", lambda root: (root / ".working").mkdir(), False)):
+        check("adoption-journal-probe-" + label, lambda p=plant, w=want: probe_tree(p) == (w, [adoption_journal]))
+
+    # A probe that cannot observe the home reads False even over a real home directory, so journals/ keeps
+    # its legacy grading: a fault grades, never exempts (red against a probe that reads its fault as present).
+    def probe_faulting(fault):
+        def faulty(_fd, rel):
+            raise fault
+        with tempfile.TemporaryDirectory(prefix="opf-homes-probe-") as tmp:
+            home_dir(Path(tmp))
+            fd = os.open(tmp, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                with patch.object(journal, "_lstat_contained", faulty):
+                    return doctor._adoption_journal_present(fd)
+            finally:
+                os.close(fd)
+
+    for label, fault in (("oserror", PermissionError(13, "an injected EACCES")),
+                         ("journal-error", journal.JournalError("an injected containment refusal"))):
+        check("adoption-journal-probe-unobservable-grades-" + label, lambda f=fault: probe_faulting(f) is False)
+    # The render source gate follows the report's roster: a homes-2 evidence finding refuses it, and a
+    # legacy report is gated on exactly SOURCE_INTEGRITY_CHECKS.
+    flagged = dict.fromkeys(doctor.required_checks(2), "PASS")
+    flagged["C-EVIDENCE-ENUM"] = "FINDING"
+    check("source-gate-homes2-evidence", lambda: not doctor.source_integrity_ok(
+        doctor.StoreValidation(doctor.INVALID, checks=flagged)))
+    check("source-gate-legacy-roster", lambda: set(doctor.source_checks(doctor.StoreValidation(
+        doctor.VALID, checks=dict.fromkeys(doctor.REQUIRED_CHECKS, "PASS")))) == doctor.SOURCE_INTEGRITY_CHECKS)
+
+    def roster(generation, ran):
+        rep = doctor._Report()
+        rep.require_homes(generation)
+        for cid in ran:
+            rep.ran(cid)
+        return rep.result()
+
+    check("roster-homes2-skipped-evidence", lambda: roster(2, doctor.REQUIRED_CHECKS).checks.get(
+        "C-EVIDENCE-ENUM") == "CANNOT-EVALUATE")
+    check("roster-legacy-evidence-unknown", lambda: any("C-EVIDENCE-ENUM" in m for m in roster(
+        1, doctor.required_checks(2)).unattributed))
+
+    # Homes 1 keeps the legacy operand handling: the legacy engine applies no journal-operand refusal,
+    # so each legacy entry point reaches its first I/O whatever the operand.
+    targets = (".working", ".working/journals", ".working/journals/import/journal/frame")
+
+    def reached(thunk):
+        try:
+            thunk()
+        except _Reached:
+            return True
+        return False
+
+    for kind in journal.OP_KINDS:
+        for target in targets:
+            ops = [dict(op=kind, path=target)]
+            with patch.object(journal, "_open_parent", side_effect=_Reached):
+                check("legacy-apply-{}-{}".format(kind, target), lambda o=ops: reached(
+                    lambda: journal.apply_ops(-1, o, lambda _name: b"")))
+            with patch.object(journal, "_open_txn_beneath", side_effect=_Reached):
+                check("legacy-preimage-{}-{}".format(kind, target), lambda o=ops: reached(
+                    lambda: journal.capture_preimages(-1, Path("/unused"), -1, o)))
+            with patch.object(journal.os, "mkdir", side_effect=_Reached):
+                check("legacy-transaction-{}-{}".format(kind, target), lambda o=ops: reached(
+                    lambda: journal.run_transaction(-1, -1, "/unused", run, dict(), o, lambda _name: b"",
+                                                    "test")))
+
+    # Homes 2: the capability-bound API refuses every kind before it opens anything.
+    with patch.object(home_journal, "_opened", side_effect=AssertionError("opened the store journal")):
+        for kind in journal.OP_KINDS:
+            for target in targets:
+                ops = [dict(op=kind, path=target)]
+                check("homes2-transaction-{}-{}".format(kind, target), lambda o=ops: "journal home" in (
+                    refusal(lambda: home_journal.run_transaction(object(), "import", run, o,
+                                                                 lambda _name: b"")) or ""))
+    check("ordinary-sibling-allowed", lambda: home_journal._check_ordinary_ops(
+        [dict(op="create", path=".working/journals-old/file")]) is None)
+
+    def legacy_recovery(frame_types):
+        truncated = []
+        intent = dict(txn=run, ops=[dict(op="remove", path=".working/journals")])
+        frames = [(t, intent if t == journal.F_INTENT else dict(txn=run)) for t in frame_types]
+        with patch.object(journal, "read_frames", return_value=(frames, True, 1)), \
+                patch.object(journal, "_truncate_log", side_effect=lambda *_args: truncated.append(True)), \
+                patch.object(journal, "_poststate_verifies", return_value=True), \
+                patch.object(journal, "_restore_preimage"), patch.object(journal, "publish"):
+            return journal.recover(-1, run, -1), len(truncated)
+
+    # Legacy (homes 1) recovery truncates the torn tail and acts on an open transaction's operands.
+    check("legacy-recovery-open-rolls-forward", lambda: legacy_recovery([journal.F_INTENT]) == ("rolled-forward", 1))
+    check("legacy-recovery-rollback-open-rolls-back",
+          lambda: legacy_recovery([journal.F_INTENT, journal.F_RIP]) == ("rolled-back", 1))
+    check("legacy-recovery-terminal-truncated",
+          lambda: legacy_recovery([journal.F_INTENT, journal.F_COMPLETE]) == ("terminal", 1))
+
+    @contextlib.contextmanager
+    def opened(*_args, **_kwargs):
+        yield -1, -1, Path("/unused") / run
+
+    def homes2_recovery(frame_types):
+        intent = dict(txn=run, ops=[dict(op="remove", path=".working/journals")])
+        frames = [(t, intent if t == journal.F_INTENT else dict(txn=run)) for t in frame_types]
+        with patch.object(home_journal, "_opened", opened), \
+                patch.object(home_journal, "_existing_frames", return_value=frames), \
+                patch.object(home_journal, "_project"), \
+                patch.object(journal, "recover", return_value="terminal") as recovered:
+            outcome = refusal(lambda: home_journal.recover_transaction(object(), "import", run))
+            if outcome is not None:
+                outcome = "refused" if "journal home" in outcome else outcome
+            return outcome or "recovered", recovered.call_count
+
+    # Only an open homes-2 transaction is acted on, so it is refused before recover can truncate or
+    # mutate anything. A terminal journal is inert history and reaches recover unchanged.
+    check("homes2-recovery-open-refused", lambda: homes2_recovery([journal.F_INTENT]) == ("refused", 0))
+    check("homes2-recovery-rollback-open-refused",
+          lambda: homes2_recovery([journal.F_INTENT, journal.F_RIP]) == ("refused", 0))
+    check("homes2-recovery-complete-terminal",
+          lambda: homes2_recovery([journal.F_INTENT, journal.F_COMPLETE]) == ("recovered", 1))
+    check("homes2-recovery-rolled-back-terminal",
+          lambda: homes2_recovery([journal.F_INTENT, journal.F_RIP, journal.F_RC]) == ("recovered", 1))
+    create = {"op": "create-file", "content_digest": "sha256:" + "0" * 64}
+    for home in homes:
+        check("adoption-target-" + home, lambda h=home: adopt.validate_op(
+            dict(create, path=h + "/file"), homes=2).status != store.VALID)
+        check("adoption-legacy-target-" + home, lambda h=home: adopt.validate_op(
+            dict(create, path=h + "/file")).status == store.VALID)
+    check("adoption-composed-member", lambda: adopt.validate_op(
+        {"op": "render-views", "store_root": ".working", "members": [
+            {"path": "journals/file", "digest": "sha256:" + "0" * 64}]}, homes=2).status != store.VALID)
+
+    check("adoption-root-pack-preserved", lambda: adopt.validate_op(
+        {"op": "render-views", "store_root": ".", "members": [
+            {"path": "notes.txt", "digest": "sha256:" + "0" * 64}]}, homes=2).status == store.VALID)
+    check("adoption-root-pack-journal-refused", lambda: adopt.validate_op(
+        {"op": "init-store", "store_root": ".", "members": [
+            {"path": ".working/journals/file", "digest": "sha256:" + "0" * 64}]}, homes=2).status != store.VALID)
+    def view_plan(model):
+        view_manifest = dict(model, views=dict(VERSION=dict(kind="projection", sources=[],
+                                                            target=".working/journals/file")))
+        # plan_views now uses validated shared manifest intake. Keep this boundary
+        # fixture's deliberate empty source set, but supply the current reader and
+        # the validator's full result type, including profile scope. Manifest-fault
+        # coverage remains in the worklog entry-point regressions.
+        def view_toml(_fd, rel):
+            if rel != machine + "/manifest.toml":
+                raise AssertionError("unexpected view source read: " + rel)
+            return copy.deepcopy(view_manifest)
+
+        with patch.object(store, "_read_toml_contained", side_effect=view_toml), \
+                patch.object(store, "validate_manifest",
+                             return_value=store.ManifestValidation(store.VALID)), \
+                patch.object(views, "_resolve_view", return_value=("projection", [], lambda _src: "1.0.0\n")), \
+                patch.object(views, "_spec_destination", return_value=("store", ".working/journals/file")):
+            return refusal(lambda: views.plan_views(-1, machine)) or ""
+
+    with active():
+        check("view-journal-destination-refused", lambda: "journal home" in view_plan(manifest2))
+        # Pair the legacy allowance with the same destination's homes-2 refusal:
+        # removing the destination guard must not make this allowance vacuously pass.
+        check("view-legacy-journal-destination-planned", lambda: view_plan(manifest) == ""
+              and "journal home" in view_plan(manifest2))
+
+    import _opf_adopt_plan as planning
+    import _opf_emit as emit
+
+    class _Enumerated(Exception):
+        pass
+
+    def investigation(path, unmanaged=False, generation=1):
+        model = manifest2 if generation == 2 else manifest
+        model = dict(model, unmanaged={"paths": [path]}) if unmanaged else model
+        resolved = SimpleNamespace(status=store.RESOLVED, machine_rel=machine)
+        with patch.object(store, "SUPPORTED_HOMES", generation), \
+                patch.object(store._journal, "require_containment"), \
+                patch.object(store, "_open_dir_nofollow", return_value=-1), \
+                patch.object(planning.os, "fstat", return_value=SimpleNamespace(st_dev=1, st_ino=1)), \
+                patch.object(planning.os, "close"), \
+                patch.object(store, "_read_pointer_target", return_value=None), \
+                patch.object(store, "resolve_store_fd",
+                             return_value=(resolved, emit.emit_checked(model).encode())), \
+                patch.object(store, "validate_manifest", return_value=store.ManifestValidation(store.VALID)), \
+                patch.object(store._journal, "_open_parent", side_effect=_Enumerated), \
+                patch.object(planning.os, "stat", side_effect=_Enumerated):
+            try:
+                planning._inventory(Path("/store"), ["notes" if unmanaged else path + "/child"], [])
+            except planning.PlanError:
+                return "refused"
+            except _Enumerated:
+                return "enumerated"
+        return "completed"
+
+    # Homes 2 excludes and reserves every control root; a legacy store reserves only imports.
+    for home in homes:
+        check("investigation-control-" + home, lambda h=home: investigation(h, generation=2) == "refused")
+        check("investigation-collision-" + home, lambda h=home: investigation(h, True, 2) == "refused")
+        check("investigation-legacy-source-" + home, lambda h=home: investigation(h) == "enumerated")
+    check("investigation-legacy-imports-collision", lambda: investigation(legacy_root, True) == "refused")
+    for home in homes[1:]:
+        check("investigation-legacy-unmanaged-" + home, lambda h=home: investigation(h, True) == "enumerated")
+
+    def unresolved_manifest(name):
+        directory = SimpleNamespace(st_mode=stat.S_IFDIR)
+        with patch.object(store._journal, "require_containment"), \
+                patch.object(store, "_open_dir_nofollow", return_value=-1), \
+                patch.object(planning.os, "fstat", return_value=SimpleNamespace(st_dev=1, st_ino=1)), \
+                patch.object(planning.os, "close"), \
+                patch.object(planning.os, "open", return_value=-1), \
+                patch.object(planning.os, "scandir",
+                             return_value=contextlib.nullcontext([SimpleNamespace(name=name)])), \
+                patch.object(planning.os, "stat", return_value=directory), \
+                patch.object(store, "_read_pointer_target", return_value=None), \
+                patch.object(store, "resolve_store_fd", return_value=(SimpleNamespace(
+                    status=store.CANNOT_EVALUATE, detail="fixture"), None)), \
+                patch.object(store._journal, "_lstat_at", return_value=directory), \
+                patch.object(store._journal, "_open_parent", side_effect=_Enumerated):
+            try:
+                planning._inventory(Path("/store"), ["notes"], [])
+            except planning.PlanError as exc:
+                return "requires repair" in str(exc)
+        return False
+
+    # An unresolved store with a candidate manifest under a reserved name still requires repair.
+    for name in store.RESERVED_MACHINE_SUBDIRS:
+        check("investigation-unresolved-reserved-" + name, lambda n=name: unresolved_manifest(n))
+
+    # Every generation-dependent call site derives the generation from the store's own manifest read, so a
+    # homes-2 store reaches the control-area refusal there and a legacy store is graded exactly as before.
+    import datetime
+    import tomllib
+    same = SimpleNamespace(st_dev=1, st_ino=1, st_mode=stat.S_IFDIR, st_nlink=1, st_size=0,
+                           st_mtime_ns=0, st_ctime_ns=0)
+    control_op = dict(create, path=".working/journals/file")
+    utc = datetime.datetime(2026, 9, 17, 12, tzinfo=datetime.timezone.utc)
+
+    def planned(generation, op, supported=None):
+        # `generation` selects the manifest; `supported` (default: the same) is the activated tooling.
+        model = manifest2 if generation == 2 else manifest
+        resolved = SimpleNamespace(status=store.RESOLVED, machine_rel=machine, detail="", pointer_source="default")
+        with patch.object(store, "SUPPORTED_HOMES", generation if supported is None else supported), \
+                patch.object(store._journal, "require_containment"), \
+                patch.object(store, "_open_dir_nofollow", return_value=-1), \
+                patch.object(planning.os, "fstat", return_value=same), \
+                patch.object(planning.os, "close"), \
+                patch.object(store, "_read_pointer_target", return_value=None), \
+                patch.object(store, "resolve_store_fd",
+                             return_value=(resolved, emit.emit_checked(model).encode())), \
+                patch.object(store, "validate_manifest", return_value=store.ManifestValidation(store.VALID)), \
+                patch.object(store._journal, "_open_parent", side_effect=FileNotFoundError), \
+                patch.object(adopt, "validate_plan", wraps=adopt.validate_plan) as frozen:
+            # Every planned creation needs observed absence, so the root-level ones and the opf/ mirror are
+            # declared targets; the enforcement members are installed by the plant rows the frozen plan ties
+            # them to.
+            bindings = adopt.canonical_plan_bindings()
+            targets = ["notes.txt", adopt.PACK_MIRROR_ROOT]
+            observed = planning.investigate(Path("/store"), sources=[], targets=targets)
+            result = planning.plan(
+                Path("/store"), sources=[], targets=targets, product="opf", decisions=[],
+                ops=[op] + adopt.enforcement_install_ops(bindings["enforcement"]),
+                expected_observation_digest=tomllib.loads(observed.observation.decode())["observation_digest"],
+                now=utc, run_nonce="0123456789abcdef", bindings=bindings)
+        return result, [c.kwargs.get("homes") for c in frozen.call_args_list]
+
+    homes2_plan, _ = planned(2, control_op)
+    legacy_plan, legacy_frozen = planned(1, control_op)
+    ordinary_plan, ordinary_frozen = planned(2, dict(create, path="notes.txt"))
+    # Each op loop refuses on its own (its exact findings), not only through the frozen-plan revalidation.
+    refused = tuple(adopt.validate_op(control_op, homes=2).findings)
+    check("plan-homes2-control-op-refused", lambda: homes2_plan.status == store.INVALID and homes2_plan.plan is None
+          and bool(refused) and homes2_plan.findings == refused)
+    control_retire = dict(op="retire-file", path=".working/journals/file", preimage_digest="sha256:" + "0" * 64)
+    control_source = dict(path=control_retire["path"], digest=control_retire["preimage_digest"], disposition="retire",
+                          occupying=False, preservation=store.retire_preimage(
+                              "adopt-20260917T120000Z-0123456789abcdef", control_retire["path"]))
+    with patch.object(planning, "_decisions", return_value=([control_retire], [control_source], [])):
+        retired, _ = planned(2, dict(create, path="notes.txt"))
+        legacy_retired, _ = planned(1, dict(create, path="notes.txt"))
+    # A move beneath the Move archive is the generation-dependent disposition: spec 14.2 permits that explicit
+    # destination, so the legacy generation plans it, while the homes-2 operand refusal reaches it.
+    control_move = dict(op="move-file", source="notes.md", destination=".working/archive/moved/notes.md",
+                        source_digest="sha256:" + "0" * 64)
+    move_source = dict(path="notes.md", digest=control_move["source_digest"], disposition="move", occupying=False,
+                       preservation=control_move["destination"])
+    with patch.object(planning, "_decisions", return_value=([control_move], [move_source], [])):
+        moved, _ = planned(2, dict(create, path="notes.txt"))
+        legacy_moved, legacy_moved_frozen = planned(1, dict(create, path="notes.txt"))
+        activated_plan, activated_frozen = planned(1, dict(create, path="notes.txt"), supported=2)
+    check("plan-homes2-control-disposition-refused", lambda: retired.status == store.INVALID
+          and retired.findings == tuple(adopt.validate_op(control_retire, homes=2).findings) != ())
+    check("plan-homes2-control-move-refused", lambda: moved.status == store.INVALID
+          and moved.findings == tuple(adopt.validate_op(control_move, homes=2).findings) != ())
+    # Adoption refuses the control area in the legacy generation too (spec 14.2 carries no homes qualifier):
+    # the legacy op check admits these rows, and the frozen plan's revalidation at the store's own
+    # generation refuses them.
+    check("plan-legacy-control-disposition-refused", lambda: legacy_retired.status == store.INVALID
+          and legacy_retired.plan is None and "plan sources[0] path '.working/journals/file' selects the reserved "
+          "store control area as adoption content (spec 14.2)" in legacy_retired.findings)
+    check("plan-legacy-control-op-refused", lambda: legacy_plan.status == store.INVALID and legacy_plan.plan is None
+          and legacy_frozen == [1]
+          and "plan writes '.working/journals/file' into the reserved store control area (spec 14.2)"
+          in legacy_plan.findings)
+    check("plan-legacy-control-move-planned", lambda: legacy_moved.status == store.VALID
+          and legacy_moved_frozen == [1])
+    check("plan-activated-legacy-generation", lambda: activated_plan.status == store.VALID
+          and activated_frozen == [1])
+    check("plan-homes2-frozen-plan-bound", lambda: ordinary_plan.status == store.VALID and ordinary_frozen == [2])
+    check("plan-validate-homes2-refused", lambda: adopt.validate_plan(
+        tomllib.loads(legacy_moved.plan.decode()), homes=2).status == store.INVALID)
+    check("plan-validate-legacy-unchanged", lambda: adopt.validate_plan(
+        tomllib.loads(legacy_moved.plan.decode())).status == store.VALID)
+
+    check("internal-api-capability-required", lambda: refuses(
+        lambda: home_journal.run_transaction(object(), "import", run, [], lambda _name: b"")))
+    with patch.object(home_journal._opf_oplock, "OpCapability", object):
+        check("internal-api-identity-required", lambda: refuses(
+            lambda: home_journal.recover_transaction(object(), "import", "../elsewhere")))
+    with patch.object(journal, "_lstat_contained", return_value=None), \
+            patch.object(journal, "read_frames", side_effect=AssertionError("missing journal was read as empty")):
+        check("internal-recovery-missing-refused",
+              lambda: refuses(lambda: home_journal._existing_frames(-1, run, "import", run)))
+
+    import threading
+    import _opf_oplock as oplock
+    cap = oplock.OpCapability.__new__(oplock.OpCapability)
+    cap._claim = threading.Lock()
+    cap._claimant = None
+    cap._released = True
+    check("internal-api-released-refused", lambda: refuses(
+        lambda: home_journal.recover_transaction(cap, "import", run)))
+    cap._released = False
+    cap._acquirer_pid = -1
+    # OPF-D2B PR3a: the acquirer identity now spans (pid, pid-start), so this foreign-acquirer
+    # capability must carry a pid-start too; -1 keeps the identity foreign, yielding a clean refusal
+    # rather than an unset-slot AttributeError.
+    cap._acquirer_pid_start = -1
+    check("internal-api-foreign-acquirer-refused", lambda: refuses(
+        lambda: home_journal.recover_transaction(cap, "import", run)))
+    cap._claim.acquire()
+    try:
+        check("internal-api-busy-refused", lambda: refuses(
+            lambda: home_journal.recover_transaction(cap, "import", run)))
+    finally:
+        cap._claim.release()
+    header = {"kind": "import", "run_id": run, "operation_id": "test"}
+    frames = [(journal.F_INTENT, {"txn": run, "header": header, "ops": []})]
+    import stat
+    with patch.object(journal, "_lstat_contained", return_value=SimpleNamespace(st_mode=stat.S_IFREG)), \
+            patch.object(journal, "read_frames", return_value=(frames, False, 0)):
+        check("internal-api-record-identity", lambda: home_journal._existing_frames(-1, run, "import", run) == frames)
+        header["kind"] = "layout"
+        check("internal-api-foreign-record-refused",
+              lambda: refuses(lambda: home_journal._existing_frames(-1, run, "import", run)))
+
+    # Observe the internal API's derived arguments and payloads with filesystem writes denied
+    # by mocks. Real crash/durability and capability integration remain the runtime suite's job.
+    import os
+    import tomllib
+    cap._acquirer_pid = os.getpid()
+    cap._acquirer_pid_start = journal._pid_start(os.getpid())
+    cap._anchor_fd = 101
+    cap._anchor_ident = (1, 101)
+    cap._machine_ident = (1, 102)
+    cap.store_root = Path("/store")
+    cap.machine_rel = machine
+    cap.op_id = "held-operation"
+    cap.holder = "fixture"
+
+    def fstat(fd):
+        return SimpleNamespace(st_dev=1, st_ino=fd, st_nlink=1,
+                               st_mode=stat.S_IFREG if fd == 101 else stat.S_IFDIR)
+
+    with patch.object(home_journal.os, "fstat", side_effect=fstat), \
+            patch.object(home_journal.os, "close"), \
+            patch.object(store, "_open_root_fd", return_value=100), \
+            patch.object(journal, "_open_dir_contained", return_value=102), \
+            patch.object(journal, "open_journal_root_fd", return_value=103), \
+            patch.object(journal, "ensure_journal_dirs") as mkdirs, \
+            patch.object(journal, "run_transaction", return_value="complete") as transaction, \
+            patch.object(home_journal, "_project") as projection:
+        check("internal-api-held-run", lambda: home_journal.run_transaction(
+            cap, "import", run, [], lambda _name: b"") == "complete")
+        check("internal-api-derived-frame-home", lambda: transaction.call_args.args[2] ==
+              Path("/store/.working/journals/import/journal"))
+        check("internal-api-bound-operation", lambda: transaction.call_args.args[4] ==
+              {"kind": "import", "run_id": run, "operation_id": cap.op_id})
+        check("internal-api-projects-terminal", lambda: projection.call_args.args[3:] == ("import", run))
+
+        def attributed(thunk):
+            try:
+                thunk()
+            except journal.JournalError as exc:
+                return "operation failed" in str(exc) and "cannot open" not in str(exc)
+            return False
+
+        # Recovery with a matching identity reaches the open phase and must create nothing there.
+        mkdirs.reset_mock()
+        with patch.object(home_journal, "_existing_frames", return_value=frames), \
+                patch.object(journal, "recover", return_value="terminal") as recovered:
+            check("internal-recovery-held", lambda: home_journal.recover_transaction(
+                cap, "import", run) == "terminal" and recovered.call_count == 1)
+            check("internal-recovery-creates-nothing", lambda: mkdirs.call_count == 0)
+        # A failure inside the operation is attributed to the operation, not to opening the journal.
+        transaction.side_effect = OSError("disk full")
+        check("internal-api-operation-error-attributed", lambda: attributed(
+            lambda: home_journal.run_transaction(cap, "import", run, [], lambda _name: b"")))
+        transaction.side_effect = None
+        cap._machine_ident = (9, 999)
+        check("internal-api-store-swap-refused", lambda: refuses(
+            lambda: home_journal.recover_transaction(cap, "import", run)))
+
+    header["kind"] = "import"
+    header["operation_id"] = "original-operation"
+    record_home = ".working/journals/import/runs/" + run
+    # PR B: the projection's state derives from the SAME captured frame sequence _existing_frames
+    # validated (state_of_frames), never a separate classify_state re-read.
+    terminal = frames + [(journal.F_COMPLETE, dict(txn=run))]
+    with patch.object(home_journal, "_existing_frames", return_value=terminal) as existing, \
+            patch.object(journal, "_lstat_contained", return_value=None) as prior, \
+            patch.object(journal, "ensure_journal_dirs") as mkdirs, \
+            patch.object(journal, "_open_parent", return_value=(104, "transaction.toml")), \
+            patch.object(oplock, "_remove_staging_garbage"), \
+            patch.object(oplock, "_create_control_file", return_value=(105, (1, 105))) as publish, \
+            patch.object(home_journal.os, "close"):
+        home_journal._project(100, 103, Path("/unused") / run, "import", run)
+        payload = publish.call_args.args[2]
+        record = tomllib.loads(payload.decode())
+        check("internal-projection-derived-home", lambda: mkdirs.call_args.args == (100, record_home))
+        check("internal-projection-typed-record", lambda: record == {
+            "format": "opf.journal.transaction/v1", "kind": "import", "run_id": run, "state": "complete",
+            "operation_id": "original-operation", "journal_rel": ".working/journals/import/journal"})
+        check("internal-projection-shared-payload", lambda: payload == home_journal.projection_payload(
+            "import", run, "complete", "original-operation"))
+        existing.return_value = frames
+        check("internal-projection-open-refused", lambda: refuses(
+            lambda: home_journal._project(100, 103, Path("/unused") / run, "import", run)))
+        existing.return_value = terminal
+        prior.return_value = object()
+        with patch.object(journal, "_read_contained", return_value=(b"corrupt", None)):
+            check("internal-projection-conflict-refused", lambda: refuses(
+                lambda: home_journal._project(100, 103, Path("/unused") / run, "import", run)))
+        with patch.object(journal, "_read_contained", return_value=(payload, None)), \
+                patch.object(home_journal.os, "fsync") as flushed:
+            check("internal-projection-idempotent", lambda: home_journal._project(
+                100, 103, Path("/unused") / run, "import", run) is None and publish.call_count == 1)
+            # Fix round 2 (codex MEDIUM): accepting the byte-equal projection re-establishes the
+            # containing directory's durability through the parent handle _open_parent returned.
+            check("internal-projection-idempotent-flushes-parent",
+                  lambda: flushed.call_args.args == (104,))
+
+    # PR B (maintainer ruling): shared native-journal validation is kind-generic; adoption identities
+    # validate through the same pure validators the adoption executor will bind to.
+    adoption_header = dict(kind="adoption", run_id=adopt_run, operation_id="adopt-op")
+    adoption_frames = [(journal.F_INTENT, dict(txn=adopt_run, header=adoption_header, ops=[])),
+                       (journal.F_COMPLETE, dict(txn=adopt_run))]
+    check("internal-journal-kind-generic-adoption", lambda:
+          home_journal.check_run_frames(adoption_frames, "adoption", adopt_run) is not None
+          and home_journal.state_of_frames(adoption_frames) == "complete"
+          and tomllib.loads(home_journal.projection_payload(
+              "adoption", adopt_run, "complete", "adopt-op").decode()) == {
+              "format": "opf.journal.transaction/v1", "kind": "adoption", "run_id": adopt_run,
+              "state": "complete", "operation_id": "adopt-op",
+              "journal_rel": ".working/journals/adoption/journal"})
+    check("internal-journal-adoption-identity-refused", lambda: refuses(
+        lambda: home_journal.check_run_frames(adoption_frames, "import", adopt_run)))
+    check("internal-journal-adoption-rolled-back", lambda: home_journal.state_of_frames(
+        [(journal.F_INTENT, dict(txn=adopt_run, header=adoption_header, ops=[])),
+         (journal.F_RIP, dict(txn=adopt_run)), (journal.F_RC, dict(txn=adopt_run))]) == "rolled-back")
+    check("internal-attempt-adoption-spelling", lambda:
+          home_journal.attempt_txn("adoption", adopt_run, 3) == adopt_run + ".a0003")
+    adoption_attempt = [(journal.F_INTENT, dict(txn=adopt_run + ".a0001", header=dict(
+        kind="adoption", run_id=adopt_run, attempt=1, operation_id="adopt-op"), ops=[])),
+        (journal.F_COMPLETE, dict(txn=adopt_run + ".a0001"))]
+    check("internal-attempt-adoption-identity", lambda:
+          home_journal.check_attempt_frames(adoption_attempt, "adoption", adopt_run, 1) is not None)
+    check("internal-attempt-adoption-foreign-refused", lambda: refuses(
+        lambda: home_journal.check_attempt_frames(adoption_attempt, "import", adopt_run, 1)))
+    check("internal-projection-adoption-nonterminal-refused", lambda: refuses(
+        lambda: home_journal.projection_payload("adoption", adopt_run, "open", "adopt-op")))
+
+    # A matching header cannot legitimize an invalid constructor identity. Require the
+    # public JournalError contract, including for empty frame sequences and projections.
+    def journal_refuses(thunk):
+        try:
+            thunk()
+        except journal.JournalError:
+            return True
+        return False
+
+    for label, bad_kind, bad_run in (("traversal", "adoption", "../escape"),
+                                      ("kind", "bogus", adopt_run)):
+        bad_header = dict(kind=bad_kind, run_id=bad_run, operation_id="op")
+        bad_frames = [(journal.F_INTENT, dict(txn=bad_run, header=bad_header))]
+        bad_attempt = [(journal.F_INTENT, dict(txn=bad_run + ".a0001",
+                                             header=dict(bad_header, attempt=1)))]
+        for validator, call in (
+                ("run", lambda: home_journal.check_run_frames(bad_frames, bad_kind, bad_run)),
+                ("empty-run", lambda: home_journal.check_run_frames([], bad_kind, bad_run)),
+                ("attempt", lambda: home_journal.check_attempt_frames(
+                    bad_attempt, bad_kind, bad_run, 1)),
+                ("empty-attempt", lambda: home_journal.check_attempt_frames([], bad_kind, bad_run, 1)),
+                ("attempt-name", lambda: home_journal.attempt_txn(bad_kind, bad_run, 1)),
+                ("record", lambda: home_journal.projection_record(bad_kind, bad_run, "complete", "op")),
+                ("payload", lambda: home_journal.projection_payload(bad_kind, bad_run, "complete", "op"))):
+            check("internal-identity-{}-{}".format(label, validator), lambda: journal_refuses(call))
+
+    # PR-3: the irrevocable ID reservation (spec 4.2/8.2). Pure shape, identity and claims here,
+    # then the derived destination and publication order on one shared recorded trace with
+    # filesystem writes denied by mocks; real exclusivity, crash states, the durable publication
+    # order and the on-disk refusals run in _self_test_vectors.
+    record_run = "record-20260917T120000Z-0123456789abcdef"
+    reservation_rel = ".working/journals/record/allocations/" + record_run + ".toml"
+    # Regression pins (fix round 1, claude MINOR-3): allocation_record and require_ordinary_target
+    # predate PR-3; these three pin the base behaviour the reservation writer builds on.
+    check("reservation-path-derived", lambda: store.allocation_record("record", record_run) == reservation_rel)
+    check("reservation-ordinary-target-refused", lambda: refuses(
+        lambda: store.require_ordinary_target(reservation_rel)))
+    with patch.object(home_journal, "_opened", side_effect=AssertionError("opened the store journal")):
+        check("reservation-operand-refused", lambda: "journal home" in (refusal(
+            lambda: home_journal.run_transaction(object(), "record", record_run,
+                                                 [dict(op="create", path=reservation_rel)],
+                                                 lambda _name: b"")) or ""))
+    check("reservation-no-caller-path", lambda: list(inspect.signature(
+        home_journal.reserve_allocation).parameters) == ["cap", "kind", "run_id", "demand", "expected"])
+    # The seam derives the claims (spec 8.2); a caller states only how many ids it takes per counter
+    # key. The demand grammar is the claims key grammar for the reserving kind, each count in
+    # 1..2**63 - 1, each bound tested just inside, at, and just outside it.
+    for bad in (None, {}, [("BI", 1)], {"BI": 0}, {"BI": -1}, {"BI": True}, {"bi": 1}, {"ZZ": 1},
+                {"imported:BI": 1}, {"BI": 2 ** 63}, {"BI": "1"}):
+        check("reservation-demand-refused-{!r}".format(bad), lambda b=bad: journal_refuses(
+            lambda: home_journal._check_demand("record", b)))
+    check("reservation-demand-bounds", lambda: not journal_refuses(
+        lambda: home_journal._check_demand("record", {"BI": 1, "WL": 2 ** 63 - 1})))
+    check("reservation-import-demand-series", lambda: not journal_refuses(
+        lambda: home_journal._check_demand("import", {"imported:BI": 1, "BI": 1}))
+        and journal_refuses(lambda: home_journal._check_demand("import", {"imported:LF": 1})))
+    check("reservation-typed-record", lambda: tomllib.loads(home_journal.reservation_payload(
+        "record", record_run, "held-operation", {"WL": 12, "BI": 7}).decode()) == {
+        "format": "opf.journal.allocation/v1", "kind": "record", "run_id": record_run,
+        "operation_id": "held-operation", "claims": {"BI": 7, "WL": 12}})
+    # The claims grammar is the store's counter-key grammar for the reserving kind (spec 8.2,
+    # _opf_schema._is_counter_key): every record namespace for every kind, the quoted
+    # imported-series keys only for an import-engine kind, and a value inside TOML's integer
+    # range, each bound tested just inside, at, and just outside it.
+    for bad in (None, {}, [("BI", 1)], {"BI": 0}, {"BI": -1}, {"BI": True}, {"bi": 1}, {"BIX": 1},
+                {7: 1}, {"BI": "7"}, {"ZZ": 1}, {"TX": 1}, {"imported:BI": 1}, {"BI": 2 ** 63}):
+        check("reservation-claims-refused-{!r}".format(bad), lambda b=bad: journal_refuses(
+            lambda: home_journal.reservation_payload("record", record_run, "op", b)))
+    for bad in ({"imported:LF": 1}, {"imported:bi": 1}, {"imported:BIX": 1}, {"imported:BI": 0},
+                {"imported:BI": 2 ** 63}):
+        check("reservation-import-claims-refused-{!r}".format(bad), lambda b=bad: journal_refuses(
+            lambda: home_journal.reservation_payload("import", run, "op", b)))
+    check("reservation-claims-value-bounds", lambda: not journal_refuses(
+        lambda: home_journal.reservation_payload("record", record_run, "op",
+                                                 {"BI": 1, "WL": 2 ** 63 - 2, "MD": 2 ** 63 - 1})))
+    check("reservation-import-series-claims", lambda: tomllib.loads(home_journal.reservation_payload(
+        "import", run, "op", {"imported:BI": 3, "BI": 2}).decode())["claims"] ==
+        {"BI": 2, "imported:BI": 3})
+    check("reservation-operation-id-refused", lambda: journal_refuses(
+        lambda: home_journal.reservation_payload("record", record_run, "", {"BI": 1})))
+    # The invalid-identity (and claims) refusal precedes ANY capability use: _held_root is
+    # replaced by a sentinel that fails the vector if it is ever reached, so a capability refusal
+    # cannot stand in for the identity one (fix round 1, codex MEDIUM; claude MINOR-2).
+    with patch.object(home_journal, "_held_root",
+                      side_effect=AssertionError("capability used before identity validation")):
+        for label, bad_kind, bad_run in (("traversal", "record", "../escape"), ("kind", "bogus", record_run),
+                                         ("foreign-run", "record", run)):
+            check("reservation-identity-" + label, lambda k=bad_kind, r=bad_run: journal_refuses(
+                lambda: home_journal.reserve_allocation(object(), k, r, {"BI": 1})))
+        check("reservation-demand-before-capability", lambda: "demand" in (refusal(
+            lambda: home_journal.reserve_allocation(object(), "record", record_run, {})) or ""))
+        check("reservation-expected-before-capability", lambda: "claims" in (refusal(
+            lambda: home_journal.reserve_allocation(object(), "record", record_run, {"BI": 1},
+                                                    expected={"BI": 0})) or ""))
+    check("reservation-capability-required", lambda: journal_refuses(
+        lambda: home_journal.reserve_allocation(object(), "record", record_run, {"BI": 1})))
+
+    @contextlib.contextmanager
+    def held_root(_cap):
+        yield 100
+
+    held = SimpleNamespace(op_id="held-operation", machine_rel=".working/toml")
+    trace = []
+    with patch.object(home_journal, "_held_root", held_root), \
+            patch.object(home_journal, "_derive_claims",
+                         side_effect=lambda *args: (trace.append("derive"), {"BI": 7})[1]) as derive, \
+            patch.object(journal, "ensure_journal_dirs",
+                         side_effect=lambda *args: trace.append("mkdirs")) as mkdirs, \
+            patch.object(journal, "_open_parent", return_value=(106, record_run + ".toml")) as parent, \
+            patch.object(journal, "_lstat_at",
+                         side_effect=lambda *args: trace.append("existence")) as prior, \
+            patch.object(journal, "_close_fd_quietly"), \
+            patch.object(oplock, "_remove_staging_garbage",
+                         side_effect=lambda *args: trace.append("garbage")) as garbage, \
+            patch.object(oplock, "_create_control_file",
+                         side_effect=lambda *args: (trace.append("publish"), (107, (1, 107)))[1]) as reserved, \
+            patch.object(home_journal.os, "close"):
+        reserved_payload = home_journal.reserve_allocation(held, "record", record_run, {"BI": 7})
+        check("reservation-derived-parent", lambda: mkdirs.call_args.args ==
+              (100, ".working/journals/record/allocations"))
+        check("reservation-derived-destination", lambda: parent.call_args.args == (100, reservation_rel))
+        # The order is judged on the one recorded trace: garbage retired, THEN the final name
+        # judged, THEN publication; call arguments alone cannot show it (fix round 1, codex
+        # MEDIUM; claude MINOR-1).
+        check("reservation-garbage-removed-first", lambda: trace[-3:] == ["garbage", "existence", "publish"]
+              and garbage.call_args.args == (106, record_run + ".toml", "id reservation"))
+        # The derivation runs first inside the held scope, before any directory is created, so a
+        # refused derivation writes nothing (spec 8.2: one atomic claim under the store's lock).
+        check("reservation-derived-before-writes", lambda: trace == [
+            "derive", "mkdirs", "garbage", "existence", "publish"]
+            and derive.call_args.args == (100, ".working/toml", "record", record_run, {"BI": 7}))
+        check("reservation-published-exact-payload", lambda: reserved.call_args.args ==
+              (106, record_run + ".toml", reserved_payload, "id reservation") and reserved_payload ==
+              home_journal.reservation_payload("record", record_run, "held-operation", {"BI": 7}))
+        # An existing entry is judged by _existing_reservation's read-back, never republished
+        # and never blindly refused as already-held (fix round 1, claude MEDIUM-1; codex MINOR).
+        prior.side_effect = lambda *args: trace.append("existence") or object()
+        with patch.object(home_journal, "_existing_reservation",
+                          side_effect=journal.JournalError("existing id reservation differs")) as judged:
+            check("reservation-existing-judged", lambda: "differs" in (refusal(
+                lambda: home_journal.reserve_allocation(held, "record", record_run, {"BI": 7})) or "")
+                and reserved.call_count == 1 and judged.call_args.args ==
+                (106, record_run + ".toml", "record", record_run, reserved_payload))
+        with patch.object(home_journal, "_existing_reservation",
+                          return_value=reserved_payload):
+            check("reservation-existing-idempotent", lambda: home_journal.reserve_allocation(
+                held, "record", record_run, {"BI": 7}) == reserved_payload
+                and reserved.call_count == 1)
+        # A planned caller's `expected` claims that the derivation no longer matches refuse with the
+        # dedicated error, before any directory is created or anything published.
+        made, published = mkdirs.call_count, reserved.call_count
+
+        def mismatch():
+            try:
+                home_journal.reserve_allocation(held, "record", record_run, {"BI": 7}, expected={"BI": 8})
+            except home_journal.ReservationDerivationChanged as exc:
+                return str(exc)
+            return None
+        check("reservation-expected-mismatch-refused", lambda: "changed from the planned claims" in (
+            mismatch() or "") and mkdirs.call_count == made and reserved.call_count == published)
+
+    check("evidence-homes2-roster", lambda: "C-EVIDENCE-ENUM" not in doctor.REQUIRED_CHECKS
+          and doctor.required_checks(2).index("C-EVIDENCE-ENUM") == doctor.REQUIRED_CHECKS.index("C-ARCHIVE-ENUM") + 1
+          and "C-EVIDENCE-ENUM" in doctor.source_checks(
+              SimpleNamespace(checks=dict.fromkeys(doctor.required_checks(2)))))
+
+    for failure in failures:
+        print("FAIL: " + failure)
+    print("OPF-HOMES BOUNDARY SELF-TEST: {} ({} checks)".format("FAILED" if failures else "OK", len(checked)))
+    return 1 if failures else 0
+
+
+# Registered keyword rewrites: (section, current keyword wording, pre-fix wording). The self-test
+# reverts each and requires the keyword lint, or the pin check, to turn red.
+_KEYWORD_REVERTS = (
+    ('4.2', 'The first imported-series release MUST keep these files inline in either store layout and MUST NOT provide views over imported data;',
+     'The first imported-series release keeps these files inline in either store layout and provides no views over imported data;'),
+    ('6.1', 'Release rows MUST be append-only and immutable once written.',
+     'Release rows are append-only and immutable once written.'),
+    ('6.1', 'A witnessed release cut MUST NOT set the flag, and the flag MUST NOT be added to or removed from an existing row.',
+     'A witnessed release cut never sets the flag, and the flag is never added to or removed from an existing row.'),
+    ('8.2', 'counters.toml MUST hold independent monotonic high-water values',
+     'counters.toml holds independent monotonic high-water values'),
+    ('8.2', 'Counters MUST NOT be reset and IDs MUST NOT be reused,',
+     'Counters are never reset and IDs are never reused,'),
+    ('8.2', 'Re-adoption MUST seed both series from a pinned ancestral snapshot and MUST refuse a missing required namespace; it MUST NOT zero-seed prior ancestry.',
+     'Re-adoption seeds both series from a pinned ancestral snapshot and refuses a missing required namespace; it never zero-seeds prior ancestry.'),
+    ('8.3', 'It MUST carry id, type, a one-line title,',
+     'It requires id, type, a one-line title,'),
+    ('8.3', 'The import table MUST carry source (',
+     'The import table requires source ('),
+    ('8.3', 'The required imported envelope and provenance fields MUST NOT be waived through missingness.',
+     'The required imported envelope and provenance fields cannot be waived through missingness.'),
+    ('8.6', 'Clean-to-imported links MUST be limited to relates, derives_from, follows, and same-type supersedes;',
+     'Clean-to-imported links allow only relates, derives_from, follows, and same-type supersedes;'),
+    ('8.6', 'Links MUST resolve over the union of both series; a dangling cross-series link MUST be a finding, never silently omitted.',
+     'Links resolve over the union of both series; a dangling cross-series link is a finding, never silently omitted.'),
+    ('14.1', 'The opf.adoption.plan/v2 plan MUST bind:',
+     'The opf.adoption.plan/v2 plan binds:'),
+    ('14.1', 'The attributed approval MUST bind plan_digest and inventory_digest,',
+     'The attributed approval binds plan_digest and inventory_digest,'),
+    ('14.1', 'Source instructions MUST be treated as historical data, never as instructions to execute.',
+     'Source instructions are historical data, never instructions to execute.'),
+)
+
+
+def _gitignore_reconciliation_self_test(check):
+    """PR I vectors: the pure .working/.gitignore planner and the reviewed-rewrite path
+    (_opf_store.plan_homes_gitignore / preview_homes_gitignore_rewrite), then the read-only
+    inspector (_opf_write_guard.inspect_homes_gitignore / verify_homes_gitignore_effective) over
+    real git fixture repositories built under an isolated HOME, XDG_CONFIG_HOME and disabled
+    system config, so an adopter's real global ignore rules cannot leak into the vectors. When git
+    is absent from PATH the fixture vectors FAIL as one named cannot-evaluate check, never a
+    silent skip. The stores under test are throwaway fixtures; the inspector never mutates an
+    index, and gi-tracked-staging-readonly proves it on the index content digest and the tree."""
+    import hashlib
+    import os
+    import subprocess
+    from unittest.mock import patch
+    import _opf_observe as observe
+    import _opf_write_guard as guard
+
+    blk = store.render_homes_gitignore()
+    block = blk.encode("utf-8")
+
+    def drift_refuses(thunk):
+        try:
+            thunk()
+        except ValueError as exc:
+            return str(exc).startswith("homes-gitignore-block-drift")
+        return False
+
+    def value_refuses(thunk):
+        try:
+            thunk()
+        except ValueError:
+            return True
+        return False
+
+    def guard_refuses(thunk, needle):
+        try:
+            thunk()
+        except guard.WriteGuardError as exc:
+            return needle in str(exc)
+        return False
+
+    # I1..I6: the pure planner. Adopter bytes are an exact prefix of every planned result.
+    check("gi-absent", lambda: store.plan_homes_gitignore(None) == block)
+    adopter = b"# adopter\n/local/\n"
+    check("gi-append-preserve", lambda: store.plan_homes_gitignore(adopter) == adopter + block)
+    check("gi-append-no-eol", lambda: store.plan_homes_gitignore(b"/local/") == b"/local/\n" + block
+          and store.homes_gitignore_matches((b"/local/\n" + block).decode("utf-8")))
+    check("gi-noop", lambda: store.plan_homes_gitignore(b"# adopter\n" + block + b"/local/\n") is None)
+    for index, bad in enumerate((blk + blk, blk.replace("/staging/", "/imported/"),
+                                 blk.replace("/journals/\n", ""), blk.replace("\n", "\r\n"),
+                                 blk.rstrip("\n"),
+                                 blk.replace("# <<< opf-managed <<<", "# >>> opf-managed >>>"))):
+        check("gi-drift-{}".format(index),
+              lambda b=bad: drift_refuses(lambda: store.plan_homes_gitignore(b.encode("utf-8"))))
+    check("gi-non-utf8", lambda: store.plan_homes_gitignore(b"\xff\n") == b"\xff\n" + block)
+
+    # The reviewed-rewrite path: a drifted well-formed block previews the exact replacement, which
+    # is applied only when the approval byte-matches a fresh preview; never silently, and never for
+    # an ambiguous marker structure.
+    drifted = b"# adopter\n" + blk.replace("/staging/", "/imported/").encode("utf-8") + b"/local/\n"
+    check("gi-rewrite-preview", lambda: store.preview_homes_gitignore_rewrite(drifted) ==
+          b"# adopter\n" + block + b"/local/\n")
+    check("gi-rewrite-approved", lambda: store.plan_homes_gitignore(
+        drifted, approved_rewrite=store.preview_homes_gitignore_rewrite(drifted),
+        reviewed_existing=drifted) == b"# adopter\n" + block + b"/local/\n")
+    check("gi-rewrite-never-silent",
+          lambda: drift_refuses(lambda: store.plan_homes_gitignore(drifted)))
+    check("gi-rewrite-stale", lambda: drift_refuses(lambda: store.plan_homes_gitignore(
+        b"# changed\n" + blk.replace("/journals/", "/other/").encode("utf-8"),
+        approved_rewrite=store.preview_homes_gitignore_rewrite(drifted), reviewed_existing=drifted)))
+    # The approval binds to the reviewed prestate: an edit INSIDE the drifted block after review
+    # yields the same preview, so only the reviewed bytes refuse it; an approval without them refuses.
+    inblock = drifted.replace(b"/journals/\n", b"/journals/\n!/journals/unreviewed\n")
+    check("gi-rewrite-inblock-edit", lambda: store.preview_homes_gitignore_rewrite(inblock) ==
+          store.preview_homes_gitignore_rewrite(drifted) and drift_refuses(
+              lambda: store.plan_homes_gitignore(
+                  inblock, approved_rewrite=store.preview_homes_gitignore_rewrite(drifted),
+                  reviewed_existing=drifted)))
+    check("gi-rewrite-unbound", lambda: value_refuses(lambda: store.plan_homes_gitignore(
+        drifted, approved_rewrite=store.preview_homes_gitignore_rewrite(drifted))))
+    check("gi-rewrite-ambiguous", lambda: value_refuses(
+        lambda: store.preview_homes_gitignore_rewrite((blk + blk).encode("utf-8"))))
+    check("gi-rewrite-exact-noop", lambda: value_refuses(
+        lambda: store.preview_homes_gitignore_rewrite(block)))
+    # A supplied approval binds to its reviewed prestate before ANY branch: a file now absent,
+    # marker-free or already exact is not the reviewed one, so the stale approval refuses rather than
+    # being dropped for a create, append or no-op plan.
+    for label, current in (("absent", None), ("markerless", b"# concurrent\n"), ("exact", block)):
+        check("gi-rewrite-stale-" + label, lambda c=current: drift_refuses(
+            lambda: store.plan_homes_gitignore(c, approved_rewrite=store.preview_homes_gitignore_rewrite(
+                drifted), reviewed_existing=drifted)))
+
+    # An absent git is a named cannot-evaluate FAIL at the inspector...
+    with patch.object(observe, "_git_path", lambda: None):
+        check("gi-git-missing", lambda: guard_refuses(
+            lambda: guard.inspect_homes_gitignore(Path("."), "init"), "git is missing"))
+    # ...and for every fixture vector below, never a silent skip.
+    git = observe._git_path()
+    if git is None:
+        check("gi-fixtures-cannot-evaluate", lambda: False)   # git is missing from PATH
+        return
+
+    with tempfile.TemporaryDirectory(prefix="opf-homes-gi-") as tmp:
+        base = Path(tmp)
+        home = base / "home"
+        (home / "cfg").mkdir(parents=True)
+        (home / ".gitconfig").write_text("", encoding="utf-8")
+        env_iso = {"HOME": str(home), "XDG_CONFIG_HOME": str(home / "cfg"),
+                   "GIT_CONFIG_NOSYSTEM": "1"}
+
+        def fixture_env():
+            env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+            env.update(env_iso)
+            env.update({"GIT_AUTHOR_NAME": "opf-selftest", "GIT_AUTHOR_EMAIL": "t@example.invalid",
+                        "GIT_COMMITTER_NAME": "opf-selftest",
+                        "GIT_COMMITTER_EMAIL": "t@example.invalid"})
+            return env
+
+        def run_git(cwd, *args):
+            # The three maintenance pins keep automatic gc/maintenance from writing into .git
+            # behind a later read-only assertion.
+            proc = subprocess.run([git, "-C", str(cwd), "-c", "gc.auto=0", "-c", "gc.autoDetach=false",
+                                   "-c", "maintenance.auto=false"] + list(args), stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT, env=fixture_env(), timeout=60)
+            if proc.returncode != 0:
+                raise RuntimeError("fixture git {} failed: {}".format(args, proc.stdout))
+            return proc.stdout
+
+        def fixture(name, subdir=""):
+            repo = base / name
+            repo.mkdir()
+            run_git(base, "init", "-q", name)
+            root = repo / subdir if subdir else repo
+            (root / ".working").mkdir(parents=True, exist_ok=True)
+            return repo, root
+
+        def tracked_fixture(name, rel, subdir=""):
+            repo, root = fixture(name, subdir)
+            payload = root / Path(rel)
+            payload.parent.mkdir(parents=True, exist_ok=True)
+            payload.write_text("x\n", encoding="utf-8")
+            run_git(repo, "--literal-pathspecs", "add", "--",
+                    payload.relative_to(repo).as_posix())
+            run_git(repo, "commit", "-qm", "seed")
+            return repo, root
+
+        def index_digest(repo):
+            return hashlib.sha256((repo / ".git" / "index").read_bytes()).hexdigest()
+
+        def tree_snapshot(repo):
+            rows = []
+            for dirpath, dirnames, filenames in os.walk(repo):
+                for entry in dirnames + filenames:
+                    rows.append(os.path.relpath(os.path.join(dirpath, entry), str(repo)))
+            return sorted(rows)
+
+        with patch.dict(os.environ, env_iso):
+            for name in guard._homes_config_overrides():
+                del os.environ[name]   # an ambient override refuses every discovery probe (restored on exit)
+            # A clean fixture plans the block with no holds, through ONLY the allowlisted read-only
+            # verbs (I15): rev-parse, ls-files, check-ignore, config, cat-file; never status.
+            repo_c, root_c = fixture("clean")
+            seen = []
+            real_run, real_disc = observe._run_git, observe._run_git_config_discovery
+
+            def spy_run(g, r, args, **kw):
+                seen.append(tuple(args))
+                return real_run(g, r, args, **kw)
+
+            def spy_disc(g, r, args, **kw):
+                seen.append(tuple(args))
+                return real_disc(g, r, args, **kw)
+
+            with patch.object(observe, "_run_git", spy_run), \
+                 patch.object(observe, "_run_git_config_discovery", spy_disc):
+                planned_c, holds_c = guard.inspect_homes_gitignore(root_c, "init")[:2]
+            check("gi-clean", lambda: planned_c == block and holds_c == [])
+            allowed = {"rev-parse", "ls-files", "check-ignore", "config", "cat-file"}
+            check("gi-verb-allowlist", lambda: bool(seen) and all(
+                next((a for a in args if not a.startswith("-")), None) in allowed
+                for args in seen))
+
+            # I7: a symlinked control file is homes-gitignore-unreadable, never followed.
+            repo7, root7 = fixture("symlink")
+            os.symlink("elsewhere", root7 / ".working" / ".gitignore")
+            check("gi-symlink", lambda: guard_refuses(
+                lambda: guard.inspect_homes_gitignore(root7, "init"), "homes-gitignore-unreadable"))
+
+            # A second hard link to the control file is likewise unreadable (contained-reader class).
+            repoh, rooth = fixture("hardlink")
+            (rooth / ".working" / ".gitignore").write_bytes(block)
+            os.link(rooth / ".working" / ".gitignore", rooth / "alias")
+            check("gi-hardlink", lambda: guard_refuses(
+                lambda: guard.inspect_homes_gitignore(rooth, "init"), "homes-gitignore-unreadable"))
+
+            # I8: a tracked staging path is the held tracked-control-path refusal, and the inspection
+            # leaves the index bytes and the tree untouched (read-only proof on the content digest,
+            # not the mtime: the split-index mtime touch is the disclosed residual).
+            repo8, root8 = tracked_fixture("tracked-staging", ".working/staging/import/f")
+            before = (index_digest(repo8), tree_snapshot(repo8))
+            holds8 = guard.inspect_homes_gitignore(root8, "init")[1]
+            check("gi-tracked-staging", lambda: any(
+                h.startswith("tracked-control-path") and ".working/staging/import/f" in h
+                for h in holds8))
+            after8 = (index_digest(repo8), tree_snapshot(repo8))
+            if after8 != before:
+                # Name what moved, so a failure on another git version is diagnosable from the log.
+                print("gi-tracked-staging-readonly: index changed={} tree added={} removed={}".format(
+                    after8[0] != before[0], sorted(set(after8[1]) - set(before[1])),
+                    sorted(set(before[1]) - set(after8[1]))), file=sys.stderr)
+            check("gi-tracked-staging-readonly", lambda: after8 == before)
+
+            # I9: a tracked journals path holds identically.
+            repo9, root9 = tracked_fixture("tracked-journals", ".working/journals/ingest/x")
+            check("gi-tracked-journals", lambda: any(
+                h.startswith("tracked-control-path") and ".working/journals/ingest/x" in h
+                for h in guard.inspect_homes_gitignore(root9, "init")[1]))
+
+            # I10: index flags do not hide a tracked control path: a skip-worktree entry and,
+            # separately, an intent-to-add entry both hold.
+            repo10, root10 = tracked_fixture("tracked-flags", ".working/staging/import/f")
+            run_git(repo10, "update-index", "--skip-worktree", "--", ".working/staging/import/f")
+            check("gi-tracked-flags-skip", lambda: any(
+                h.startswith("tracked-control-path")
+                for h in guard.inspect_homes_gitignore(root10, "init")[1]))
+            repo10b, root10b = fixture("intent-to-add")
+            ita = root10b / ".working" / "journals" / "ingest"
+            ita.mkdir(parents=True)
+            (ita / "y").write_text("x\n", encoding="utf-8")
+            run_git(repo10b, "add", "-N", "--", ".working/journals/ingest/y")
+            check("gi-tracked-flags-intent", lambda: any(
+                h.startswith("tracked-control-path") and ".working/journals/ingest/y" in h
+                for h in guard.inspect_homes_gitignore(root10b, "init")[1]))
+
+            # A flagged .working/.gitignore itself is cannot-evaluate: its worktree bytes may not
+            # be the committed ones.
+            repof, rootf = tracked_fixture("gitignore-flagged", ".working/.gitignore")
+            run_git(repof, "update-index", "--skip-worktree", "--", ".working/.gitignore")
+            check("gi-gitignore-flagged", lambda: guard_refuses(
+                lambda: guard.inspect_homes_gitignore(rootf, "init"), "skip-worktree"))
+
+            # I12: an exact block that a later adopter negation overrides is
+            # homes-gitignore-ineffective (per-path effectiveness, not a whole-probe rc).
+            repo12, root12 = fixture("ineffective")
+            (root12 / ".working" / ".gitignore").write_bytes(block + b"!/staging/\n")
+            planned12, holds12 = guard.inspect_homes_gitignore(root12, "init")[:2]
+            check("gi-ineffective", lambda: planned12 is None and any(
+                h.startswith("homes-gitignore-ineffective") and "staging" in h for h in holds12))
+
+            # I13: a nested store holds on its own prefixed control path.
+            repo13, root13 = tracked_fixture("nested", ".working/staging/import/f", subdir="sub")
+            check("gi-nested-prefix", lambda: any(
+                h.startswith("tracked-control-path") and "sub/.working/staging/import/f" in h
+                for h in guard.inspect_homes_gitignore(root13, "init")[1]))
+
+            # I14: a store prefix beginning with a pathspec-magic sigil stays literal
+            # (--literal-pathspecs on ls-files; the "./" prefix on check-ignore).
+            repo14, root14 = tracked_fixture("magic", ".working/staging/import/f", subdir=":x")
+            check("gi-pathspec-magic", lambda: any(
+                h.startswith("tracked-control-path") and ":x/.working/staging/import/f" in h
+                for h in guard.inspect_homes_gitignore(root14, "init")[1]))
+
+            # I16: no repository at all is cannot-evaluate, never a pass.
+            norepo = base / "norepo"
+            (norepo / ".working").mkdir(parents=True)
+            check("gi-not-repo", lambda: guard_refuses(
+                lambda: guard.inspect_homes_gitignore(norepo, "init"),
+                "not inside a git repository"))
+
+            # The post-write re-check: effective after an install, a named finding after an
+            # adopter negation lands beneath it.
+            repov, rootv = fixture("verify")
+            (rootv / ".working" / ".gitignore").write_bytes(block)
+            check("gi-verify-effective",
+                  lambda: guard.verify_homes_gitignore_effective(rootv, "init") == [])
+            (rootv / ".working" / ".gitignore").write_bytes(block + b"!/journals/\n")
+            check("gi-verify-ineffective", lambda: any(
+                h.startswith("homes-gitignore-ineffective") and "journals" in h
+                for h in guard.verify_homes_gitignore_effective(rootv, "init")))
+
+            # The durable probe answers for NEW evidence: tracked evidence already under imported/
+            # (the steady state after the first import) cannot mask an ignoring rule...
+            repod, rootd = tracked_fixture("durable-tracked", ".working/imported/ev")
+            (rootd / ".gitignore").write_text("/.working/imported/\n", encoding="utf-8")
+            (rootd / ".working" / ".gitignore").write_bytes(block)
+            check("gi-durable-tracked", lambda: any(
+                h.startswith("durable-evidence-ignored") and "imported" in h
+                for h in guard.inspect_homes_gitignore(rootd, "init")[1]))
+            # ...and an index entry at the probe child itself, which would mask it, is cannot-evaluate.
+            repom, rootm = tracked_fixture("probe-masked",
+                                           ".working/imported/" + guard._HOMES_PROBE_CHILD)
+            (rootm / ".gitignore").write_text("/.working/imported/\n", encoding="utf-8")
+            check("gi-probe-masked", lambda: guard_refuses(
+                lambda: guard.inspect_homes_gitignore(rootm, "init"), "would mask"))
+
+            # A regular file AT a control home is not matched by the block's directory-only rules:
+            # held by the inspector and the post-write re-check alike.
+            repot, roott = fixture("home-file")
+            (roott / ".working" / ".gitignore").write_bytes(block)
+            (roott / ".working" / "staging").write_text("x\n", encoding="utf-8")
+            check("gi-home-file", lambda: all(any(
+                h.startswith("homes-gitignore-ineffective") and "staging" in h for h in holds)
+                for holds in (guard.inspect_homes_gitignore(roott, "init")[1],
+                              guard.verify_homes_gitignore_effective(roott, "init"))))
+
+            # An ignored control file is never committed, so the block would not travel: held.
+            repoi, rooti = fixture("control-ignored")
+            (rooti / ".gitignore").write_text("/.working/.gitignore\n", encoding="utf-8")
+            (rooti / ".working" / ".gitignore").write_bytes(block)
+            check("gi-control-ignored", lambda: any(
+                h.startswith("homes-gitignore-ignored")
+                for h in guard.inspect_homes_gitignore(rooti, "init")[1]))
+
+            # The post-write re-check applies the inspector's unreadable-input refusal.
+            repou, rootu = fixture("verify-unreadable")
+            (rootu / ".gitignore").write_text("/.working/staging/\n/.working/journals/\n",
+                                              encoding="utf-8")
+            os.symlink("elsewhere", rootu / ".working" / ".gitignore")
+            check("gi-verify-unreadable", lambda: guard_refuses(
+                lambda: guard.verify_homes_gitignore_effective(rootu, "init"),
+                "homes-gitignore-unreadable"))
+
+            # A symlinked .working/ is the named unreadable refusal, never a raw JournalError.
+            repow, rootw = fixture("working-symlink")
+            (rootw / ".working").rmdir()
+            (rootw / "real").mkdir()
+            os.symlink("real", rootw / ".working")
+            check("gi-working-symlink", lambda: guard_refuses(
+                lambda: guard.inspect_homes_gitignore(rootw, "init"), "homes-gitignore-unreadable"))
+
+            # The shared indexed-ignore availability probe runs through the verb allowlist too, in
+            # the inspector and the post-write re-check alike: narrowing the allowlist refuses its
+            # config call (no other homes probe runs config).
+            with patch.object(guard, "_HOMES_INSPECT_VERBS",
+                              guard._HOMES_INSPECT_VERBS - frozenset(("config",))):
+                check("gi-verb-allowlist-shared", lambda: all(guard_refuses(
+                    lambda f=f: f(root_c, "init"), "'config'") for f in (
+                        guard.inspect_homes_gitignore, guard.verify_homes_gitignore_effective)))
+
+            # A control-path listing git answers with stderr (a sparse index expanding, for example)
+            # refuses with git's own words, not a bare rc.
+            def noisy_run(g, r, args, **kw):
+                if "ls-files" in args:
+                    return observe._GitOutcome(True, 0, b"", "hint: synthetic ls-files stderr\n")
+                return real_run(g, r, args, **kw)
+
+            with patch.object(observe, "_run_git", noisy_run):
+                check("gi-index-stderr", lambda: guard_refuses(
+                    lambda: guard.inspect_homes_gitignore(root_c, "init"), "synthetic ls-files stderr"))
+
+            # The inspector forwards the reviewed prestate: the approval applies on the reviewed
+            # bytes and holds on any other bytes, even ones with the same preview.
+            repor, rootr = fixture("rewrite-bound")
+            drift_r = b"# adopter\n" + blk.replace("/staging/\n", "/staging/\n/extra/\n").encode("utf-8")
+            other_r = drift_r.replace(b"/extra/", b"/other/")
+            (rootr / ".working" / ".gitignore").write_bytes(drift_r)
+            preview_r = store.preview_homes_gitignore_rewrite(drift_r)
+            check("gi-rewrite-inspect-bound", lambda: guard.inspect_homes_gitignore(
+                rootr, "init", approved_rewrite=preview_r, reviewed_existing=drift_r)
+                == (preview_r, [], drift_r)
+                and any(h.startswith("homes-gitignore-block-drift")
+                        for h in guard.inspect_homes_gitignore(
+                            rootr, "init", approved_rewrite=preview_r, reviewed_existing=other_r)[1]))
+            # ...and a stale approval holds when the file has since lost its markers, never an append.
+            (rootr / ".working" / ".gitignore").write_bytes(b"# concurrent replacement\n")
+            planned_s, holds_s = guard.inspect_homes_gitignore(
+                rootr, "init", approved_rewrite=preview_r, reviewed_existing=drift_r)[:2]
+            check("gi-rewrite-inspect-stale", lambda: planned_s is None and any(
+                h.startswith("homes-gitignore-block-drift") for h in holds_s))
+
+            # The inspection returns the exact bytes it planned from, so the caller's journal can bind
+            # its prestate to them: a file with and without a final newline plan the same bytes.
+            repoe, roote = fixture("prestate")
+            (roote / ".working" / ".gitignore").write_bytes(b"/local/")
+            check("gi-prestate", lambda: guard.inspect_homes_gitignore(roote, "init") == (
+                b"/local/\n" + block, [], b"/local/"))
+
+            # The allowlist reads the verb after the argument-less global flags only: a leading option
+            # that takes an argument cannot pass its argument off as the verb, and config passes only in
+            # a read form; each refuses before launch.
+            launched = []
+            with patch.object(observe, "_run_git",
+                              lambda *a, **k: launched.append(a) or observe._GitOutcome(True, 0, b"", "")):
+                check("gi-verb-option-arg", lambda: all(guard_refuses(
+                    lambda a=a: guard._homes_run_git(git, root_c, a), "non-allowlisted") for a in (
+                        ["-C", "ls-files", "update-index", "--refresh"], ["-c", "x=y", "ls-files"],
+                        ["config", "core.bare", "true"])) and not launched)
+
+            # A config read action counts only where git still parses it as an option, before `--` and
+            # the first positional, beside argument-less flags: Codex's `--file F -- k --get`, a
+            # positional first (`k --get-all`) and an option taking the action as its argument
+            # (`--file --get`) are writes to git 2.53.0, each refused before launch; the partial-clone
+            # probe's own reads still pass.
+            config_file = str(base / "guard-config")
+            config_launched = []
+            with patch.object(observe, "_run_git_config_discovery", lambda *a, **k: config_launched.append(a)
+                              or observe._GitOutcome(True, 0, b"", "")):
+                check("gi-config-guard-dashdash", lambda: all(guard_refuses(
+                    lambda a=a: guard._homes_run_git_discovery(git, root_c, a), "non-allowlisted") for a in (
+                        ["config", "--file", config_file, "--", "qa.worker", "--get"],
+                        ["config", "--", "qa.worker", "--get"],
+                        ["config", "qa.worker", "--get"],
+                        ["config", "-z", "--file", config_file, "qa.worker", "--get-all"],
+                        ["config", "-z", "qa.worker", "--get-all"],
+                        ["config", "--file", "--get", "--", "qa.worker", "v"])) and not config_launched)
+            check("gi-config-guard-reads", lambda: all(guard._homes_allowlisted_verb(a) == "config" for a in (
+                ["config", "--get-regexp", r"^remote\..*\.partialclonefilter$"],
+                ["config", "--get", "extensions.partialClone"],
+                ["config", "-z", "--name-only", "--get-regexp", r"^remote\..*\.promisor$"],
+                ["config", "--type=bool", "--get-all", "remote.origin.promisor"])))
+
+            # An ignore source git cannot read (a symlinked nested .gitignore, which git refuses to
+            # follow whatever the uid) is only a warning, with check-ignore rc 1, the not-ignored
+            # answer: any diagnostic is cannot-evaluate in the inspector and the re-check alike...
+            repos, roots = fixture("source-diagnostic")
+            (roots / ".working" / ".gitignore").write_bytes(block)
+            (roots / ".working" / "imported").mkdir()
+            (roots / "rules").write_text("*\n", encoding="utf-8")
+            os.symlink(os.path.join("..", "..", "rules"), roots / ".working" / "imported" / ".gitignore")
+            check("gi-ignore-source-diagnostic", lambda: all(guard_refuses(
+                lambda f=f: f(roots, "init"), "unable to access") for f in (
+                    guard.inspect_homes_gitignore, guard.verify_homes_gitignore_effective)))
+
+            # ...including a diagnostic on the shared partial-clone probe's config reads.
+            def noisy_disc(g, r, args, **kw):
+                out = real_disc(g, r, args, **kw)
+                if "config" in args:
+                    return observe._GitOutcome(out.completed, out.rc, out.out, "warning: synthetic config\n")
+                return out
+
+            with patch.object(observe, "_run_git_config_discovery", noisy_disc):
+                check("gi-discovery-stderr", lambda: guard_refuses(
+                    lambda: guard.inspect_homes_gitignore(root_c, "init"), "synthetic config"))
+
+            # ...and a partial-clone config probe that fails WITHOUT a diagnostic (rc 2 or 255, a
+            # timeout, or an enumerated promisor key whose re-query answers rc 1) is cannot-evaluate in
+            # the inspector and the re-check alike, never the partial fallback whose availability check
+            # can still end clean (Codex's reproductions over the installed block); the shared default
+            # keeps that fallback for opf.py's init preflight.
+            repoz, rootz = fixture("config-probe-failure")
+            (rootz / ".working" / ".gitignore").write_bytes(block)
+
+            def requery_fails(args):
+                if "--name-only" in args:
+                    return observe._GitOutcome(True, 0, b"remote.origin.promisor\x00", "")
+                return observe._GitOutcome(True, 1, b"", "")
+
+            for label, answer in (
+                    ("rc2", lambda a: observe._GitOutcome(True, 2, b"", "")),
+                    ("rc255", lambda a: observe._GitOutcome(True, 255, b"", "")),
+                    ("timeout", lambda a: observe._GitOutcome(False, None, b"", "synthetic timeout")),
+                    ("requery", requery_fails)):
+                def failing_disc(g, r, args, answer=answer, **kw):
+                    return answer(args) if "config" in args else real_disc(g, r, args, **kw)
+
+                with patch.object(observe, "_run_git_config_discovery", failing_disc):
+                    check("gi-config-probe-failure-" + label, lambda: all(guard_refuses(
+                        lambda f=f: f(rootz, "init"), "partial-clone config probe failed") for f in (
+                            guard.inspect_homes_gitignore, guard.verify_homes_gitignore_effective))
+                        and observe._is_partial_clone(git, rootz, run=failing_disc) is True)
+
+            # ...and so is an enumerated promisor key whose non-UTF-8 name cannot be re-queried at all:
+            # Codex's round-4 reproduction, `[remote "up\xffstream"] promisor = garbage` over the
+            # installed block, a value git itself rejects (rc 128) through the byte-exact key; the
+            # default keeps the partial fallback.
+            repon, rootn = fixture("config-probe-nonutf8")
+            (rootn / ".working" / ".gitignore").write_bytes(block)
+            with open(repon / ".git" / "config", "ab") as config_fh:
+                config_fh.write(b'\n[remote "up\xffstream"]\n\tpromisor = garbage\n')
+            check("gi-config-probe-failure-nonutf8", lambda: all(guard_refuses(
+                lambda f=f: f(rootn, "init"), "partial-clone config probe failed") for f in (
+                    guard.inspect_homes_gitignore, guard.verify_homes_gitignore_effective))
+                and observe._is_partial_clone(git, rootn) is True)
+
+            # A runtime configuration override the config-discovery probe would drop is a named
+            # cannot-evaluate, never replayed: with core.ignoreCase=true supplied through
+            # GIT_CONFIG_COUNT (Codex's reproduction) or a wrapper's `git -c` (GIT_CONFIG_PARAMETERS),
+            # an uppercase negation re-includes the home for the adopter's git, while the probe, which
+            # drops the override, would read the block as effective (as it does, correctly, without
+            # one). Every dropped name is refused; the carried GIT_CONFIG_NOSYSTEM toggle is not.
+            ignore_case = (("GIT_CONFIG_COUNT", dict(GIT_CONFIG_COUNT="1", GIT_CONFIG_KEY_0="core.ignoreCase",
+                                                     GIT_CONFIG_VALUE_0="true")),
+                           ("GIT_CONFIG_PARAMETERS", dict(GIT_CONFIG_PARAMETERS="'core.ignorecase'='true'")))
+            for rel in ("staging", "journals"):
+                repoo, rooto = fixture("override-" + rel)
+                (rooto / ".working" / ".gitignore").write_bytes(block + b"!/" + rel.upper().encode() + b"/\n")
+                (rooto / ".working" / rel).mkdir()
+                (rooto / ".working" / rel / "payload").write_text("x\n", encoding="utf-8")
+                check("gi-config-override-baseline-" + rel,
+                      lambda r=rooto: guard.inspect_homes_gitignore(r, "init")[:2] == (None, []))
+                for name, extra in ignore_case:
+                    with patch.dict(os.environ, extra):
+                        check("gi-config-override-" + rel + "-" + name, lambda r=rooto, n=name: all(
+                            guard_refuses(lambda f=f: f(r, "init"), n) for f in (
+                                guard.inspect_homes_gitignore, guard.verify_homes_gitignore_effective)))
+            with patch.dict(os.environ, dict(GIT_CONFIG="x", GIT_CONFIG_GLOBAL="x", GIT_CONFIG_SYSTEM="x",
+                                             GIT_CONFIG_KEY_3="x")):
+                check("gi-config-override-names", lambda: guard._homes_config_overrides() == [
+                    "GIT_CONFIG", "GIT_CONFIG_GLOBAL", "GIT_CONFIG_KEY_3", "GIT_CONFIG_SYSTEM"])
+
+            # A partial re-include beneath a home: /<home>/* ignores the probe child, not the home, so
+            # a re-included subdirectory's future content would be unignored. git's own rule report
+            # shows the governing rule is not a home-level exclusion: cannot-evaluate. The same
+            # home-level rule repeated after the block still covers the home.
+            for rel in ("staging", "journals"):
+                repop, rootp = fixture("partial-" + rel)
+                (rootp / ".working" / ".gitignore").write_bytes(
+                    block + "!/{0}/\n/{0}/*\n!/{0}/import/\n".format(rel).encode("utf-8"))
+                (rootp / ".working" / rel / "import").mkdir(parents=True)
+                check("gi-partial-reinclude-" + rel, lambda r=rootp: all(guard_refuses(
+                    lambda f=f: f(r, "init"), "re-include") for f in (
+                        guard.inspect_homes_gitignore, guard.verify_homes_gitignore_effective)))
+            repoq, rootq = fixture("home-rule-repeated")
+            (rootq / ".working" / ".gitignore").write_bytes(block + b"/staging/\n")
+            check("gi-home-rule-repeated",
+                  lambda: guard.inspect_homes_gitignore(rootq, "init")[:2] == (None, []))
+
+            # A glob character in the store prefix: check-ignore matches its probe paths against the
+            # index as glob pathspecs, so a tracked sibling the glob matches would mask the durable and
+            # control-file answers; the glob-mode listing refuses it. The tracked control file itself
+            # is its own (tracked) answer and passes.
+            for label, rel, rule in (("durable", ".working/imported/" + guard._HOMES_PROBE_CHILD,
+                                      "imported/\n"), ("control", ".working/.gitignore", ".gitignore\n")):
+                repog, rootg = fixture("glob-" + label, subdir="s[t]")
+                (rootg / ".working" / ".gitignore").write_bytes(block)
+                sibling = repog / "st" / Path(rel)
+                sibling.parent.mkdir(parents=True)
+                sibling.write_text("x\n", encoding="utf-8")
+                run_git(repog, "--literal-pathspecs", "add", "--", sibling.relative_to(repog).as_posix())
+                run_git(repog, "commit", "-qm", "seed")
+                (repog / ".git" / "info").mkdir(exist_ok=True)
+                (repog / ".git" / "info" / "exclude").write_text(rule, encoding="utf-8")
+                check("gi-glob-prefix-masked-" + label, lambda r=rootg: guard_refuses(
+                    lambda: guard.inspect_homes_gitignore(r, "init"), "would mask"))
+            repok, rootk = tracked_fixture("control-tracked", ".working/.gitignore")
+            (rootk / ".working" / ".gitignore").write_bytes(block)
+            check("gi-control-tracked",
+                  lambda: guard.inspect_homes_gitignore(rootk, "init")[:2] == (None, []))
+
+            # The post-write re-check confirms the block itself: root rules that happen to cover the
+            # homes do not stand in for an absent, adopter-only or drifted .working/.gitignore.
+            for label, content in (("absent", None), ("adopter", b"/local/\n"), ("drifted", drift_r)):
+                repob, rootb = fixture("verify-missing-" + label)
+                (rootb / ".gitignore").write_text("/.working/staging/\n/.working/journals/\n",
+                                                  encoding="utf-8")
+                if content is not None:
+                    (rootb / ".working" / ".gitignore").write_bytes(content)
+                check("gi-verify-block-missing-" + label, lambda r=rootb: any(
+                    h.startswith("homes-gitignore-block-missing")
+                    for h in guard.verify_homes_gitignore_effective(r, "init")))
+
+        # I11: a global core.excludesFile that ignores imported/ is durable-evidence-ignored under
+        # the adopter's REAL configuration (config discovery), read through a second isolated HOME.
+        home11 = base / "home11"
+        (home11 / "cfg").mkdir(parents=True)
+        (home11 / "excludes").write_text("imported/\n", encoding="utf-8")
+        (home11 / ".gitconfig").write_text(
+            "[core]\n\texcludesFile = {}\n".format(home11 / "excludes"), encoding="utf-8")
+        env_iso11 = dict(HOME=str(home11), XDG_CONFIG_HOME=str(home11 / "cfg"),
+                         GIT_CONFIG_NOSYSTEM="1")
+        with patch.dict(os.environ, env_iso11):
+            for name in guard._homes_config_overrides():
+                del os.environ[name]
+            repo11, root11 = fixture("durable-ignored")
+            check("gi-durable-ignored", lambda: any(
+                h.startswith("durable-evidence-ignored") and "imported" in h
+                for h in guard.inspect_homes_gitignore(root11, "init")[1]))
+
+        # A store the working directory reaches through a symlink (Claude's round-4 reproduction): an
+        # includeIf "gitdir:" rule matching only that logical path gives the adopter's git there, with cwd
+        # and PWD at the link, a core.excludesFile that ignores imported/, while a probe from the physical
+        # path alone reads it as not ignored. The probe runs from both paths and refuses the disagreement,
+        # naming both; answers that agree (a rule matching the physical path, or no rule) stand, and a
+        # working directory at the physical path has no logical path, so nothing changes there.
+        homel = base / "homel"
+        (homel / "cfg").mkdir(parents=True)
+        (homel / "excludes").write_text("/.working/imported/\n", encoding="utf-8")
+        (homel / "excludes.inc").write_text(
+            "[core]\n\texcludesFile = {}\n".format(homel / "excludes"), encoding="utf-8")
+        (base / "lphys").mkdir()
+        os.symlink("lphys", base / "llink")
+        env_isol = dict(HOME=str(homel), XDG_CONFIG_HOME=str(homel / "cfg"), GIT_CONFIG_NOSYSTEM="1")
+
+        def from_dir(path, thunk, pwd=None):
+            # Run `thunk` with the working directory and PWD at `path` as given (symlinks unresolved),
+            # as an adopter's shell there does, or with PWD the exact spelling `pwd` of that directory;
+            # both are restored.
+            previous = os.getcwd()
+            os.chdir(path)
+            try:
+                with patch.dict(os.environ, PWD=str(path) if pwd is None else pwd):
+                    return thunk()
+            finally:
+                os.chdir(previous)
+
+        def include_if(gitdir):
+            rule = "[includeIf \"gitdir:{}/\"]\n\tpath = {}\n".format(gitdir, homel / "excludes.inc")
+            (homel / ".gitconfig").write_text("" if gitdir is None else rule, encoding="utf-8")
+
+        with patch.dict(os.environ, env_isol):
+            for name in guard._homes_config_overrides():
+                del os.environ[name]
+            repol, rootl = fixture("lphys/repo")
+            (rootl / ".working" / ".gitignore").write_bytes(block)
+            logical = base / "llink" / "repo"
+            include_if(base / "llink")
+            check("gi-logical-path-disagree", lambda: all(from_dir(logical, lambda f=f: guard_refuses(
+                lambda: f(rootl, "init"), "answers differently from the physical path {!r} and from the "
+                "logical path {!r}".format(str(rootl), str(logical)))) for f in (
+                    guard.inspect_homes_gitignore, guard.verify_homes_gitignore_effective)))
+            check("gi-logical-path-physical-cwd", lambda: from_dir(
+                rootl, lambda: guard.inspect_homes_gitignore(rootl, "init")[:2] == (None, [])))
+            include_if(os.path.realpath(base / "lphys"))
+            check("gi-logical-path-agree-held", lambda: from_dir(logical, lambda: any(
+                h.startswith("durable-evidence-ignored")
+                for h in guard.inspect_homes_gitignore(rootl, "init")[1])))
+            include_if(None)
+            check("gi-logical-path-agree-clean", lambda: from_dir(logical, lambda: guard._homes_logical_path(
+                rootl) == str(logical) and guard.inspect_homes_gitignore(rootl, "init")[:2] == (None, [])
+                and guard.verify_homes_gitignore_effective(rootl, "init") == []))
+
+            # git names the worktree top by PWD's exact spelling (Codex's and Claude's round-5
+            # reproductions): a rule written against `R/.`, `R//`, `R/.working/..` or `<link>/./repo`
+            # applies to the adopter's git there, so the probe passes that PWD verbatim, never
+            # normalized, and refuses the disagreement naming it; with no rule the spellings agree.
+            # Below the worktree top the adopter's git names the repository by its physical path, but
+            # the probe runs from `<PWD>/..`: a rule matching that spelling is the disclosed
+            # over-refusal.
+            spellings = (("dot", rootl, str(rootl) + "/.", str(rootl) + "/."),
+                         ("dslash", rootl, str(rootl) + "//", str(rootl) + "/"),
+                         ("dotdot", rootl, str(rootl) + "/.working/..", str(rootl) + "/.working/.."),
+                         ("link-dot", logical, str(base) + "/llink/./repo", str(base) + "/llink/./repo"))
+            for label, cwd, pwd, rule in spellings:
+                include_if(rule)
+                check("gi-logical-spelling-verbatim-" + label, lambda c=cwd, p=pwd: from_dir(
+                    c, lambda: guard._homes_logical_path(rootl) == p, pwd=p))
+                check("gi-logical-spelling-disagree-" + label, lambda c=cwd, p=pwd: all(from_dir(
+                    c, lambda f=f: guard_refuses(lambda: f(rootl, "init"), "answers differently from the "
+                                                 "physical path {!r} and from the logical path {!r}".format(
+                                                     str(rootl), p)), pwd=p) for f in (
+                        guard.inspect_homes_gitignore, guard.verify_homes_gitignore_effective)))
+            include_if(None)
+            check("gi-logical-spelling-agree-clean", lambda: all(from_dir(c, lambda: guard.inspect_homes_gitignore(
+                rootl, "init")[:2] == (None, []), pwd=p) for _, c, p, _ in spellings))
+            below = logical / ".working"
+            include_if(str(below) + "/..")
+            check("gi-logical-path-subdir-overrefusal", lambda: from_dir(below, lambda: guard_refuses(
+                lambda: guard.inspect_homes_gitignore(rootl, "init"), "and from the logical path {!r}".format(
+                    str(below) + "/.."))))
+            include_if(None)
+
+            # A relative ambient PWD (Claude's fix-7 reproduction): git names the worktree top by it
+            # verbatim, so with PWD `.` there a `gitdir:[.]/` rule applies to the adopter's git, a
+            # spelling no probe reproduces; both entry points refuse it, naming it. An unset or empty
+            # PWD is not refused: that rule then does not apply to the adopter's git, and the
+            # inspection stays clean.
+            def clean_both():
+                try:
+                    return (guard.inspect_homes_gitignore(rootl, "init")[:2] == (None, [])
+                            and guard.verify_homes_gitignore_effective(rootl, "init") == [])
+                except guard.WriteGuardError:
+                    return False
+
+            def pwd_unset(thunk):
+                with patch.dict(os.environ):
+                    os.environ.pop("PWD", None)
+                    return thunk()
+
+            include_if("[.]")
+            check("gi-logical-path-relative-pwd", lambda: all(from_dir(rootl, lambda f=f: guard_refuses(
+                lambda: f(rootl, "init"), "the ambient PWD '.' is relative"), pwd=".") for f in (
+                    guard.inspect_homes_gitignore, guard.verify_homes_gitignore_effective)))
+            check("gi-logical-path-pwd-unset-clean", lambda: from_dir(rootl, lambda: pwd_unset(clean_both)))
+            check("gi-logical-path-pwd-empty-clean", lambda: from_dir(rootl, clean_both, pwd=""))
+            include_if(None)
+
+
+# Whether this file is the process entry (python <file>) rather than an imported module (the opf.py
+# aggregate). It is held as a value, so the final block stays the only __main__ guard in the file
+# (tools/check_entry_guard.py) while self_test still routes an entry run through _fail_closed_main.
+_RUN_AS_ENTRY = __name__ == "__main__"
+
+
+def self_test():
+    """The canonical --self-test entry's suite hook (F-SELFTEST-NO-MAIN). Run as this file's process
+    entry (_RUN_AS_ENTRY), it routes the suite through _fail_closed_main, which
+    installs the fault recorders before any in-process load, settles them after the suite, and ends the
+    process with os._exit, so sys.exit(self_test()) never returns and no atexit callback registered by
+    loaded code runs after the verdict. Called in-process (the opf.py aggregate), it runs the suite
+    plainly and returns its result; that aggregate entry is a disclosed residual
+    until the aggregate gains a subprocess-per-unit runner."""
+    if _RUN_AS_ENTRY:
+        _fail_closed_main(_self_test)
+    return _self_test()
+
+
+def _self_test():
+    """Run the vectors behind main()'s cannot-evaluate backstop, so the canonical `--self-test` entry maps an
+    escaping read or parse error to exit 2 exactly as `main(["--self-test"])` does."""
+    try:
+        code = _self_test_vectors()
+    except (OSError, UnicodeError, ValueError, AttributeError) as exc:
+        print("check_opf_homes: cannot evaluate: {}".format(exc), file=sys.stderr)
+        return 2
+    failures = _fault_channel_vectors()
+    for failure in failures:
+        print("check_opf_homes self-test: FAIL: {}".format(failure), file=sys.stderr)
+    return code or (1 if failures else 0)
+
+
+def _self_test_vectors():
+    import _opf_adopt as adopt
+    import _opf_check as doctor
+    import _opf_init as init
+    failures = []
+    checked = 0
+
+    def check(name, thunk):
+        nonlocal checked
+        checked += 1
+        try:
+            if not thunk():
+                failures.append(name)
+        except Exception as exc:  # a reversal must be a named failed check, not a silent skip
+            failures.append("{} ({})".format(name, exc))
+
+    def refuses(thunk):
+        try:
+            thunk()
+        except ValueError:
+            return True
+        return False
+
+    suffix = "-20260917T120000Z-0123456789abcdef"
+    prefixes = {"import": "imp", "ingest": "imp", "adoption": "adopt", "layout": "layout", "preview": "preview"}
+    check("control-boundaries", lambda: boundary_self_test() == 0)
+    check("kinds", lambda: store.STAGING_KINDS == tuple(prefixes))
+    check("homes", lambda: store.STORE_TREE_CONTROL_DIRS == ("imported", "archive", "staging", "journals"))
+    check("reservations", lambda: store.RESERVED_MACHINE_SUBDIRS ==
+          ("imports", "imported", "archive", "staging", "journals"))
+    for constant, expected in (("IMPORTED_REL", ".working/imported"), ("ARCHIVE_REL", ".working/archive"),
+                               ("STAGING_REL", ".working/staging"), ("JOURNALS_REL", ".working/journals")):
+        check(constant, lambda c=constant, e=expected: getattr(store, c) == e)
+    for kind, prefix in prefixes.items():
+        run = prefix + suffix
+        check("stage-" + kind, lambda: store.stage_run(kind, run) == ".working/staging/{}/{}".format(kind, run))
+        check("evidence-" + kind, lambda: store.evidence_run(kind, run) ==
+              ".working/imported/{}/{}".format(kind, run))
+        check("journal-" + kind, lambda: store.journal_root(kind) == ".working/journals/{}/journal".format(kind))
+        check("transaction-" + kind, lambda: store.txn_record(kind, run) ==
+              ".working/journals/{}/runs/{}/transaction.toml".format(kind, run))
+        for bad in (None, [], "", ".", "..", "journal", run + "\n", run + "/x", "x/" + run,
+                    run.upper(), "wrong" + suffix):
+            for function in (store.stage_run, store.evidence_run, store.txn_record):
+                check("run-refusal-{}-{}-{!r}".format(function.__name__, kind, bad),
+                      lambda: refuses(lambda: function(kind, bad)))
+    for bad in (None, [], "", "adopt", "migration", "../import", "import/preview"):
+        check("kind-refusal-{!r}".format(bad), lambda: refuses(lambda: store.journal_root(bad)))
+        for function in (store.stage_run, store.evidence_run, store.txn_record):
+            check("kind-refusal-{}-{!r}".format(function.__name__, bad),
+                  lambda: refuses(lambda: function(bad, "imp" + suffix)))
+    # The journal-only record kind (spec 4.2): journal_root, txn_record and allocation_record admit it;
+    # stage_run, evidence_run and evidence_inventory keep refusing it, so record never gains a staging
+    # or imported home. The paired mutations are exercised in place: dropping record from JOURNAL_KINDS
+    # turns the constructors red, and widening STAGING_KINDS with record (option ii) turns the
+    # staging refusals red.
+    from unittest.mock import patch as _patch
+    record_run = "record" + suffix
+    check("journal-kinds", lambda: store.JOURNAL_KINDS == store.STAGING_KINDS + ("record",))
+    check("journal-record", lambda: store.journal_root("record") == ".working/journals/record/journal")
+    check("transaction-record", lambda: store.txn_record("record", record_run) ==
+          ".working/journals/record/runs/{}/transaction.toml".format(record_run))
+    check("allocation-record", lambda: store.allocation_record("record", record_run) ==
+          ".working/journals/record/allocations/{}.toml".format(record_run))
+    for bad in (None, [], "", "imp" + suffix, "adopt" + suffix, record_run.upper(), record_run + "/x",
+                "record" + suffix.replace("Z", "X")):
+        for function in (store.txn_record, store.allocation_record):
+            check("run-refusal-{}-record-{!r}".format(function.__name__, bad),
+                  lambda function=function, bad=bad: refuses(lambda: function("record", bad)))
+    check("kind-record-no-staging", lambda: refuses(lambda: store.stage_run("record", record_run)))
+    check("kind-record-no-evidence", lambda: refuses(lambda: store.evidence_run("record", record_run)))
+    check("kind-record-no-inventory", lambda: refuses(lambda: store.evidence_inventory("record", record_run)))
+    with _patch.object(store, "JOURNAL_KINDS", store.STAGING_KINDS):
+        check("journal-record-flip-dropped-kind", lambda: refuses(lambda: store.journal_root("record"))
+              and refuses(lambda: store.txn_record("record", record_run))
+              and refuses(lambda: store.allocation_record("record", record_run)))
+    with _patch.object(store, "STAGING_KINDS", store.STAGING_KINDS + ("record",)):
+        check("staging-record-flip-option-ii", lambda: not refuses(lambda: store.stage_run("record", record_run))
+              and not refuses(lambda: store.evidence_run("record", record_run)))
+    # PR-3: the reservation writer on a real store: exclusive, create-only, durable publication. The
+    # reachable on-disk states are nothing, a torn staging leftover, the complete reservation (its
+    # directory entry durable once the publication's final fsync ran), and the complete reservation
+    # plus its shared-inode staging leftover. A later call under the SAME capability retires the
+    # garbage and then completes or refuses deterministically; a call under a NEW capability (what
+    # a retry after a kill holds when it re-enters through acquire_operation; a resumed init
+    # attaches the persisted operation id and so repeats the SAME capability instead) is refused,
+    # and the leftover reservation is the disclosed conservative residual.
+    import os
+    import signal
+    import threading
+    import time
+    import _journal as native_journal
+    import _opf_journal as home_journal
+    import _opf_oplock as oplock
+
+    def reservation_refusal(thunk):
+        try:
+            thunk()
+        except native_journal.JournalError as exc:
+            return str(exc)
+        return None
+
+    def counters_text(table):
+        # A counters.toml the seam reads (spec 8.2): the schema marker and one quoted key per counter.
+        return "schema = 1\n\n[counters]\n" + "".join(
+            "\"{}\" = {}\n".format(key, value) for key, value in table.items())
+
+    with tempfile.TemporaryDirectory(prefix="opf-homes-") as tmp:
+        root = Path(tmp) / "store"
+        machine_dir = root / ".working" / "toml"
+        machine_dir.mkdir(parents=True)
+        # The seam derives each claim above the counters.toml high-water (spec 8.2), so the fixture
+        # carries one; at zero, a demand of n claims exactly n while no other reservation stands.
+        (machine_dir / "counters.toml").write_text(
+            counters_text({"BI": 0, "WL": 0, "imported:BI": 0}), encoding="utf-8")
+        anchor_file = root / "anchor"
+        anchor_file.write_bytes(b"")
+        cap = oplock.OpCapability.__new__(oplock.OpCapability)
+        cap._claim = threading.Lock()
+        cap._claimant = None
+        cap._released = False
+        cap._acquirer_pid = os.getpid()
+        cap._acquirer_pid_start = native_journal._pid_start(os.getpid())
+        cap._anchor_fd = os.open(str(anchor_file), os.O_RDONLY)
+        anchor_st = os.fstat(cap._anchor_fd)
+        cap._anchor_ident = (anchor_st.st_dev, anchor_st.st_ino)
+        machine_st = os.stat(machine_dir)
+        cap._machine_ident = (machine_st.st_dev, machine_st.st_ino)
+        cap.store_root = root
+        cap.machine_rel = ".working/toml"
+        cap.op_id = "held-operation"
+        cap.holder = "fixture"
+        try:
+            target = root / store.allocation_record("record", record_run)
+            # The publication's durable order, asserted on one shared recorded trace: the full
+            # payload write, the file fsync, the exclusive link, the staging retire, the
+            # directory fsync. A mutant that makes os.fsync a no-op during the call leaves no
+            # fsync events and fails here (fix round 1, codex MEDIUM: byte-state checks cannot
+            # see durability).
+            import stat as file_stat
+            events = []
+            real_fsync, real_link, real_unlink = os.fsync, os.link, os.unlink
+            real_write_all = native_journal._write_all
+
+            def recording_fsync(fd):
+                st = os.fstat(fd)
+                events.append(("fsync-dir" if file_stat.S_ISDIR(st.st_mode) else "fsync-file",
+                               st.st_ino))
+                real_fsync(fd)
+
+            def recording_link(src, dst, **kwargs):
+                events.append(("link", src, dst))
+                real_link(src, dst, **kwargs)
+
+            def recording_unlink(name, **kwargs):
+                events.append(("unlink", name))
+                real_unlink(name, **kwargs)
+
+            def recording_write_all(fd, data):
+                events.append(("write", os.fstat(fd).st_ino, len(data)))
+                real_write_all(fd, data)
+
+            with _patch.object(os, "fsync", recording_fsync), \
+                    _patch.object(os, "link", recording_link), \
+                    _patch.object(os, "unlink", recording_unlink), \
+                    _patch.object(native_journal, "_write_all", recording_write_all):
+                payload = home_journal.reserve_allocation(cap, "record", record_run,
+                                                          {"BI": 7, "WL": 12})
+            tail = events[-5:]
+            check("reservation-ordered-durable-publication", lambda: [e[0] for e in tail] ==
+                  ["write", "fsync-file", "link", "unlink", "fsync-dir"]
+                  and tail[0][1] == tail[1][1] == os.stat(target).st_ino
+                  and tail[0][2] == len(payload)
+                  and tail[2][2] == record_run + ".toml" and tail[2][1] == tail[3][1]
+                  and tail[4][1] == os.stat(target.parent).st_ino)
+            check("reservation-on-disk-published", lambda: target.read_bytes() == payload and payload ==
+                  home_journal.reservation_payload("record", record_run, "held-operation", {"WL": 12, "BI": 7}))
+            check("reservation-on-disk-exact-destination",
+                  lambda: sorted(os.listdir(target.parent)) == [record_run + ".toml"])
+            # A repeat call under the SAME capability carrying the exact same claims is answered
+            # idempotently from the read-back entry and re-establishes durability: the containing
+            # directory is flushed again before the payload is returned (fix round 1, claude
+            # MEDIUM-1; fix round 2 wording: the entry may predate a publication failure whose
+            # cleanup could not remove it, so presence alone does not establish durability).
+            flushed = []
+
+            def flush_recorder(fd):
+                flushed.append(os.fstat(fd).st_ino)
+                real_fsync(fd)
+
+            with _patch.object(os, "fsync", flush_recorder):
+                check("reservation-retry-idempotent-durable",
+                      lambda: home_journal.reserve_allocation(
+                          cap, "record", record_run, {"BI": 7, "WL": 12}) == payload
+                      and os.stat(target.parent).st_ino in flushed
+                      and target.read_bytes() == payload)
+            # Different claims refuse with their own message: a refusal never reads as
+            # ownership of the requested numbers.
+            second = reservation_refusal(
+                lambda: home_journal.reserve_allocation(cap, "record", record_run, {"BI": 8}))
+            check("reservation-second-refused", lambda: second is not None and "already exists with different content" in second)
+            check("reservation-second-preserves-bytes", lambda: target.read_bytes() == payload)
+            leftover = target.parent / oplock._staging_name(record_run + ".toml")
+            os.link(target, leftover)
+            third = reservation_refusal(
+                lambda: home_journal.reserve_allocation(cap, "record", record_run, {"BI": 9}))
+            check("reservation-crash-after-link-refused", lambda: third is not None
+                  and "already exists with different content" in third and not leftover.exists()
+                  and os.stat(target).st_nlink == 1 and target.read_bytes() == payload)
+            # The same leftover state, retried by the SAME capability with the SAME claims,
+            # completes idempotently: the shared-inode leftover is retired, the entry read back
+            # and the payload returned. This is also the resumed-init shape (attach_init_lease
+            # re-attaches the persisted operation id): the byte-equal retry is crash repair, safe
+            # because the directory is fsynced before the payload is returned. (A retry under a
+            # fresh acquire_operation capability mints a new op_id and is refused;
+            # reservation-new-capability-refused below shows it.)
+            os.link(target, leftover)
+            check("reservation-leftover-retried-same-capability", lambda: home_journal.reserve_allocation(
+                cap, "record", record_run, {"BI": 7, "WL": 12}) == payload
+                and not leftover.exists() and os.stat(target).st_nlink == 1)
+
+            def fresh_capability():
+                # A second fixture capability on the same store under a NEW operation id (what a retry
+                # after a kill holds when it re-enters through acquire_operation); the caller closes
+                # its anchor descriptor.
+                fresh_cap = oplock.OpCapability.__new__(oplock.OpCapability)
+                fresh_cap._claim = threading.Lock()
+                fresh_cap._claimant = None
+                fresh_cap._released = False
+                fresh_cap._acquirer_pid = os.getpid()
+                fresh_cap._acquirer_pid_start = native_journal._pid_start(os.getpid())
+                fresh_cap._anchor_fd = os.open(str(anchor_file), os.O_RDONLY)
+                fresh_cap._anchor_ident = cap._anchor_ident
+                fresh_cap._machine_ident = cap._machine_ident
+                fresh_cap.store_root = root
+                fresh_cap.machine_rel = ".working/toml"
+                fresh_cap.op_id = "fresh-operation"
+                fresh_cap.holder = "fixture"
+                return fresh_cap
+
+            # A retry after a kill that re-enters through acquire_operation holds a NEW capability (a
+            # fresh op_id per acquisition), and it stays refused: the payload embeds the op_id, so the
+            # bytes differ. It is judged here, while the run's own reservation is the only entry and
+            # counters.toml and the demand are unchanged, so the derivation yields the published claims
+            # again and the operation id alone tells the bytes apart. The killed run's leftover
+            # reservation is the disclosed residual; its numbers stay reserved (conservative). The
+            # byte-equal idempotent answer serves a repeat call under the SAME capability: a plain
+            # repeat, or a resumed init, which attaches the persisted operation id rather than minting
+            # a new one.
+            def new_capability_retry():
+                fresh_cap = fresh_capability()
+                try:
+                    return reservation_refusal(lambda: home_journal.reserve_allocation(
+                        fresh_cap, "record", record_run, {"BI": 7, "WL": 12}))
+                finally:
+                    os.close(fresh_cap._anchor_fd)
+            alone = sorted(os.listdir(target.parent)) == [record_run + ".toml"]
+            fresh = new_capability_retry()
+            check("reservation-new-capability-refused", lambda: alone and fresh is not None
+                  and "already exists with different content" in fresh
+                  and "does not establish that the run holds" in fresh
+                  and target.read_bytes() == payload)
+            # The paired mutation, in place: a payload that does not bind the operation id (the fresh
+            # capability's id replaced by the published one) answers the same retry idempotently, so
+            # the check above turns red on it.
+            real_reservation_payload = home_journal.reservation_payload
+
+            def payload_without_operation(kind, run_id, operation_id, claims):
+                return real_reservation_payload(
+                    kind, run_id, cap.op_id if operation_id == "fresh-operation" else operation_id, claims)
+            with _patch.object(home_journal, "reservation_payload", payload_without_operation):
+                check("reservation-new-capability-flip-unbound-operation",
+                      lambda: new_capability_retry() is None and target.read_bytes() == payload)
+            run2 = "record-20260917T120001Z-0123456789abcdef"
+            torn = target.parent / oplock._staging_name(run2 + ".toml")
+            torn.write_bytes(b"torn")
+            payload2 = home_journal.reserve_allocation(cap, "record", run2, {"BI": 9})
+            # run2 derives above the record_run reservation (BI = 7): 7 + 9.
+            check("reservation-crash-before-link-completes", lambda: not torn.exists()
+                  and (target.parent / (run2 + ".toml")).read_bytes() == payload2
+                  and payload2 == home_journal.reservation_payload(
+                      "record", run2, "held-operation", {"BI": 16}))
+            # Each squat below binds the requesting run's OWN name, which the derivation leaves out
+            # of its scan, so the refusal is the read-back's; the squat is removed after its check,
+            # since any other run's scan refuses a non-reservation entry.
+            run3 = "record-20260917T120002Z-0123456789abcdef"
+            (target.parent / (run3 + ".toml")).mkdir()
+            check("reservation-occupied-refused", lambda: "non-regular entry" in (reservation_refusal(
+                lambda: home_journal.reserve_allocation(cap, "record", run3, {"BI": 1})) or ""))
+            (target.parent / (run3 + ".toml")).rmdir()
+            # A symlink squat cannot be read back through the O_NOFOLLOW non-blocking read
+            # and refuses naming the read-back, never implying held numbers.
+            run4 = "record-20260917T120004Z-0123456789abcdef"
+            os.symlink("elsewhere", target.parent / (run4 + ".toml"))
+            check("reservation-symlink-refused", lambda: "cannot read back" in (reservation_refusal(
+                lambda: home_journal.reserve_allocation(cap, "record", run4, {"BI": 1})) or ""))
+            os.unlink(target.parent / (run4 + ".toml"))
+            # A final name appearing only between the existence check and the exclusive link
+            # (unreachable under the held capability) refuses with the reservation-specific
+            # message, never the oplock anchor-recovery advice (fix round 1, claude MINOR-4).
+            with _patch.object(native_journal, "_lstat_at", lambda pfd, name: None):
+                raced = reservation_refusal(lambda: home_journal.reserve_allocation(
+                    cap, "record", record_run, {"BI": 7, "WL": 12}))
+            check("reservation-link-race-refused", lambda: raced is not None
+                  and "appeared during publication" in raced and "recover=True" not in raced
+                  and os.stat(target).st_nlink == 1 and target.read_bytes() == payload)
+            # The same race where the publication's own cleanup also fails must keep that
+            # cleanup-failure detail in the reservation-specific refusal instead of dropping it
+            # with the oplock advice (fix round 2, claude MINOR-3; strengthened in fix round 3,
+            # codex MEDIUM): the refusal must NAME the actual stranded staging entry and keep the
+            # injected unlink failure, so a mutant dropping the whole carried detail (if kept: to
+            # if False:) and a mutant keeping the marker but dropping the leftover suffix
+            # (message += detail + leftover to message += detail) both go red here. The stranded
+            # leftover is retired as garbage by the next reserving call;
+            # reservation-stranded-leftover-retired below asserts that retirement.
+            def refusing_unlink(entry, **kwargs):
+                raise OSError(5, "injected unlink failure")
+
+            with _patch.object(native_journal, "_lstat_at", lambda pfd, name: None), \
+                    _patch.object(os, "unlink", refusing_unlink):
+                stranded = reservation_refusal(lambda: home_journal.reserve_allocation(
+                    cap, "record", record_run, {"BI": 7, "WL": 12}))
+            stranded_names = [entry for entry in os.listdir(target.parent)
+                              if oplock._is_staging_name(entry, record_run + ".toml")]
+            check("reservation-link-race-keeps-cleanup-detail", lambda: stranded is not None
+                  and "appeared during publication" in stranded
+                  and "could not be cleaned up" in stranded and "recover=True" not in stranded
+                  and len(stranded_names) == 1 and stranded_names[0] in stranded
+                  and "injected unlink failure" in stranded
+                  and target.read_bytes() == payload)
+            # The same new-capability retry once another run's reservation has advanced the BI
+            # high-water (run2 at BI = 16): it is refused as different bytes, the reservation unchanged.
+            # The fresh operation id alone changes the bytes, so this check cannot show that the
+            # derivation moved as well; reservation-new-capability-after-advance-derived-refused below
+            # judges the same retry with the operation id unbound, so only the derivation (16 + 7) can
+            # refuse it.
+            advanced = new_capability_retry()
+            check("reservation-new-capability-after-advance-refused", lambda: advanced is not None
+                  and "already exists with different content" in advanced
+                  and "does not establish that the run holds" in advanced
+                  and target.read_bytes() == payload)
+            # Fix round 3 (claude MINOR, decided assert): the cleanup-detail vector's comment
+            # claimed the stranded leftover is retired as garbage by the next reserving call;
+            # that next call is the after-advance refusal just above, and the retirement is asserted
+            # here rather than claimed, with the reservation keeping its single link.
+            check("reservation-stranded-leftover-retired", lambda: len(stranded_names) == 1
+                  and not (target.parent / stranded_names[0]).exists()
+                  and os.stat(target).st_nlink == 1)
+            # The same advance retried under the SAME capability with the same demand: the operation
+            # id matches, so only the derivation can tell the bytes apart. Another run's reservation
+            # now holds BI at 16, so the repeat derives BI = 16 + 7 and is refused as different bytes,
+            # the reservation unchanged. The paired mutation, in place: a repeat whose derivation
+            # scans no other reservation once the run's own entry exists derives the published claims
+            # again and answers the retry idempotently, so the check turns red on it. The same
+            # mutation under the unbound-operation payload shows the fresh-capability retry above is
+            # refused by the derivation too, not by its operation id alone.
+            real_derive_claims = home_journal._derive_claims
+
+            def derive_without_scan_on_repeat(root_fd, machine_rel, kind, run_id, demand):
+                if not os.path.lexists(root / store.allocation_record(kind, run_id)):
+                    return real_derive_claims(root_fd, machine_rel, kind, run_id, demand)
+                with _patch.object(home_journal, "reservation_high", lambda root_fd, exclude=None: {}):
+                    return real_derive_claims(root_fd, machine_rel, kind, run_id, demand)
+
+            def same_capability_retry():
+                return reservation_refusal(lambda: home_journal.reserve_allocation(
+                    cap, "record", record_run, {"BI": 7, "WL": 12}))
+            advanced_same = same_capability_retry()
+            check("reservation-same-capability-after-advance-refused", lambda: advanced_same is not None
+                  and "already exists with different content" in advanced_same
+                  and "does not establish that the run holds" in advanced_same
+                  and target.read_bytes() == payload)
+            with _patch.object(home_journal, "_derive_claims", derive_without_scan_on_repeat):
+                check("reservation-same-capability-after-advance-flip-scan-omitted",
+                      lambda: same_capability_retry() is None and target.read_bytes() == payload)
+            with _patch.object(home_journal, "reservation_payload", payload_without_operation):
+                derived_refusal = new_capability_retry()
+                check("reservation-new-capability-after-advance-derived-refused",
+                      lambda: derived_refusal is not None
+                      and "already exists with different content" in derived_refusal
+                      and target.read_bytes() == payload)
+                with _patch.object(home_journal, "_derive_claims", derive_without_scan_on_repeat):
+                    check("reservation-new-capability-after-advance-flip-scan-omitted",
+                          lambda: new_capability_retry() is None and target.read_bytes() == payload)
+            # Fix round 2 (claude MINOR-1): a FIFO squatting a reservation name refuses AT ONCE
+            # (the read-back open carries O_NONBLOCK, so a writer-less FIFO cannot block it),
+            # judged in a BOUNDED child: a blocking mutant turns this check red at the deadline
+            # instead of hanging the suite. The child re-binds the fixture capability's acquirer
+            # identity to itself (the fixture equivalent of acquiring in that process) and exits
+            # 7 only on the non-regular-entry refusal.
+            run5 = "record-20260917T120005Z-0123456789abcdef"
+            os.mkfifo(target.parent / (run5 + ".toml"))
+            fifo_child = os.fork()
+            if fifo_child == 0:
+                code = 1
+                try:
+                    cap._acquirer_pid = os.getpid()
+                    cap._acquirer_pid_start = native_journal._pid_start(os.getpid())
+                    squat = reservation_refusal(lambda: home_journal.reserve_allocation(
+                        cap, "record", run5, {"BI": 1}))
+                    if squat is not None and "non-regular entry" in squat:
+                        code = 7
+                except BaseException:
+                    code = 1
+                finally:
+                    os._exit(code)
+            fifo_deadline = time.monotonic() + 30.0
+            fifo_status = None
+            while time.monotonic() < fifo_deadline:
+                waited, raw_status = os.waitpid(fifo_child, os.WNOHANG)
+                if waited == fifo_child:
+                    fifo_status = raw_status
+                    break
+                time.sleep(0.05)
+            if fifo_status is None:
+                os.kill(fifo_child, signal.SIGKILL)
+                os.waitpid(fifo_child, 0)
+            check("reservation-fifo-refused-bounded", lambda s=fifo_status: s is not None
+                  and os.WIFEXITED(s) and os.WEXITSTATUS(s) == 7)
+            os.unlink(target.parent / (run5 + ".toml"))
+            # Fix round 2 (codex MEDIUM-1), reworked in fix round 3 (both reviews, MAJOR):
+            # _project's EXISTING-projection branch restores the same ancestor and
+            # containing-directory durability a fresh publication gets, and it retires staging
+            # garbage BEFORE testing or reading the final entry (reserve_allocation's ordering).
+            # Unlike a reservation, the projection payload derives from the journal's own INTENT
+            # header, so a run killed anywhere inside publication IS retried with byte-identical
+            # bytes (recovery under a fresh capability); the retry must flush, not trust
+            # presence. projection-published pins the fresh publication this builds on;
+            # projection-complete-retry-flushes is the durability discriminator over a COMPLETE
+            # publication (red when the existing branch returns without the flushes);
+            # projection-staging-crash-retry-recovers builds the partial-publication crash state
+            # and is red on the pre-fix _project.
+            proj_run = "record-20260917T120006Z-0123456789abcdef"
+            proj_frames = [
+                (native_journal.F_INTENT, dict(txn=proj_run, header=dict(
+                    kind="record", run_id=proj_run, operation_id="journal-operation"), ops=[])),
+                (native_journal.F_COMPLETE, dict(txn=proj_run))]
+            proj_rel = store.txn_record("record", proj_run)
+            proj_parts = proj_rel.split("/")
+            proj_target = root / proj_rel
+            proj_root_fd = store._open_root_fd(root)
+            try:
+                with _patch.object(home_journal, "_existing_frames", return_value=proj_frames):
+                    home_journal._project(proj_root_fd, -1, root / "unused", "record", proj_run)
+                    proj_payload = home_journal.projection_payload(
+                        "record", proj_run, "complete", "journal-operation")
+                    check("projection-published", lambda: proj_target.read_bytes() == proj_payload)
+                    proj_flushed = []
+
+                    def projection_flush_recorder(fd):
+                        proj_flushed.append(os.fstat(fd).st_ino)
+                        real_fsync(fd)
+
+                    with _patch.object(os, "fsync", projection_flush_recorder):
+                        retried = home_journal._project(proj_root_fd, -1, root / "unused",
+                                                        "record", proj_run)
+                    proj_ancestors = [os.stat(root).st_ino] + [
+                        os.stat(root.joinpath(*proj_parts[:depth])).st_ino
+                        for depth in range(1, len(proj_parts))]
+                    check("projection-complete-retry-flushes", lambda: retried is None
+                          and proj_target.read_bytes() == proj_payload
+                          and all(ino in proj_flushed for ino in proj_ancestors))
+                    # Fix round 3 (both reviews, MAJOR): the crash state a kill between the
+                    # exclusive link and the staging retire leaves is the complete projection
+                    # PLUS its shared-inode staging leftover (link count 2). The retry must
+                    # retire the leftover, accept the byte-equal projection unchanged, leave a
+                    # single link and flush the directory; the pre-fix _project read the final
+                    # entry first and refused its second link on every retry; that refusal
+                    # lands here as a red check through reservation_refusal, never an escaping
+                    # cannot-evaluate.
+                    proj_staging = proj_target.parent / oplock._staging_name(proj_target.name)
+                    os.link(proj_target, proj_staging)
+                    crash_flushed = []
+
+                    def crash_flush_recorder(fd):
+                        crash_flushed.append(os.fstat(fd).st_ino)
+                        real_fsync(fd)
+
+                    with _patch.object(os, "fsync", crash_flush_recorder):
+                        crash_retried = reservation_refusal(lambda: home_journal._project(
+                            proj_root_fd, -1, root / "unused", "record", proj_run))
+                    check("projection-staging-crash-retry-recovers",
+                          lambda: crash_retried is None
+                          and not proj_staging.exists()
+                          and proj_target.read_bytes() == proj_payload
+                          and os.stat(proj_target).st_nlink == 1
+                          and os.stat(proj_target.parent).st_ino in crash_flushed
+                          and all(ino in crash_flushed for ino in proj_ancestors))
+            finally:
+                os.close(proj_root_fd)
+            cap._released = True
+            check("reservation-released-refused", lambda: reservation_refusal(
+                lambda: home_journal.reserve_allocation(
+                    cap, "record", "record-20260917T120003Z-0123456789abcdef", {"BI": 1})) is not None)
+        finally:
+            os.close(cap._anchor_fd)
+
+    # The spec 8.2 next-ID rule inside the seam: every call derives its claims under the held
+    # capability from counters.toml and every other reservation of every journal kind, so runs that
+    # each ask for one id never share it, and an input the derivation cannot read and validate
+    # refuses with nothing written (no reservation and no directory). Each case runs on a store of
+    # its own (derivation_store), with a fixture capability built as above.
+    import contextlib
+    import errno
+
+    @contextlib.contextmanager
+    def derivation_store(table, op_id="derive-operation"):
+        with tempfile.TemporaryDirectory(prefix="opf-homes-derive-") as derive_tmp:
+            store_root = Path(derive_tmp) / "store"
+            machine = store_root / ".working" / "toml"
+            machine.mkdir(parents=True)
+            if table is not None:
+                (machine / "counters.toml").write_text(counters_text(table), encoding="utf-8")
+            (store_root / "anchor").write_bytes(b"")
+            held = oplock.OpCapability.__new__(oplock.OpCapability)
+            held._claim = threading.Lock()
+            held._claimant = None
+            held._released = False
+            held._acquirer_pid = os.getpid()
+            held._acquirer_pid_start = native_journal._pid_start(os.getpid())
+            held._anchor_fd = os.open(str(store_root / "anchor"), os.O_RDONLY)
+            try:
+                anchor_ident = os.fstat(held._anchor_fd)
+                held._anchor_ident = (anchor_ident.st_dev, anchor_ident.st_ino)
+                machine_ident = os.stat(machine)
+                held._machine_ident = (machine_ident.st_dev, machine_ident.st_ino)
+                held.store_root = store_root
+                held.machine_rel = ".working/toml"
+                held.op_id = op_id
+                held.holder = "fixture"
+                yield store_root, held
+            finally:
+                os.close(held._anchor_fd)
+
+    def derive_run(kind, number):
+        return "{}-20260918T{:06d}Z-0123456789abcdef".format(store._HOME_RUN_PREFIXES[kind], number)
+
+    def derived(held, kind, run_id, demand, claims):
+        # The call publishes exactly the canonical reservation of `claims` (and nothing else is judged).
+        return home_journal.reserve_allocation(held, kind, run_id, demand) == \
+            home_journal.reservation_payload(kind, run_id, held.op_id, claims)
+
+    def set_counters(store_root, table):
+        (store_root / ".working" / "toml" / "counters.toml").write_text(counters_text(table), encoding="utf-8")
+
+    def refused_unwritten(store_root, thunk, *needles):
+        # A refusal naming every needle, with no journals directory created at all.
+        message = reservation_refusal(thunk)
+        return (message is not None and all(needle in message for needle in needles)
+                and not (store_root / ".working" / "journals").exists())
+
+    def five_sequential():
+        with derivation_store({"BI": 0, "WL": 0}) as (derive_root, held):
+            runs = [derive_run("record", n) for n in range(1, 6)]
+            ok = all(derived(held, "record", r, {"BI": 1}, {"BI": n}) for n, r in enumerate(runs, 1))
+            home = derive_root / ".working" / "journals" / "record" / "allocations"
+            return ok and sorted(os.listdir(home)) == sorted(r + ".toml" for r in runs)
+    check("reservation-five-sequential-distinct", five_sequential)
+
+    def counter_high_water():
+        with derivation_store({"BI": 40, "WL": 0}) as (_derive_root, held):
+            return derived(held, "record", derive_run("record", 1), {"BI": 1}, {"BI": 41})
+    check("reservation-counter-high-water-respected", counter_high_water)
+
+    def counter_versus_reservations():
+        with derivation_store({"BI": 3}) as (derive_root, held):
+            planted = derived(held, "record", derive_run("record", 1), {"BI": 7}, {"BI": 10})
+            above_reservation = derived(held, "record", derive_run("record", 2), {"BI": 1}, {"BI": 11})
+            set_counters(derive_root, {"BI": 20})
+            above_counter = derived(held, "record", derive_run("record", 3), {"BI": 1}, {"BI": 21})
+            return planted and above_reservation and above_counter
+    check("reservation-max-counter-vs-reservations", counter_versus_reservations)
+
+    def cross_kind():
+        with derivation_store({"BI": 0}) as (derive_root, held):
+            imported_run = derive_run("import", 1)
+            planted = derived(held, "import", imported_run, {"BI": 10}, {"BI": 10})
+            before = (derive_root / store.allocation_record("import", imported_run)).read_bytes()
+            above = derived(held, "record", derive_run("record", 2), {"BI": 1}, {"BI": 11})
+            return planted and above and (
+                derive_root / store.allocation_record("import", imported_run)).read_bytes() == before
+    check("reservation-cross-kind-scan", cross_kind)
+
+    def series_independent():
+        with derivation_store({"BI": 0, "imported:BI": 0}) as (derive_root, held):
+            planted = derived(held, "import", derive_run("import", 1), {"imported:BI": 50},
+                              {"imported:BI": 50})
+            clean = derived(held, "record", derive_run("record", 2), {"BI": 1}, {"BI": 1})
+            set_counters(derive_root, {"BI": 0, "imported:BI": 5})
+            imported = derived(held, "import", derive_run("import", 3), {"imported:BI": 1},
+                               {"imported:BI": 51})
+            return planted and clean and imported
+    check("reservation-series-independent", series_independent)
+
+    def foreign_garbage():
+        with derivation_store({"BI": 0}) as (derive_root, held):
+            home = derive_root / ".working" / "journals" / "record" / "allocations"
+            home.mkdir(parents=True)
+            leftover = home / oplock._staging_name(derive_run("record", 9) + ".toml")
+            leftover.write_bytes(b"torn")
+            return derived(held, "record", derive_run("record", 1), {"BI": 1}, {"BI": 1}) \
+                and leftover.read_bytes() == b"torn"
+    check("reservation-foreign-garbage-skipped", foreign_garbage)
+
+    foreign_run = derive_run("import", 7)
+    foreign_name = foreign_run + ".toml"
+    foreign_canonical = home_journal.reservation_payload("import", foreign_run, "op", {"BI": 1})
+
+    @contextlib.contextmanager
+    def unreadable_foreign():
+        real_open = os.open
+
+        def opening(path, flags, *args, **kwargs):
+            if path == foreign_name and kwargs.get("dir_fd") is not None:
+                raise PermissionError(errno.EACCES, "synthetic unreadable reservation", path)
+            return real_open(path, flags, *args, **kwargs)
+        with _patch.object(os, "open", opening), \
+                _patch.object(os, "supports_dir_fd", set(os.supports_dir_fd) | {opening}):
+            yield
+
+    # Each bad entry stands in the import kind's home, so the refused record run must leave its own
+    # home uncreated: nothing written, not even a directory.
+    for label, name, plant, needle in (
+            ("nonregular", foreign_name, lambda p: p.mkdir(), "is not a regular file"),
+            ("malformed", foreign_name, lambda p: p.write_bytes(b"not toml ["), "is malformed"),
+            ("misnamed", "junk.txt", lambda p: p.write_bytes(b"x"), "is not an id reservation"),
+            ("conflicting", foreign_name, lambda p: p.write_bytes(home_journal.reservation_payload(
+                "ingest", foreign_run, "op", {"BI": 1})), "conflicts with the exact canonical reservation"),
+            ("unreadable", foreign_name, lambda p: p.write_bytes(foreign_canonical),
+             "synthetic unreadable reservation")):
+        def foreign_refused(name=name, plant=plant, needle=needle, label=label):
+            with derivation_store({"BI": 0}) as (derive_root, held):
+                home = derive_root / ".working" / "journals" / "import" / "allocations"
+                home.mkdir(parents=True)
+                plant(home / name)
+                with unreadable_foreign() if label == "unreadable" else contextlib.nullcontext():
+                    message = reservation_refusal(lambda: home_journal.reserve_allocation(
+                        held, "record", derive_run("record", 1), {"BI": 1}))
+                return (message is not None and needle in message
+                        and not (derive_root / ".working" / "journals" / "record").exists())
+        check("reservation-foreign-{}-refused".format(label), foreign_refused)
+
+    # A symlinked, oversized or FIFO reservation of another run refuses through the seam's own scan too
+    # (the run's own name is the read-back's, tested above), each paired in place with the mutation it
+    # discriminates. The symlink points at a file holding that run's exact canonical payload, so only
+    # the no-follow open refuses it; the oversized entry is that canonical payload under an 8-byte read
+    # cap, so only the cap refuses it.
+    def planted_foreign(derive_root, plant):
+        # One import-kind entry planted under another run's name; the record kind's home stays absent.
+        home = derive_root / ".working" / "journals" / "import" / "allocations"
+        home.mkdir(parents=True)
+        plant(derive_root, home / foreign_name)
+
+    def foreign_attempt(derive_root, held):
+        # The record run's reservation call over the planted entry: its refusal (None when it
+        # reserved) and whether the record kind's home stayed uncreated.
+        message = reservation_refusal(lambda: home_journal.reserve_allocation(
+            held, "record", derive_run("record", 1), {"BI": 1}))
+        return message, not (derive_root / ".working" / "journals" / "record").exists()
+
+    def plant_foreign_symlink(derive_root, path):
+        (derive_root / "elsewhere.toml").write_bytes(foreign_canonical)
+        os.symlink(str(derive_root / "elsewhere.toml"), path)
+
+    def plant_foreign_canonical(derive_root, path):
+        path.write_bytes(foreign_canonical)
+
+    real_read_fd = native_journal._read_fd
+    for label, plant, needle, context, mutant in (
+            ("symlink", plant_foreign_symlink, "cannot read the id reservation", contextlib.nullcontext,
+             lambda: _patch.object(os, "O_NOFOLLOW", 0)),
+            ("oversize", plant_foreign_canonical, "exceeds the 8-byte read cap",
+             lambda: _patch.object(native_journal, "_MAX_PRODUCT_READ_BYTES", 8),
+             lambda: _patch.object(native_journal, "_read_fd",
+                                   lambda fd, cap=None, stop_at_cap=False: real_read_fd(fd)))):
+        def foreign_seam(plant=plant, context=context, mutant=contextlib.nullcontext):
+            with derivation_store({"BI": 0}) as (derive_root, held):
+                planted_foreign(derive_root, plant)
+                with context(), mutant():
+                    return foreign_attempt(derive_root, held)
+
+        def foreign_seam_refused(seam=foreign_seam, needle=needle):
+            message, untouched = seam()
+            return message is not None and foreign_name in message and needle in message and untouched
+        check("reservation-foreign-{}-refused".format(label), foreign_seam_refused)
+        check("reservation-foreign-{}-flip-admitted".format(label), lambda seam=foreign_seam, m=mutant:
+              seam(mutant=m)[0] is None)
+
+    def bounded_child(thunk, deadline):
+        # Run `thunk` in a forked child of this process that exits 7 only when it returns True:
+        # "passed" for that exit within `deadline` seconds, "timed-out" for a child still running at
+        # the deadline (this test's own, killed and reaped), and "failed" for any other end.
+        pid = os.fork()
+        if pid == 0:
+            code = 1
+            try:
+                if thunk():
+                    code = 7
+            except BaseException:
+                code = 1
+            finally:
+                os._exit(code)
+        end = time.monotonic() + deadline
+        status = None
+        while time.monotonic() < end:
+            waited, raw_status = os.waitpid(pid, os.WNOHANG)
+            if waited == pid:
+                status = raw_status
+                break
+            time.sleep(0.05)
+        if status is None:
+            os.kill(pid, signal.SIGKILL)
+            os.waitpid(pid, 0)
+            return "timed-out"
+        return "passed" if os.WIFEXITED(status) and os.WEXITSTATUS(status) == 7 else "failed"
+
+    # A FIFO reservation of another run refuses AT ONCE (the scan's read opens non-blocking), judged in
+    # a bounded child; the paired mutation, a blocking open, is judged under a short deadline and must
+    # block until it. The store is built and removed by this process; the child only makes the call,
+    # re-binding the fixture capability's acquirer identity to itself.
+    def foreign_fifo(blocking, deadline):
+        with derivation_store({"BI": 0}) as (derive_root, held):
+            planted_foreign(derive_root, lambda _root, path: os.mkfifo(path))
+
+            def attempt():
+                held._acquirer_pid = os.getpid()
+                held._acquirer_pid_start = native_journal._pid_start(os.getpid())
+                with _patch.object(os, "O_NONBLOCK", 0) if blocking else contextlib.nullcontext():
+                    message, untouched = foreign_attempt(derive_root, held)
+                return (message is not None and foreign_name in message
+                        and "is not a regular file" in message and untouched)
+            return bounded_child(attempt, deadline)
+    check("reservation-foreign-fifo-refused", lambda: foreign_fifo(False, 30.0) == "passed")
+    check("reservation-foreign-fifo-flip-blocking", lambda: foreign_fifo(True, 3.0) == "timed-out")
+
+    # Every counters.toml the derivation cannot read and validate refuses, naming the file, with
+    # nothing written; an absent counter is never read as 0.
+    def plant_symlink(machine):
+        (machine / "counters-real.toml").write_text(counters_text({"BI": 0}), encoding="utf-8")
+        os.symlink("counters-real.toml", machine / "counters.toml")
+
+    def plant_hardlink(machine):
+        (machine / "counters.toml").write_text(counters_text({"BI": 0}), encoding="utf-8")
+        os.link(machine / "counters.toml", machine / "counters-second.toml")
+
+    def plant_bytes(data):
+        return lambda machine: (machine / "counters.toml").write_bytes(data)
+
+    oversize = _patch.object(native_journal, "_MAX_PRODUCT_READ_BYTES", 8)
+    for label, plant, needle, context in (
+            ("absent", lambda machine: None, "[Errno {}]".format(errno.ENOENT), None),
+            ("symlink", plant_symlink, "cannot read", None),
+            ("hardlink", plant_hardlink, "hard links", None),
+            ("not-toml", plant_bytes(b"not toml ["), "is malformed", None),
+            ("not-utf8", plant_bytes(b"\xff\xfe"), "is malformed", None),
+            ("no-schema", plant_bytes(b"[counters]\nBI = 0\n"), "schema marker", None),
+            ("unknown-key", plant_bytes(b"schema = 1\nextra = 1\n\n[counters]\nBI = 0\n"),
+             "unknown top-level key", None),
+            ("key-absent", plant_bytes(b"schema = 1\n\n[counters]\nWL = 0\n"), "no high-water for BI", None),
+            ("bool", plant_bytes(b"schema = 1\n\n[counters]\nBI = true\n"), "non-negative integer", None),
+            ("negative", plant_bytes(b"schema = 1\n\n[counters]\nBI = -1\n"), "non-negative integer", None),
+            ("non-table", plant_bytes(b"schema = 1\ncounters = 1\n"), "is not a table", None),
+            ("oversize", plant_bytes(counters_text({"BI": 0}).encode()), "read cap", oversize)):
+        def counters_refused(plant=plant, needle=needle, context=context):
+            with derivation_store(None) as (derive_root, held):
+                plant(derive_root / ".working" / "toml")
+                with context if context is not None else contextlib.nullcontext():
+                    return refused_unwritten(derive_root, lambda: home_journal.reserve_allocation(
+                        held, "record", derive_run("record", 1), {"BI": 1}), "counters.toml", needle)
+        check("reservation-counters-{}-refused".format(label), counters_refused)
+
+    # A FIFO at counters.toml refuses AT ONCE (the read opens non-blocking), judged in a BOUNDED child
+    # that exits 7 only on that refusal with nothing written; a blocking read turns this red at the
+    # deadline instead of hanging the suite.
+    with derivation_store(None) as (derive_root, held):
+        os.mkfifo(derive_root / ".working" / "toml" / "counters.toml")
+        counters_child = os.fork()
+        if counters_child == 0:
+            code = 1
+            try:
+                held._acquirer_pid = os.getpid()
+                held._acquirer_pid_start = native_journal._pid_start(os.getpid())
+                if refused_unwritten(derive_root, lambda: home_journal.reserve_allocation(
+                        held, "record", derive_run("record", 1), {"BI": 1}),
+                        "counters.toml", "not a regular file"):
+                    code = 7
+            except BaseException:
+                code = 1
+            finally:
+                os._exit(code)
+        counters_deadline = time.monotonic() + 30.0
+        counters_status = None
+        while time.monotonic() < counters_deadline:
+            waited, raw_status = os.waitpid(counters_child, os.WNOHANG)
+            if waited == counters_child:
+                counters_status = raw_status
+                break
+            time.sleep(0.05)
+        if counters_status is None:
+            os.kill(counters_child, signal.SIGKILL)
+            os.waitpid(counters_child, 0)
+        check("reservation-counters-fifo-refused", lambda s=counters_status: s is not None
+              and os.WIFEXITED(s) and os.WEXITSTATUS(s) == 7)
+
+    # A counters.toml that cannot be opened, and one whose open succeeds but whose read fails, each
+    # refuse naming the file with nothing written. The paired mutation, in place, reads a counters
+    # file the derivation cannot read as a zero high-water, which reserves instead.
+    @contextlib.contextmanager
+    def unreadable_counters(fault):
+        real_open, real_read = os.open, os.read
+        counters_fds = set()
+
+        def opening(path, flags, *args, **kwargs):
+            if path == "counters.toml" and kwargs.get("dir_fd") is not None:
+                if fault == "open":
+                    raise PermissionError(errno.EACCES, "synthetic unopenable counters", path)
+                fd = real_open(path, flags, *args, **kwargs)
+                counters_fds.add(fd)
+                return fd
+            return real_open(path, flags, *args, **kwargs)
+
+        def reading(fd, length):
+            if fd in counters_fds:
+                raise OSError(errno.EIO, "synthetic unreadable counters")
+            return real_read(fd, length)
+        with _patch.object(os, "open", opening), \
+                _patch.object(os, "supports_dir_fd", set(os.supports_dir_fd) | {opening}), \
+                _patch.object(os, "read", reading):
+            yield
+
+    def counters_read_as_zero():
+        real_counter_high = home_journal._counter_high
+
+        def zero_when_unreadable(root_fd, machine_rel, keys):
+            try:
+                return real_counter_high(root_fd, machine_rel, keys)
+            except native_journal.JournalError as exc:
+                if str(exc).startswith("cannot read "):
+                    return {key: 0 for key in keys}
+                raise
+        return _patch.object(home_journal, "_counter_high", zero_when_unreadable)
+
+    for fault, needle in (("open", "synthetic unopenable counters"), ("read", "synthetic unreadable counters")):
+        def counters_fault(fault=fault, needle=needle):
+            with derivation_store({"BI": 0}) as (derive_root, held), unreadable_counters(fault):
+                return refused_unwritten(derive_root, lambda: home_journal.reserve_allocation(
+                    held, "record", derive_run("record", 1), {"BI": 1}), "counters.toml", needle)
+
+        def counters_fault_flipped(fault=fault):
+            with derivation_store({"BI": 0}) as (_derive_root, held), counters_read_as_zero(), \
+                    unreadable_counters(fault):
+                return derived(held, "record", derive_run("record", 1), {"BI": 1}, {"BI": 1})
+        check("reservation-counters-unreadable-{}-refused".format(fault), counters_fault)
+        check("reservation-counters-unreadable-{}-flip-read-as-zero".format(fault), counters_fault_flipped)
+
+    # The exhaustion boundary (2**63 - 1, the largest value a reservation carries): just inside, at,
+    # and just outside it, plus a counter already at and above it.
+    top = 2 ** 63 - 1
+    for label, counter, demand, claim in (("inside", top - 2, 1, top - 1), ("at", top - 2, 2, top),
+                                          ("outside", top - 2, 3, None), ("full", top, 1, None),
+                                          ("above-range", top + 1, 1, None)):
+        def exhaustion(counter=counter, demand=demand, claim=claim):
+            with derivation_store({"BI": counter}) as (derive_root, held):
+                run_id = derive_run("record", 1)
+                if claim is not None:
+                    return derived(held, "record", run_id, {"BI": demand}, {"BI": claim})
+                return refused_unwritten(derive_root, lambda: home_journal.reserve_allocation(
+                    held, "record", run_id, {"BI": demand}), "range is used up")
+        check("reservation-exhaustion-" + label, exhaustion)
+
+    # A repeat under the same capability derives again: once counters.toml has advanced, the derived
+    # claims differ from the published ones, so the repeat is refused as different bytes and the
+    # reservation stands unchanged.
+    def repeat_after_advance():
+        with derivation_store({"BI": 0}) as (derive_root, held):
+            run_id = derive_run("record", 1)
+            first = derived(held, "record", run_id, {"BI": 1}, {"BI": 1})
+            published = (derive_root / store.allocation_record("record", run_id)).read_bytes()
+            set_counters(derive_root, {"BI": 5})
+            message = reservation_refusal(lambda: home_journal.reserve_allocation(
+                held, "record", run_id, {"BI": 1}))
+            return first and message is not None and "already exists with different content" in message \
+                and (derive_root / store.allocation_record("record", run_id)).read_bytes() == published
+    check("reservation-repeat-after-counter-advance-refused", repeat_after_advance)
+
+    # A repeat under the same capability after changes that leave the demanded key's maximum where it
+    # was derives the published claims again and is answered from the read-back entry. Another run's
+    # reservation holds BI at 5 and this run's at 6 (demand 1); then counters.toml raises BI to a value
+    # just inside or exactly at that reservation (4, 5) and raises WL, a key this run does not demand,
+    # to 9, above that maximum, and a third run reserves WL. Just outside (BI at 6) the maximum moves
+    # and the repeat is refused as different bytes. The reservation stays unchanged in every case. The
+    # paired mutation, in place: a counters base taken over every key the file carries, not the
+    # demanded key's own, derives above WL and refuses the repeat at the unchanged maximum.
+    def repeat_unchanged_maximum(counter):
+        # The repeat's outcome ("answered" when it returns the published payload, else its refusal
+        # text, None when the setup failed) and whether the reservation bytes stayed unchanged.
+        with derivation_store({"BI": 0, "WL": 0}) as (derive_root, held):
+            run_id = derive_run("record", 2)
+            planted = derived(held, "record", derive_run("record", 1), {"BI": 5}, {"BI": 5})
+            first = derived(held, "record", run_id, {"BI": 1}, {"BI": 6})
+            published = (derive_root / store.allocation_record("record", run_id)).read_bytes()
+            set_counters(derive_root, {"BI": counter, "WL": 9})
+            third = derived(held, "record", derive_run("record", 3), {"WL": 1}, {"WL": 10})
+            if not (planted and first and third):
+                return None, False
+            try:
+                outcome = "answered" if home_journal.reserve_allocation(
+                    held, "record", run_id, {"BI": 1}) == published else "other bytes"
+            except native_journal.JournalError as exc:
+                outcome = str(exc)
+            unchanged = (derive_root / store.allocation_record("record", run_id)).read_bytes() == published
+            return outcome, unchanged
+
+    def repeat_answered(counter):
+        outcome, unchanged = repeat_unchanged_maximum(counter)
+        return outcome == "answered" and unchanged
+
+    def counters_any_key():
+        real_counter_high = home_journal._counter_high
+
+        def highest_of_every_key(root_fd, machine_rel, keys):
+            # The fixture's counters.toml carries exactly BI and WL.
+            high = real_counter_high(root_fd, machine_rel, keys)
+            top = max(real_counter_high(root_fd, machine_rel, ["BI", "WL"]).values())
+            return {key: max(value, top) for key, value in high.items()}
+        return _patch.object(home_journal, "_counter_high", highest_of_every_key)
+
+    check("reservation-repeat-unchanged-maximum-inside-answered", lambda: repeat_answered(4))
+    check("reservation-repeat-unchanged-maximum-at-answered", lambda: repeat_answered(5))
+
+    def repeat_refused(counter):
+        outcome, unchanged = repeat_unchanged_maximum(counter)
+        return outcome is not None and "already exists with different content" in outcome and unchanged
+    check("reservation-repeat-moved-maximum-outside-refused", lambda: repeat_refused(6))
+    with counters_any_key():
+        check("reservation-repeat-unchanged-maximum-flip-any-key", lambda: repeat_refused(5))
+
+    # PR-3 fix round 1 (codex MAJOR), reworked in fix round 2 (codex MEDIUM-2): ensure_journal_dirs
+    # makes each component entry durable on EVERY call. mkdir and fsync are recorded on ONE shared
+    # trace per boundary; the injected fsync failure is BOUND to an observed creation (the first
+    # fsync at or after the boundary-th mkdir), the interrupted attempt stops there, and the clean
+    # retry runs on the same trace. journal-dirs-fsync-fault-N requires the injection to have fired
+    # after exactly N creations (setup plus that binding; all four also pass on the pre-fix
+    # helper). journal-dirs-created-then-flushed-N (discriminator) requires EVERY observed creation
+    # to be followed by a flush of its parent directory, so a mutant that fsyncs each parent BEFORE
+    # looking up or creating its child (the same inode set, the wrong order) goes red here, and at
+    # the last boundary in the fault check itself (no fsync follows the final mkdir, so its
+    # injection never fires). journal-dirs-retry-flushes-ancestors-N (discriminator) requires the
+    # clean retry to flush every ancestor again, red when the helper flushes only on creation: the
+    # components the interrupted attempt created exist, but presence cannot stand in for
+    # durability. The same shared helper serves _opened and _project; the projection vectors above
+    # exercise its _project caller on a real store.
+    journal_rel = ".working/journals/record/allocations"
+    components = journal_rel.split("/")
+    for boundary in range(1, len(components) + 1):
+        with tempfile.TemporaryDirectory(prefix="opf-homes-") as faulty:
+            dir_fd = os.open(faulty, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                native_fsync, native_mkdir = os.fsync, os.mkdir
+                trace = []
+                state = {"mkdirs": 0, "injected": None}
+
+                def recording_mkdir(entry, mode=0o777, *, dir_fd=None, _trace=trace, _state=state):
+                    native_mkdir(entry, mode, dir_fd=dir_fd)
+                    _state["mkdirs"] += 1
+                    _trace.append(("mkdir", os.fstat(dir_fd).st_ino, entry))
+
+                def bound_failing_fsync(fd, _stop=boundary, _trace=trace, _state=state):
+                    ino = os.fstat(fd).st_ino
+                    if _state["injected"] is None and _state["mkdirs"] >= _stop:
+                        _state["injected"] = len(_trace)
+                        _trace.append(("fsync-injected-failure", ino))
+                        raise OSError(5, "injected fsync failure")
+                    _trace.append(("fsync", ino))
+                    native_fsync(fd)
+
+                def interrupted():
+                    try:
+                        native_journal.ensure_journal_dirs(dir_fd, journal_rel)
+                    except OSError:
+                        return True
+                    return False
+
+                with _patch.object(os, "fsync", bound_failing_fsync), \
+                        _patch.object(os, "mkdir", recording_mkdir):
+                    was_interrupted = interrupted()
+                    # The clean retry, guarded: a mutant whose injection fires only here (the
+                    # fsync-before-mkdir order leaves no fsync after the last boundary's mkdir)
+                    # must land as red checks below, not as an escaping cannot-evaluate.
+                    retry_interrupted = interrupted()
+                events = list(trace)
+                injected_at = state["injected"]
+                check("journal-dirs-fsync-fault-{}".format(boundary),
+                      lambda w=was_interrupted, i=injected_at, e=events: w and i is not None
+                      and sum(1 for ev in e[:i] if ev[0] == "mkdir") == boundary)
+                check("journal-dirs-created-then-flushed-{}".format(boundary),
+                      lambda e=events: all(
+                          any(later[0] == "fsync" and later[1] == ev[1] for later in e[idx + 1:])
+                          for idx, ev in enumerate(e) if ev[0] == "mkdir"))
+                ancestors = [os.stat(faulty).st_ino] + [
+                    os.stat(os.path.join(faulty, *components[:depth])).st_ino
+                    for depth in range(1, len(components))]
+                retried_flushes = [] if injected_at is None else [
+                    ev[1] for ev in events[injected_at + 1:] if ev[0] == "fsync"]
+                check("journal-dirs-retry-flushes-ancestors-{}".format(boundary),
+                      lambda a=ancestors, f=retried_flushes, r=retry_interrupted:
+                      not r and all(ino in f for ino in a))
+            finally:
+                os.close(dir_fd)
+
+    run = "adopt" + suffix
+    for path in ("notes/a.md", "adoption/a.md", "space name.txt", "\u00e9.txt"):
+        check("move-" + path, lambda: store.moved_dest(path) == ".working/archive/moved/" + path)
+        check("preimage-" + path, lambda: store.retire_preimage(run, path) ==
+              ".working/archive/adoption/{}/{}".format(run, path))
+        check("file-owner-" + path, lambda: adopt._is_contained_filepath(path))
+    for bad in (None, [], "", "/", ".", "..", "./a", "a/../b", "a//b", "a/", "/a", "C:a",
+                "a\\b", "a\x00b", "a\nb", "a\x7fb", "a\x85b", "a\u2028b", "a\u2029b"):
+        check("move-refusal-{!r}".format(bad), lambda: refuses(lambda: store.moved_dest(bad)))
+        check("preimage-refusal-{!r}".format(bad), lambda: refuses(lambda: store.retire_preimage(run, bad)))
+        check("file-owner-refusal-{!r}".format(bad), lambda: not adopt._is_contained_filepath(bad))
+    check("preimage-run-refusal", lambda: refuses(lambda: store.retire_preimage("imp" + suffix, "a")))
+    check("import-grammar-owner", lambda: re.compile("^imp" + store._HOME_RUN_SUFFIX + r"\Z").pattern ==
+          adopt._IMPORT_RUN_ID_RE.pattern)
+    check("adoption-grammar-owner", lambda: re.compile("^adopt" + store._HOME_RUN_SUFFIX + r"\Z").pattern ==
+          adopt._RUN_ID_RE.pattern)
+    import_run = "imp" + suffix
+    check("inventory-first", lambda: store.evidence_inventory("import", import_run) ==
+          ".working/imported/import/{}/inventory.toml".format(import_run))
+    check("inventory-phase", lambda: store.evidence_inventory("import", import_run, "evidence") ==
+          ".working/imported/import/{}/inventory-evidence.toml".format(import_run))
+    for bad in ("", "Evidence", "1st", "a/b", "a" * 33, 5, []):
+        check("inventory-phase-refusal-{!r}".format(bad),
+              lambda: refuses(lambda: store.evidence_inventory("import", import_run, bad)))
+    check("inventory-run-refusal", lambda: refuses(lambda: store.evidence_inventory("import", "adopt" + suffix)))
+
+    # Real discovery, including an arbitrary custom machine name. Only the opf token is a match: a manifest
+    # whose base table declares the retired devprocess token is no match under any machine name.
+    with tempfile.TemporaryDirectory(prefix="opf-homes-") as tmp:
+        for token in (store.STANDARD_TOKEN, "devprocess"):
+            for name in ("imports", "imported", "archive", "staging", "journals", "toml", "custom"):
+                root = Path(tmp) / token / name
+                machine = root / ".working" / name
+                machine.mkdir(parents=True)
+                (machine / "manifest.toml").write_text(
+                    '[{}]\nstandard = "{}"\n'.format(token, token), encoding="utf-8")
+                fd = store._open_root_fd(root)
+                try:
+                    def discovery():
+                        try:
+                            status, found, _ = store.discover_machine_store(fd, root)
+                        except store.StoreError:
+                            return (token == store.STANDARD_TOKEN
+                                    and name in ("imports", "imported", "archive", "staging", "journals"))
+                        if token != store.STANDARD_TOKEN:
+                            return status == "present" and found is None
+                        return name in ("toml", "custom") and status == "one" and found == name
+                    check("discovery-{}-{}".format(token, name), discovery)
+                finally:
+                    store.os.close(fd)
+
+    block = "# >>> opf-managed >>>\n/journals/\n/staging/\n# <<< opf-managed <<<\n"
+    check("gitignore-render", lambda: store.render_homes_gitignore() == block)
+    for text in (block, "# adopter\n" + block + "/local/\n"):
+        check("gitignore-match", lambda: store.homes_gitignore_matches(text))
+    for bad in (None, "", block + block, block.replace("/staging/", "/imported/"),
+                block.replace("/journals/\n", ""), block.replace("\n", "\r\n"), block.rstrip("\n"),
+                block.replace("# <<< opf-managed <<<", "# >>> opf-managed >>>")):
+        check("gitignore-drift-{!r}".format(bad), lambda: not store.homes_gitignore_matches(bad))
+    _gitignore_reconciliation_self_test(check)
+
+    # OPF-D2B PR3a (decision 5): the base spec_version bump 1.1.0 -> 1.2.0 is an intended change
+    # (init.toml provenance), no longer inert; this tooling defines no store upgrade.
+    check("inert-version", lambda: store.SUPPORTED_SPEC_VERSION == "1.2.0")
+    check("inert-homes", lambda: store.SUPPORTED_HOMES == 1
+          and store.homes_generation({"opf": {"homes": 2}}) == 1)
+    check("inert-init", lambda: init._manifest_model()["opf"]["spec_version"] == "1.2.0"
+          and "homes" not in init._manifest_model()["opf"])
+    check("inert-import", lambda: doctor.IMPORTS_REL == ".working/imports"
+          and doctor._is_import_run_id("imp" + suffix) and not doctor._is_import_run_id("adopt" + suffix))
+    check("inert-root-exclusions", lambda: store.STORE_ROOT_CONTROL_DIRS == (".git", ".aiqt"))
+    source = Path(store.__file__).read_text(encoding="utf-8")
+    check("transitional-comment", lambda: "In homes 2, .aiqt is AIQT-only" in source
+          and "Until homes 2 is activated, legacy import state still" in source)
+    text = SPEC.read_text(encoding="utf-8")
+    check("spec-contract", lambda: not contract_findings(text))
+    # The journal-only record kind is spec-pinned through the kind loop: deleting `record` from the
+    # section 4.2 vocabulary sentence turns the gate red with the kind's own finding.
+    check("spec-kind-record", lambda: "spec 4.2 missing kind: record" in
+          contract_findings(text.replace("`preview`, `record`", "`preview`", 1)))
+    # Each operative section independently discriminates: removing it must fail the drift gate.
+    for section, body in _sections(text).items():
+        if section in _CONTRACT or section in _PINNED:
+            check("spec-flip-" + section, lambda: bool(contract_findings(text.replace(body, "\n", 1))))
+    # The section splitter skips fenced code as CommonMark reads a top-level fence: a heading-like
+    # line inside a fence bounds nothing, a real heading after the fence still bounds its section,
+    # and a fence never closed runs to the end of the text, so no heading below it bounds a section
+    # and a registered section there is missing. Each fence row is red under a splitter that splits
+    # at every heading-like line; each no-fence row is red under one that reads the line as a fence.
+    def split_around(block):
+        return _sections("## 1. One\n\nlead\n\n" + block + "\n\ntail\n\n## 2. Two\n\nnext\n")
+    for name, block in (
+            ("backticks-info", "```text\n## Inner\n```"),
+            ("tildes", "~~~\n## Inner\n~~~"),
+            ("tilde-info-with-backtick", "~~~ a`b\n## Inner\n~~~"),
+            ("indent-3", "   ```\n## Inner\n   ```"),
+            ("indent-0-close-3", "```\n## Inner\n   ```"),
+            ("indent-2-close-0", "  ```\n## Inner\n```"),
+            ("close-longer-run", "```\n## Inner\n`````"),
+            ("close-trailing-space-tab", "```\n## Inner\n``` \t"),
+            ("short-run-no-close", "````\n## Inner\n```\n### Still inside\n````"),
+            ("other-character-no-close", "```\n~~~\n## Inner\n```"),
+            ("text-after-run-no-close", "```\n```x\n## Inner\n```"),
+            ("indent-4-no-close", "```\n    ```\n## Inner\n```"),
+    ):
+        check("spec-split-fence-" + name, lambda b=block: (lambda s: tuple(s) == ("0", "1", "2")
+              and "## Inner" in s["1"] and "tail" in s["1"] and s["2"] == "\n\nnext\n")(split_around(b)))
+    for name, line in (("indent-4", "    ```"), ("tab-indent", "\t```"), ("two-backticks", "``"),
+                       ("backtick-info-with-backtick", "``` a`b"), ("inline-code-line", "```x```")):
+        check("spec-split-no-fence-" + name, lambda b=line + "\n## Inner": (
+              lambda s: tuple(s) == ("0", "1", "2") and "lead" in s["1"] and "tail" not in s["1"]
+              and s["2"] == "\n\nnext\n")(split_around(b)))
+    check("spec-split-heading-after-fence", lambda: (lambda s: tuple(s) == ("0", "1", "1.1", "2")
+          and "## Inner" in s["1"] and "after" not in s["1"] and "after" in s["1.1"]
+          and "tail" in s["1.1"] and s["2"] == "\n\nnext\n")(
+              split_around("```\n## Inner\n```\n\n### 1.1 Real\n\nafter")))
+    check("spec-split-fence-unclosed", lambda: (lambda s: tuple(s) == ("0", "1")
+          and "## Inner" in s["1"] and "## 2. Two" in s["1"] and s["1"].endswith("next\n"))(
+              _sections("## 1. One\n\n```text\n## Inner\n```\n\nlead\n\n````\n## 2. Two\n\nnext\n")))
+    # On the live spec: the changelog example's fenced headings stay in Appendix D, and a fence
+    # never closed, planted at the end of section 17, masks every heading below it, so the
+    # Appendix E pins are missing while section 17 keeps its own.
+    check("spec-split-live-appendix-d", lambda: all(
+        line in _sections(text)["D"] for line in ("\n## unreleased\n", "\n## 1.2.3..1.3.0 ")))
+    unclosed = text.replace(_sections(text)["17"], _sections(text)["17"] + "~~~~~~~~~~\n", 1)
+    check("spec-split-live-fence-unclosed", lambda: "~" * 10 not in text and (lambda found: any(
+        f.startswith("spec E missing contract: ") for f in found) and not any(
+        f.startswith("spec 17 missing contract: ") for f in found))(contract_findings(unclosed)))
+    # The splitter tracks no list item or HTML block, so the default entry checks its bounds
+    # against the block reading (contract_findings), and each of these is red there: a list item's
+    # fence whose closing line opens with 0 to 3 spaces, planted at the end of section 5, masks
+    # heading 5.1 from the splitter alone, and a <pre> block holding a fence line is red at its
+    # HTML line.
+    def planted_end(section, block):
+        end = _section_spans(text)[section][1]
+        return text[:end].rstrip("\n") + "\n\n" + block + "\n\n" + text[end:]
+    listed = planted_end("5", "- ```\n  x\n  ```")
+    check("spec-split-live-list-fence", lambda: "5.1" in _sections(text) and "5.1" not in _sections(listed)
+          and (lambda m: m is not None and "spec section split: line {} holds a level-3 heading outside any"
+               " container, where the splitter bounds no section: {}".format(
+                   listed.count("\n", 0, m.start()) + 1, m.group(0)) in contract_findings(listed))(
+                       re.search(r"^### 5\.1 .*$", listed, re.MULTILINE)))
+    pre = planted_end("5", "<pre>\n```\n</pre>")
+    check("spec-split-live-html-pre", lambda: "<pre>" not in text and (
+        "spec section split: line {} may open a raw HTML block, which neither the splitter nor the"
+        " block reading tracks".format(pre.count("\n", 0, pre.index("<pre>")) + 1) in contract_findings(pre)))
+    # The other direction: past a list item's fence that the splitter misreads, a heading-like line
+    # inside a later fence bounds a section where the block reading finds no heading (line 8).
+    # The row is red under a cross-check that reports only the headings the splitter misses.
+    check("spec-split-block-reading-extra-bound", lambda: "spec section split: line 8 bounds a section,"
+          " where the block reading finds no level-2 or level-3 heading outside a container: ## Inner"
+          in contract_findings("## 1. One\n\n- ```\n  x\n  ```\n\n```\n## Inner\n```\n\n## 2. Two\n\nnext\n"))
+    # A setext heading under a paragraph that opens like a link reference definition bounds
+    # nothing in either reader, so the bounds check is silent there; the block reading marks the
+    # paragraph's first line (line 3) as not read, and that line is red.
+    check("spec-split-unread-reference-setext", lambda: "spec section split: line 3 is not read by"
+          " the block reading, since Markdown renderers read it differently, so neither reader's"
+          " section bounds there are checked" in contract_findings(
+              "## 1. One\n\n[x]: /u\nHidden heading\n---\n\n## 2. Two\n\nnext\n"))
+    # A cross-reader agreement row, which discriminates no fix: the block reading closes a fence
+    # on spaces or tabs after the run, as the splitter does, so the two read the same headings
+    # there. _heading_bounds expands tabs (_expand) before its closer match, so no tab reaches
+    # that pattern today; the row is red where the splitter stops closing on a tab after the run,
+    # or where the block reading both stops expanding tabs and narrows its closer to spaces.
+    check("spec-split-agreement-close-space-tab", lambda: (lambda t: [
+        heading[2] for heading in _heading_bounds(t)[0]] == ["1. One", "2. Two"] and [
+        start for start, _level in _heading_bounds(t)[5]] == [m.start() for m in _split_bounds(t)])(
+            "## 1. One\n\n```\n## Inner\n``` \t\n\n## 2. Two\n"))
+    # Section 10.8 holds its whole text report example, the fenced "## " lines included, and
+    # the area view paragraphs after it.
+    check("spec-split-live-10.8", lambda: (lambda body: all(line in body for line in (
+        "\n## Matches\n", "\n## No area\n", "\n## Unremediated\n", "\n## Change body\n"))
+        and "`CARRIED.md` is the area view" in body and "## 11." not in body)(_sections(text)["10.8"]))
+    # Whole-section pin tiling, the former 9.2 mechanism extended to every registered section:
+    # the ordered pins of each section must concatenate to exactly its normalized body, so
+    # deleting ANY sentence there, prose, list row, table row or fenced block included, breaks
+    # a pin and turns the gate red. Each pin occurs exactly once in its section body, and
+    # deleting that single operative occurrence in place (never a replace-all) turns the gate
+    # red with the pin's own finding.
+    from unittest.mock import patch
+
+    # Spec 4.4 no longer reserves imports (maintainer ruling, 2026-10-23) while the tooling still does:
+    # the reserved-name check skips exactly that one name, which must still be a tooling reservation,
+    # every other reserved name stays red when the spec drops it, and without the exclusion the live
+    # spec is red for imports.
+    check("reservation-tooling-only", lambda: _TOOLING_ONLY_RESERVATIONS == ("imports",) and all(
+        name in store.RESERVED_MACHINE_SUBDIRS for name in _TOOLING_ONLY_RESERVATIONS))
+    check("reservation-tooling-only-narrow", lambda: "spec 4.4 missing reserved name: imported" in
+          contract_findings(text.replace("The names `imported`, `archive`,", "The names `archive`,", 1)))
+    with patch.object(sys.modules[__name__], "_TOOLING_ONLY_RESERVATIONS", ()):
+        check("reservation-tooling-only-flip", lambda: "spec 4.4 missing reserved name: imports" in
+              contract_findings(text))
+
+    def tiles(spec, section):
+        return " ".join(_CONTRACT[section]) == _normalized(_sections(spec)[section])
+    for section, fragments in _CONTRACT.items():
+        body = _sections(text)[section]
+        normalized_body = " ".join(body.replace("`", "").split())
+        pin_prefix = "spec " + section + " missing contract"
+        control = text.replace(body, "\n\n" + normalized_body + "\n\n", 1)
+        # Scoped to pin findings: normalizing 4.2 inherently breaks its own structural checks
+        # (the rendered gitignore block), which stay covered by the unmutated spec-contract check.
+        check("spec-pin-control-" + section, lambda c=control, p=pin_prefix: not any(
+            f.startswith(p) for f in contract_findings(c)))
+        check("spec-tile-" + section, lambda s=section: tiles(text, s))
+        # Mutate the registry itself: per-pin deletion tests cannot notice a dropped pin, but
+        # the tiling equality does.
+        with patch.dict(_CONTRACT, {section: _CONTRACT[section][1:]}):
+            check("spec-tile-dropped-pin-" + section, lambda s=section: not tiles(text, s))
+        for fragment in fragments:
+            if isinstance(fragment, _Quoted):
+                # A quotation block flattened onto one line is no block: the control reports it.
+                check("spec-quotation-flip-" + section + "-" + fragment, lambda c=control, f=(
+                    "spec " + section + " missing retired-text quotation: " + fragment):
+                    f in contract_findings(c))
+                continue
+            mutated_body = normalized_body.replace(fragment, "", 1)
+            mutated = text.replace(body, "\n\n" + mutated_body + "\n\n", 1)
+            finding = pin_prefix + ": " + fragment
+            check("spec-pin-flip-" + section + "-" + fragment,
+                  lambda f=finding, m=mutated, frag=fragment, nb=normalized_body:
+                  nb.count(frag) == 1 and f in contract_findings(m))
+    # Untiled sentence pins: each section stays out of the tiling registry, its normalized
+    # control is green, each pin occurs exactly once, and deleting that occurrence in place turns
+    # the gate red with the pin's own finding.
+    for section, fragments in _PINNED.items():
+        body = _sections(text)[section]
+        normalized_body = " ".join(body.replace("`", "").split())
+        pin_prefix = "spec " + section + " missing contract"
+        control = text.replace(body, "\n\n" + normalized_body + "\n\n", 1)
+        check("spec-pinned-untiled-" + section, lambda s=section: s not in _CONTRACT)
+        check("spec-pin-control-" + section, lambda c=control, p=pin_prefix: not any(
+            f.startswith(p) for f in contract_findings(c)))
+        for fragment in fragments:
+            mutated = text.replace(body, "\n\n" + normalized_body.replace(fragment, "", 1) + "\n\n", 1)
+            finding = pin_prefix + ": " + fragment
+            check("spec-pin-flip-" + section + "-" + fragment,
+                  lambda f=finding, m=mutated, frag=fragment, nb=normalized_body:
+                  nb.count(frag) == 1 and f in contract_findings(m))
+    # Surface pins: the live files are green, each pin occurs exactly once in its normalized
+    # text, and deleting that occurrence turns the gate red with the pin's own finding.
+    surfaces = {path: path.read_text(encoding="utf-8") for path in _SURFACE}
+    check("surface-contract", lambda: not surface_findings(surfaces))
+    for path, fragments in _SURFACE.items():
+        normalized = _surface_text(surfaces[path])
+        for fragment in fragments:
+            mutated = dict(surfaces)
+            mutated[path] = normalized.replace(fragment, "", 1)
+            finding = "surface {} missing contract: {}".format(_surface_name(path), fragment)
+            check("surface-pin-flip-" + _surface_name(path) + "-" + fragment,
+                  lambda f=finding, m=mutated, frag=fragment, nb=normalized:
+                  nb.count(frag) == 1 and f in surface_findings(m))
+    # Emptying or narrowing the surface registry would retire its pins silently: its shape is
+    # pinned, so dropping a file or any of its pins turns the self-test red.
+    check("surface-registry", lambda: tuple(_SURFACE) == (
+        QUICKSTART, DISCLOSURE, ADOPT_PAGE, ADOPT_GUIDE, CORE_FILES) and
+          tuple(map(len, _SURFACE.values())) == (10, 7, 10, 6, 11))
+    # Each generated page is registered at its root path, an index.html under its page directory,
+    # named by that directory, so the findings tell the pages apart.
+    check("surface-page-paths", lambda: all(
+        path.name == "index.html" and path.parent.parent == SPEC.parents[1] / "site"
+        and _surface_name(path) == path.parent.name + "/index.html"
+        for path in (DISCLOSURE, ADOPT_PAGE, CORE_FILES)))
+    # Each retired surface sentence is absent from its live file, and planting it back turns the
+    # gate red with its own finding.
+    check("surface-retired-registry", lambda: tuple(_SURFACE_RETIRED) == (QUICKSTART, DISCLOSURE, CORE_FILES) and
+          tuple(map(len, _SURFACE_RETIRED.values())) == (3, 10, 6) and
+          set(_SURFACE_RETIRED) <= set(_SURFACE))
+    for path, fragments in _SURFACE_RETIRED.items():
+        normalized = _surface_text(surfaces[path])
+        for fragment in fragments:
+            mutated = dict(surfaces)
+            mutated[path] = normalized + " " + fragment
+            finding = "surface {} restores retired text: {}".format(_surface_name(path), fragment)
+            check("surface-retired-flip-" + _surface_name(path) + "-" + fragment,
+                  lambda f=finding, m=mutated, frag=fragment, nb=normalized:
+                  frag not in nb and f in surface_findings(m))
+    # Delete the wrapped sentence in place: normalization must not hide a lost requirement.
+    body = _sections(text)["9.2"]
+    mutated, removed = re.subn(r"The\s+upgrade\s+MUST\s+be\s+idempotent\.", "", body)
+    check("spec-flip-9.2-idempotence", lambda: removed == 1 and
+          "spec 9.2 missing contract: The upgrade MUST be idempotent." in
+          contract_findings(text.replace(body, mutated, 1)))
+    # Section 16.1 declaration rules, their section 17 residuals, and the Appendix E pins: deleting
+    # the wrapped sentence in place, or rewording its operative clause, turns the gate red with that
+    # pin's own finding. A reword vector states no precondition of its own: spec-contract above fails
+    # on any text that already lacks a pin, and c == 1 fails where the operative wording is absent.
+    def spec_vectors(section, cases):
+        body = _sections(text)[section]
+        for start, rewordings in cases:
+            pin = [f for f in dict(_CONTRACT, **_PINNED)[section] if f.startswith(start)]
+            sentence = pin[0] if len(pin) == 1 else start
+            finding = "spec " + section + " missing contract: " + sentence
+            pattern = r"\s+".join("`?" + "`?".join(map(re.escape, w)) + "`?"
+                                   for w in sentence.split())
+            deleted, removed = re.subn(pattern, "", body)
+            check("spec-flip-" + section + "-" + start,
+                  lambda d=deleted, r=removed, f=finding, p=pin, b=body:
+                  len(p) == 1 and r == 1 and f in contract_findings(text.replace(b, d, 1)))
+            for old, new in rewordings:
+                reworded, changed = re.subn(r"\s+".join(map(re.escape, old.split())), new, body)
+                check("spec-reword-" + section + "-" + old,
+                      lambda w=reworded, c=changed, f=finding, b=body:
+                      c == 1 and f in contract_findings(text.replace(b, w, 1)))
+    spec_vectors("16.1", (
+            ('An implementation MUST declare,', (
+             ('in the documentation of each release and in every report its emitter writes,',
+              'in the documentation of each release,'),
+            )),
+            ('Each release MUST ship that declaration', (
+             ('as one file, the declaration file.',
+              'as one or more files.'),
+            )),
+            ('A runtime check MUST read the declaration', (
+             ('from the copy of that file installed with the implementation (the installed copy) alone,',
+              'from any copy,'),
+             ('never from the documentation of the release or from any report.',
+              'or from the documentation of the release.'),
+            )),
+            ('Each release MUST also carry,', (
+             ('MUST also carry,',
+              'MAY also carry,'),
+             ('and the documentation of each release MUST state where the implementation carries it.',
+              'and the documentation of each release names it.'),
+            )),
+            ('A release that carries no such digest,', (
+             ('does not conform to this section, and a conformance claim MUST NOT be made for it.',
+              'MAY still conform to this section.'),
+            )),
+            ("A runtime check MUST compare the installed copy's bytes", (
+             ('before it reads any field,',
+              'after it reads every field,'),
+             ('or whose bytes differ from that digest, MUST yield cannot-evaluate and MUST NOT authorize any store operation.',
+              'or whose bytes differ from that digest, MUST yield cannot-evaluate and MAY authorize a store operation.'),
+            )),
+            ('Every report the emitter of a release writes', (
+             ('MUST carry the four parts compared in every report, exactly these:',
+              'MUST carry at least these four parts:'),
+             ('the restatement of the declaration, the shipped-file digest the implementation carries, the installed-copy digest, and the runtime result.',
+              'the restatement of the declaration and the runtime result.'),
+            )),
+            ('The installed-copy digest is the SHA-256', (
+             ('and a report MUST NOT carry `not-read` with any runtime result other than `cannot_evaluate`.',
+              'and a report MAY carry `not-read` with any runtime result.'),
+            )),
+            ('Each digest in a report MUST be written', (
+             ('as 64 lowercase hexadecimal digits,',
+              'in hexadecimal,'),
+             ('`pass` where it authorized store operations and `fail` where it did not.',
+              '`pass` or `fail`.'),
+             ('yielded cannot-evaluate or another rule of this section made that run yield cannot-evaluate,',
+              'yielded cannot-evaluate,'),
+            )),
+            ('A restatement differs from', (
+             ('omits such a field, or states a field the file does not carry.',
+              'or states a field the file does not carry.'),
+            )),
+            ('The documentation of each release MUST restate', (
+             ("MUST restate that file's declaration without differing from it.",
+              "SHOULD restate that file's declaration."),
+            )),
+            ('The expected report of a release', (
+             ('is fixed by the bytes the release ships alone:',
+              'is the report a reference run emits:'),
+             ('and otherwise `pass` or `fail`, between which this section, as it now stands, sets no rule.',
+              'and otherwise `pass`.'),
+            )),
+            ('A report deviates from the expected report', (
+             ('is omitted, written in another form, or holds another value;',
+              'holds another value;'),
+             ('no other content of a report is compared.',
+              'other content of a report is compared as the checker chooses.'),
+            )),
+            ('The runtime-result part also deviates', (
+             ('also deviates where its token disagrees with whether that run authorized store operations, the performed operations the checker observes;',
+              'does not deviate on what that run authorized;'),
+             ('the only part of a report compared with more than the shipped bytes alone.',
+              'a part of a report the shipped bytes alone decide.'),
+            )),
+            ('An execution environment is unaltered', (
+             ('changed only as that documentation directs and in this closed operational list, and in nothing else:',
+              'changed as the checker chooses:'),
+             ('the account name, administrative privilege only where that documentation directs it, the working and temporary locations, and the clock.',
+              'the account name, the working and temporary locations, the clock, and any other setting.'),
+            )),
+            ('Every default of that stock install', (
+             ("is part of an unaltered execution environment, so meeting it is the release's,",
+              "alters the execution environment, so undoing it is the checker's,"),
+            )),
+            ('A runtime check is the step of the implementation', (
+             ('and a documented run of the runtime check and the emitter need not resolve a store.',
+              'and a documented run of the runtime check and the emitter always resolves a store.'),
+             ('the emitter is the step of the implementation that writes the conformance reports section 16 describes, never a store-file emitter such as the canonical new-document emitter,',
+              'the emitter is any step of the implementation that writes a file,'),
+            )),
+            ('That comparison detects an edit of the installed copy alone;', (
+             ('detects an edit of the installed copy alone;',
+              'detects every edit of the installation;'),
+             ('section 17 discloses that residual and the others these rules leave.',
+              'these rules leave no residual.'),
+            )),
+            ('Whether a run authorized store operations is an observable', (
+             ("it authorized them exactly where it performed one, a write within a store that run resolved or to that store's lease, as the checker observes the run's writes,",
+              'it authorized them where its own decision said so, observed or not,'),
+            )),
+            ('An attempt is the documented installation', (
+             ('followed by two successive documented runs',
+              'followed by one documented run'),
+             ('made by one checker in an unaltered execution environment,',
+              'made by one checker in any execution environment,'),
+            )),
+            ('A reference run of a release is a run', (
+             ("holds that file's bytes as the release ships them and is readable when the run starts.",
+              "holds that file's bytes as the release ships them."),
+            )),
+            ('The installation or the execution environment is altered', (
+             ("what the stock install's defaults, the changes the closed operational list above permits, the documented steps, the release's own code, and code those steps install from a source the documentation of the release directs left it;",
+              "what the documented steps and the release's own code left it;"),
+             ("and what sits there alters neither, the installation apart: the installed files, the installed copy included, and the files a documented step or the release's own code wrote belong to the installation wherever they sit, those locations included, so an edit of any of them alters the installation there as anywhere.",
+              'and what sits there alters neither.'),
+            )),
+            ('An attempt whose installation or execution environment anything else altered', (
+             ('is not an attempt and establishes nothing.',
+              'is an attempt like any other.'),
+            )),
+            ('A verdict under this section is decided', (
+             ('MUST be reported as unresolved, never as established.',
+              'MAY be reported as established.'),
+            )),
+            ('A release MUST be available:', (
+             ('every attempt MUST complete',
+              'some attempt MUST complete'),
+            )),
+            ('A reference run of a release MUST NOT', (
+             ('MUST NOT emit a report that deviates from the expected report,',
+              'MUST NOT emit a report that omits the restatement,'),
+             ('its runtime check MUST NOT authorize any store operation where the expected runtime result is `cannot_evaluate`.',
+              'its runtime check MAY authorize a store operation where the expected runtime result is `cannot_evaluate`.'),
+            )),
+            ("Only a checker's own attempts", (
+             ("Only a checker's own attempts and reference runs are evidence under the two rules above:",
+              'Any attempts and reference runs are evidence under the two rules above:'),
+             ('a report of any other run or installation, altered or not, MUST NOT be presented',
+              'a report of any other run or installation MAY be presented'),
+            )),
+            ('A failure of either rule is shown', (
+             ('made on the same platform and version,',
+              ''),
+             ('never counter a shown or established failure.',
+              'counter a shown or established failure.'),
+             ('established for that checker where a second of its own attempts or reference runs,',
+              'established where a second attempt or reference run of any checker,'),
+            )),
+            ('The two rules above are the one path', (
+             ('MUST be judged solely as a failure of the availability rule or of the reference-run rule, shown and established only as those rules provide, never as nonconformance on one showing;',
+              'MAY be judged as nonconformance on one showing;'),
+            )),
+            ('An availability failure is shown by a failed attempt', (
+             ('it has no part, so the same-part condition does not apply to it.',
+              'the same-part condition applies to it.'),
+             ('established by a second failed attempt of the same checker on the same platform and version;',
+              'established by a second failed attempt of any checker;'),
+            )),
+            ('Under the reference-run rule the same-part condition applies to every failure,', (
+             ('shown and reproduced only by a run that performs such an operation, never by a deviating report.',
+              'shown by such an operation and reproduced by any deviating report.'),
+             ('a store operation performed where the expected runtime result is `cannot_evaluate` included:',
+              'a store operation included:'),
+            )),
+            ('The showing and the reproducing evidence MAY be', (
+             ('the two runs of one attempt included.',
+              'never the two runs of one attempt.'),
+            )),
+            ('A checker that reports on a shown failure', (
+             ('and MUST NOT report an unresolved failure, or the absence of a shown one, as conformance of the release.',
+              'and MAY report an unresolved failure as conformance of the release.'),
+            )),
+            ("A release for which a checker's own evidence establishes", (
+             ('a conformance claim under this section MUST name the attempts and reference runs it rests on.',
+              'a conformance claim under this section needs no named evidence.'),
+            )),
+            ('Each such failure is a release nonconformance,', (
+             ('it MUST NOT be treated as making the declaration malformed or contradictory,',
+              'it makes the declaration contradictory,'),
+            )),
+            ('A declaration that is absent,', (
+             ('is malformed: it MUST yield cannot-evaluate',
+              'is incomplete: it MAY yield cannot-evaluate'),
+             ('or its worklog storage generation, is malformed:',
+              'is malformed:'),
+            )),
+            ('The rules on an absent, unreadable, malformed, or contradictory declaration', (
+             ('govern the file alone:',
+              'govern the file and its restatements:'),
+             ('and each check MUST NOT take any field from the documentation of the release or from any report.',
+              'and each check MAY take a field from the documentation of the release.'),
+            )),
+            ('The following writes, and no others, are not store operations', (
+             ('The following writes, and no others, are not store operations under this section,',
+              'The following writes, among others, are not store operations under this section,'),
+            )),
+            ('A run that stops as cannot-evaluate and writes nothing', (
+             ('A run that stops as cannot-evaluate and writes nothing but what section 5.7 requires to end its own claim therefore performed no store operation.',
+              'Every write of a run that stops as cannot-evaluate is a store operation.'),
+            )),
+            ('Every other write within a store the run resolved', (
+             ('a record publish performed where the expected runtime result is `cannot_evaluate` remains one.',
+              'a record publish performed where the expected runtime result is `cannot_evaluate` is exempt.'),
+            )),
+            ('Section 8.5 fixes those tokens,', (
+             ('under this section `pass` and `fail` read observably, over performed store operations,',
+              'under this section `pass` and `fail` read as internal decisions,'),
+            )),
+            ('A pass token beside no performed store operation', (
+             ('and a `cannot_evaluate` token beside one each disagree that way, whatever the expected result,',
+              'each disagree that way where the expected result is `pass` or `fail`,'),
+            )),
+            ('The behaviour-coupled comparisons are exactly two,', (
+             ('MUST be reported as unresolved, never as established, a residual section 17 discloses;',
+              'MAY be reported as established;'),
+             ('are exactly two, the token comparison above and the store part below, and they read only the writes the checker observed:',
+              'read every comparison of the run:'),
+             ("the rest of the expected-report comparison reads such a run's report as any other.",
+              'every comparison of such a run gives no evidence.'),
+            )),
+            ('Every requirement of this section that those rules do not compare', (
+             ('is judged by that inspection alone, never by this procedure.',
+              'is judged by this procedure.'),
+            )),
+            ('A run that is no reference run and belongs to none of', (
+             ('however often it is repeated, it is no evidence under the two rules above, it shows and establishes nothing there, and it decides no verdict under this section, on one showing or many,',
+              'repeated twice, it establishes a failure under the two rules above,'),
+             ("is an observation of the implementation's behaviour, never an inspection of the bytes the release ships or a reading of the documentation of the release:",
+              'is an inspection of the implementation that decides as inspection does:'),
+            )),
+            # One implementation model (maintainer ruling, 2026-10-23): each new 16.1 sentence is red when
+            # its operative clause is reworded back toward a class.
+            ('The base defines one implementation model', (
+             ('defines one implementation model and no implementation conformance classes:',
+              'defines two implementation conformance classes:'),
+             ('bind every implementation.',
+              'bind both classes.'),
+            )),
+            ('An implementation supports base spec_version 2.0.0', (
+             ('and initializes stores directly at them.',
+              'and may also upgrade older stores.'),
+            )),
+            ("The reference tooling's opf doctor grades a manifest", (
+             ('so its VALID verdict on such a store says nothing about conformance to this specification,',
+              'so its VALID verdict on such a store shows conformance to this specification,'),
+            )),
+    ))
+    spec_vectors("17", (
+            # Section 17 states the discovery guarantee in section 9.2's every-manifest wording
+            # (maintainer ruling, 2026-10-24): the narrower adopter-manifest wording restored is red.
+            ('The token is stable,', (
+             ('keeps every manifest discoverable through the exact base discovery token `opf`',
+              "keeps every existing adopter's manifest discoverable through this exact token"),
+            )),
+            ('- The section 16.1 runtime check compares', (
+             ('so it detects an edit of that copy alone,',
+              'so it detects any edit,'),
+             ('it does not detect a co-edit that changes both',
+              'it detects a co-edit that changes both'),
+             ("or one that changes the installed copy together with the implementation's comparison code so that the comparison no longer refuses that copy,",
+              ''),
+             ('section 16.1 does not require one.',
+              'section 16.1 requires one.'),
+            )),
+            ("Whether a release's runtime check compares", (
+             ('are established only by an inspection of the implementation, never by a reference run:',
+              'are established by reference runs:'),
+            )),
+            ('Section 16.1 verdicts are observer-local:', (
+             ('can mislead that checker.',
+              'cannot mislead any checker.'),
+            )),
+            ('Another checker contests a claim only with its own evidence:', (
+             ('only with its own evidence: under the section 16.1 availability and reference-run rules, with its own attempts and reference runs alone, and otherwise with what it finds by inspecting the bytes the release ships or by reading the documentation of the release,',
+              'only with its own attempts and reference runs,'),
+             ('with its own attempts and reference runs alone,',
+              'with any attempts and reference runs,'),
+             ('such as that the release carries no shipped-file digest or that its documentation states no place for it.',
+              'such as a release that carries no shipped-file digest or whose documentation states no place for it.'),
+            )),
+            ('Honest checkers can reach different verdicts', (
+             ("since section 16.1 makes every default of each such install that the documentation does not exclude, by directing that it be changed or by naming a platform that lacks it, the release's to meet.",
+              'since section 16.1 has the release meet the defaults of every such install.'),
+             ('or, where that documentation names none, the platform the checker in question uses,',
+              ''),
+            )),
+            ('They can also reach different verdicts', (
+             ('They can also reach different verdicts on one platform and version,',
+              'They never reach different verdicts on one platform and version,'),
+             ('show a failure of one rule twice, under the reference-run rule in the same part both times,',
+              'show a failure twice,'),
+            )),
+            ('The same residual covers the section 16.1 rule', (
+             ("whose installation or execution environment differs from what the stock install's defaults, the changes the closed operational list permits, the documented steps, the release's own code, and code those steps install from a source the documentation of the release directs left it",
+              "altered by anything other than the documented steps, the release's own code, code those steps install from a directed source, and the stock platform's defaults"),
+             ('the changes the closed operational list permits,',
+              ''),
+             ("and section 16.1 has a checker that cannot determine an attempt's eligibility report what only such attempts show as unresolved, never established.",
+              'and such an attempt counts until the alteration is proven.'),
+            )),
+            ('A failure that a checker cannot show twice', (
+             ('stays unresolved, however many other checkers each show it once,',
+              'is established where two checkers each show it once,'),
+             ('on the same platform and version and, under the reference-run rule, in the same part,',
+              ''),
+            )),
+            ('Where the documentation of a release directs', (
+             ('attempts made at different times can differ as the bytes the directed source serves differ,',
+              'attempts made at different times never differ,'),
+            )),
+            ('It covers whether a checker observed every write of a run', (
+             ('reports what only the behaviour-coupled comparisons of such runs show as unresolved, never established.',
+              'reports what such runs show as established.'),
+             ("or hide a disagreeing token or a store-part failure that the run's writes show,",
+              ''),
+            )),
+            ('The working and temporary locations a checker chose are its own', (
+             ("the installed files, the installed copy included, and the files a documented step or the release's own code wrote stay part of the installation wherever they sit,",
+              'nothing placed there is part of the installation,'),
+            )),
+            ('That probe, like every run outside', (
+             ('it establishes nothing under the section 16.1 rules however often it is repeated,',
+              'it establishes a failure where it is repeated,'),
+             ('it decides no verdict of its own,',
+              'it decides a verdict of its own,'),
+            )),
+            ('A requirement of section 16.1 on the conduct of', (
+             ('is judged only by that inspection,',
+              'is judged by reference runs,'),
+             ('and one it can attribute is decided by what that inspection finds in those bytes, never by the observed run itself on any number of showings.',
+              'and one it can attribute is decided by the observed run.'),
+            )),
+            ('Appendix E gives informative guidance', (
+             ('Appendix E gives informative guidance',
+              'Appendix E gives normative rules'),
+            )),
+    ))
+    # Appendix E: each reword below reverts a fix of the PR #480 review, or states the opposite of
+    # what section 16.1 makes of a probe, and turns the gate red with that pin's own finding.
+    spec_vectors("E", (
+            ('This appendix is informative:', (
+             ('section 16.1 alone decides',
+              'this appendix decides'),
+            )),
+            ('A shared record informs', (
+             ('never substitutes for',
+              'can substitute for'),
+            )),
+            ('Corroborate across checkers:', (
+             ('stays unresolved for each checker until its own attempts or reference runs show it twice,',
+              "stays unresolved until one checker's own attempts or reference runs show it twice,"),
+             ('until its own attempts or reference runs show it twice, on the same platform and version and, under the reference-run rule, in the same part.',
+              'until its own evidence shows it twice (section 17).'),
+            )),
+            ('Where its installed-copy digest', (
+             ('the report is inconsistent with a run whose runtime check compared',
+              'the report did not come from a runtime check that compared'),
+             ('and, on finding them different, yielded cannot-evaluate as section 16.1 requires, whose emitter reported that run truthfully, and whose report no one altered after the emitter wrote it.',
+              'together with an emitter that reported that run truthfully.'),
+             ('and, on finding them different, yielded cannot-evaluate as section 16.1 requires,',
+              ''),
+             ('truthfully, and whose report no one altered after the emitter wrote it.',
+              'truthfully.'),
+            )),
+            ('It does not show that no comparison ran:', (
+             ('It does not show that no comparison ran:',
+              'It shows that no comparison ran:'),
+             ('a comparison that is skipped, defective, or made without refusing a mismatch,',
+              'a comparison that is skipped or defective,'),
+            )),
+            ('It establishes nothing under section 16.1.', (
+             ('It establishes nothing under section 16.1.',
+              'It establishes a failure under section 16.1.'),
+            )),
+            ('This observes the implementation', (
+             ('This observes',
+              'This inspects'),
+            )),
+            ('An edited installed copy is an altered installation', (
+             ('establishes nothing under the section 16.1 availability and reference-run rules.',
+              'establishes nothing under the section 16.1 availability and reference-run rules; what it yields is inspection evidence about the shipped implementation.'),
+            )),
+            ('It is an observation, never an inspection', (
+             ('It is an observation, never an inspection of the bytes the release ships,',
+              'It is an inspection of the bytes the release ships,'),
+            )),
+    ))
+    # Base spec 2.0.0 with homes 2 is the only baseline (maintainer ruling, 2026-10-23; spec 4.2 and
+    # 9.2). The spec sentence and its pin disagree red either way: a reworded spec clause, a retired
+    # clause restored in the spec under the current pins, or a retired pin restored under the current
+    # spec.
+    spec_vectors("4.2", (
+            ('Base spec 2.0.0, with', (
+             ('is the only base version this specification defines.',
+              'is one of the base versions this specification defines.'),
+            )),
+            ('A writer MUST NOT accept a format', (
+             ('A writer MUST NOT accept a format',
+              'A writer MAY accept a format'),
+            )),
+    ))
+    spec_vectors("9.2", (
+            ('A store that omits [opf].homes,', (
+             ('than the integer `2`, MUST be refused.',
+              'than the integer `2`, MAY be graded as legacy homes.'),
+            )),
+            ('A spec_version below 2.0.0', (
+             ('and validation MUST refuse it as a fail-closed INVALID finding.',
+              'and validation MAY grade it as a legacy store.'),
+             ('refuse it as a fail-closed INVALID finding.',
+              'refuse it as a fail-closed INVALID finding naming the remedy, a fresh 2.0.0 store.'),
+            )),
+            # A manifest below 2.0.0 is refused as a store and authorizes nothing (maintainer ruling,
+            # 2026-10-24): rewording the refusal, or restoring a path over it, turns the gate red.
+            ('A manifest so refused,', (
+             ('is refused as a store: that refusal MUST NOT be read as authorizing initialization or adoption',
+              'is foreign content: that refusal MAY be read as authorizing a first adoption'),
+             ('(sections 4.5 and 14.1).',
+              '(sections 4.5 and 14.1), apart from the section 14 adoption the remedy above names.'),
+            )),
+            # The hand step of the same ruling, stated where 9.2 describes the refusal.
+            ('A tree under a manifest so refused', (
+             ('MUST NOT be adopted until the operator has moved that manifest aside by hand, a step no OPF command performs;',
+              'MAY be adopted once opf adopt has moved that manifest aside;'),
+             ('ordinary foreign content for a section 14 first adoption (section 14.1).',
+              'the ancestry of a section 14 re-adoption (section 14.1).'),
+            )),
+            # The reserved-children exception to the hand step: an adoption selecting them, or an
+            # OPF write in place of the operator's move, is red.
+            ('Files remaining under the reserved store control children', (
+             ('an adoption option MUST NOT select them, so the operator moves them aside by hand on the same terms, a step no OPF command performs,',
+              'an adoption option MAY select them with a disposition,'),
+            )),
+            ('A manifest declaring a spec_version of 2.0.0 or above', (
+             ('authorizing initialization or adoption (sections 4.5, 8.2, and 14.1).',
+              'authorizing initialization or adoption, and the remedy adoption above does not apply to it (sections 4.5, 8.2, and 14.1).'),
+            )),
+            # Refuse before write: each operative clause reworded away, or an exception restored, turns
+            # the gate red.
+            ('Before any command writes to a store,', (
+             ('every implementation MUST apply these validation refusals',
+              'an implementation MAY apply these validation refusals'),
+             ('so a store they refuse stays byte-identical.',
+              'so a store they refuse is repaired first.'),
+             ('refuse stays byte-identical.',
+              'refuse stays byte-identical; the one exception is the section 14 adoption that the remedy above names.'),
+             ('the recovery of sections 8.8, 14.1, and 14.2 included,',
+              'the recovery of sections 8.8, 14.1, and 14.2 excepted,'),
+            )),
+            # Every later bump keeps every manifest discoverable through the exact token (maintainer
+            # ruling, 2026-10-24): the requirement reworded to a permission, or a rename admitted, is red.
+            ('Every later base-schema version bump MUST keep', (
+             ('Every later base-schema version bump MUST keep every manifest discoverable',
+              'A later base-schema version bump MAY rename the token that keeps every manifest discoverable'),
+             ('through the exact base discovery token `opf`',
+              'through the base discovery token `opf` or a renamed one'),
+            )),
+    ))
+    # The maintainer ruling of 2026-10-23: one implementation model, the generic upgrade rule, the
+    # imported-series check ownership and the reversed-first-adoption residual. Each sentence is red
+    # where its operative clause is reworded.
+    spec_vectors("9.2", (
+            ('An upgrade MUST NOT create provenance,', (
+             ('An upgrade MUST NOT create provenance, any approval (an adoption approval, a ratification or a receipt included), or history.',
+              'An upgrade MAY create provenance where the store lacks it.'),
+             ('any approval (an adoption approval, a ratification or a receipt included), or history.',
+              'adoption approval or historical records.'),
+            )),
+            ('Every implementation MUST apply', (
+             ("Every implementation MUST apply the version ceiling's refusal",
+              "An implementation MAY apply the version ceiling's refusal"),
+            )),
+    ))
+    spec_vectors("8.3", (
+            ('C-IMPORTED-IDS owns every imported-series ID defect exclusively', (
+             ('MUST NOT be reported again by C-IMPORTED-SCHEMA or any other check.',
+              'MAY also be reported by C-IMPORTED-SCHEMA.'),
+            )),
+    ))
+    spec_vectors("8.6", (
+            ('A clean-series record MUST NOT carry', (
+             ('A clean-series record MUST NOT carry',
+              'A clean-series record MAY carry'),
+            )),
+            ('C-IMPORTED-SEGREGATION enforces this firewall:', (
+             ('MUST each be a C-IMPORTED-SEGREGATION finding.',
+              'MAY each be reported as a warning.'),
+            )),
+    ))
+    spec_vectors("4.5", (
+            ('A zero-match outcome over a present', (
+             ('MUST NOT be treated as authorizing initialization or adoption by itself:',
+              'MAY authorize initialization by itself:'),
+            )),
+            # A manifest below 2.0.0 is refused as a store and authorizes nothing (maintainer ruling,
+            # 2026-10-24).
+            ('A discovered manifest that the section 9.2 validation refusals refuse', (
+             ('is refused as a store (section 9.2): it MUST NOT be treated as authorizing initialization or adoption.',
+              'marks no store: for adoption, it and the files beneath it MUST be treated as foreign content.'),
+            )),
+            # A tree under a refused older manifest is adopted only after the operator moves that
+            # manifest aside by hand (maintainer ruling, 2026-10-24): an OPF write in place of the hand
+            # step, or the tree read as ancestry, is red.
+            ('A tree under such a manifest', (
+             ('MUST NOT be adopted until the operator has moved that manifest aside by hand, a step no OPF command performs;',
+              'MAY be adopted once opf adopt has moved that manifest aside;'),
+             ('ordinary foreign content for a section 14 first adoption (section 14.1).',
+              'the ancestry of a section 14 re-adoption (section 14.1).'),
+            )),
+            # The reserved-children exception to the hand step, stated in 4.5 as in 9.2.
+            ('Files remaining under the reserved store control children', (
+             ('an adoption option MUST NOT select them, so the operator moves them aside by hand on the same terms, a step no OPF command performs,',
+              'an adoption option MAY select them with a disposition,'),
+            )),
+    ))
+    # The journal-operand rule has no exception (maintainer ruling, 2026-10-24).
+    spec_vectors("4.2", (
+            ('Ordinary transaction operands,', (
+             ('or contain `journals/`.',
+              "or contain `journals/`; the one exception is a section 9.2 remedy adoption's disposition of the old tree's files under that name."),
+            )),
+    ))
+    spec_vectors("14.2", (
+            ('A fully reversed first adoption', (
+             ('is touched only by a fail-closed refusal, never consumed as recovery state;',
+              'is recovered automatically by the next command;'),
+             ('a same-user residual of the class section 14.1 discloses.',
+              "a same-user residual of the class section 14.1 discloses, except where a section 9.2 remedy adoption's approved plan dispositions it as foreign content."),
+            )),
+            # The adoption archive binds every file under its home, never only those the store's own
+            # apply archived (maintainer ruling, 2026-10-24).
+            ('Once apply commits, a file under', (
+             ('a file under `.working/archive/adoption/<run-id>/` MUST keep',
+              "a file the store's own apply archived under `.working/archive/adoption/<run-id>/` MUST keep"),
+            )),
+    ))
+    # No section carries a homes-1 store, a homes migration, an activation framing or a 1.x upgrade
+    # delta. Each row names a run of current pins by prefix and the retired pins it replaced, verbatim
+    # from the base registry. Restoring the retired text in the spec in place of the run turns the gate
+    # red with every current pin's finding; restoring the retired pins under the current spec turns it
+    # red with every retired pin's finding. A retired sentence restored beside the current text breaks
+    # spec-tile above, and the default entry refuses its _RETIRED fragment (below). retired_known holds
+    # the retired sentences no row restores: those deleted outright, and those a current pin is a
+    # substring of, since only a qualifier was dropped, so restoring them in place hides no current pin;
+    # the _RETIRED fragment alone catches each.
+    def _pin(section, start):
+        found = [f for f in _CONTRACT[section] if f.startswith(start)]
+        return found[0] if len(found) == 1 else start
+    archive = _pin("9.2", "The upgrade MUST NOT write the adoption archive ")
+    retired_runs = (
+        ('4.2', ('Base spec 2.0.0, with', 'It includes adoption,', 'A writer MUST NOT accept', 'The reference tooling does not yet implement base 2.0.0'), (
+            'Base spec 1.3.0 defines adoption and the separate imported series on homes 1.',
+            'The 1.3.0 requirements in sections 4.2, 4.5, 6.1, 8, 9.1, 9.2, 11, 12, 14, and 16.1 are a target contract; they do not claim that the reference tooling has activated adoption, imported-series validation, or the import writer.',
+            'Activation MUST include deterministic doctor coverage before a writer accepts the new format.',
+            'For an upgrade-capable implementation (section 16.1), activation MUST also include the tested upgrade in section 9.2; a fresh-only implementation activates without it and MUST instead include the section 16.1 admission check and its refusal evidence.',
+            'Homes 2 is a separate, later activation.',
+            'The homes-2 contract below is for spec_version = "2.0.0" and [opf].homes = 2.',
+            'The current reference tooling reserves these names and implements their homes-2 boundary checks.',
+            'It still supports 1.2.0 and initializes legacy homes (generation 1, with no homes key); writers retain their legacy paths until homes 2 is activated.',
+            'Homes 2 has no homes migration: a store is at homes 2 only when it is created there, no homes-1 store is migrated to homes 2, and once homes 2 is activated opf upgrade MUST refuse a homes-1 store by name rather than migrate it.',
+            'The section 9 manifest example describes the 1.3.0 target on legacy homes.',
+            'The homes-2 requirements in sections 4.2, 12, 14.1, 14.2, and 15, and the section 9.2 refusal of a homes-1 store, describe the target contract, not an activated runtime guarantee.',
+        )),
+        ('4.2', ('Base spec 2.0.0, with', 'It includes adoption,', 'A writer MUST NOT accept', 'The reference tooling does not yet implement base 2.0.0'), (
+            'It still supports 1.2.0 and initializes legacy homes (generation 1, with no homes key); writers retain their legacy paths until homes 2 is activated, which requires the homes migration (opf upgrade) to be available.',
+            'The homes-2 requirements in sections 4.2, 9.2, 12, 14.1, 14.2, and 15 describe the target contract, not an activated runtime guarantee.',
+        )),
+        ('4.2', ('# optional 1:1 index mirrors',), (
+            '# optional 1:1 index mirrors (section 10.1) IMPORT-REPORT.md # legacy import report (pre-1.3.0 runs only; section 14.1) toml/ manifest.toml # store manifest and discovery marker (section 9) counters.toml # per-namespace ID high-water marks (section 8.2) version.toml # version and release ledger (section 6.1) worklog.toml # durable operational record (section 6.2) <type>.imported.index.toml # imported records per enabled type except LF (section 8.3) worklog.imported.toml # imported worklog, on its own ID number line lease.toml # single-writer lease, present only while held (section 5.7) init.toml # bootstrap provenance of a coupled init (section 9.2), if present backlog_item.index.toml # typed record files (section 8) done.index.toml finding.index.toml pending_decision.index.toml autonomous_decision.index.toml block.index.toml handoff.index.toml reference.index.toml contribution.index.toml maintainer_decision.index.toml preference_pattern.index.toml archive/ 2026/ archive.toml # enumerates rotated IDs and spans (section 12) done.index.toml worklog.toml archive/ moved/<source-path> # default Move destinations (section 14.2) adoption/<run-id>/ # retire preimages and archived occupying sources (section 14.2) imported/<kind>/<run-id>/ # durable originals, inventories, approvals and receipts (section 14) staging/<kind>/<run-id>/ # short-lived staging, evidence-gated reclamation (section 14.1) journals/<kind>/ # reserved recovery state, never a view or ordinary op target journal/ # crash-durable frames runs/<run-id>/transaction.toml # gate-readable projections allocations/<run-id>.toml # irrevocable ID reservations (section 8.2) When the store has been relocated, the .working/ tree lives at the store repository root exactly as drawn, and the product repository keeps only the pointer and the public deliverables.',
+        )),
+        ('4.2', ('opf init MUST create the imported leaves',), (
+            'A 1.3.0 opf init and the section 9.2 upgrade MUST create the imported leaves for every enabled type except legacy_fragment, create-only and empty; in a store that declares spec_version 1.3.0 or later, enabling a further type or module other than legacy_fragment later MUST create its imported leaf in the same act as its clean index.',
+        )),
+        ('4.2', ('Enabling a further type or module', 'Both counter-row duties'), (
+            'In a store that declares spec_version 1.3.0 or later, enabling a further type or module other than legacy_fragment MUST also add its imported counter row in the same act as its clean index, at zero only where no imported ancestry exists, as in the section 9.2 upgrade.',
+            'Both counter-row duties follow from the section 8.2 rule that requires the imported counter rows once the store declares spec_version 1.3.0 or later.',
+        )),
+        ('4.2', ('Init, and any upgrade, MUST render',), (
+            'Homes-2 init, and any upgrade of a store already at homes 2, MUST render this managed block into .working/.gitignore from the topology constants; the reference tooling provides the renderer and drift gate but installs no block: gitignore # >>> opf-managed >>> /journals/ /staging/ # <<< opf-managed <<< Durable imported/ and archive/ evidence MUST stay tracked.',
+        )),
+        ('4.2', ('Init, and any upgrade, MUST render',), (
+            'Homes-2 init and upgrade MUST render this managed block into .working/.gitignore from the topology constants; the reference tooling provides the renderer and drift gate but installs no block: gitignore # >>> opf-managed >>> /journals/ /staging/ # <<< opf-managed <<< Durable imported/ and archive/ evidence MUST stay tracked.',
+        )),
+        ('4.2', ('Containment and doctor exclude journals', 'A store whose adoption home'), (
+            'Containment and doctor exclude journals and make no recovery claim; a rogue file there is outside their coverage.',
+            "Under pre-1.3.0 tooling, a store that has not started an adoption keeps, within that tooling's own version ceiling, its legacy grading: the homes-2 names are ordinary store paths there, graded, detected, and dispositioned exactly as before, and the pre-1.3.0 doctor's check roster and residuals are unchanged for such a store.",
+            "A store whose adoption home .working/imported/adoption/ exists has started an adoption and receives the adoption grading from the same pre-1.3.0 tooling: each admitted run's recorded paths are registered, the non-occupying retire, move and migrate rows of its plan (and only those) are its frozen sources, a frozen source whose live bytes still match its plan digest is graded as bounded adoption state while a drifted or vanished source is a containment failure at required (section 11), and the adopting residuals are disclosed in addition to the legacy residuals.",
+        )),
+        ('4.2', ('The apply side MUST write each adoption inventory',), (
+            "On homes 1 too, the apply side MUST write each adoption inventory's [adoption] identity table, whose keys are exactly run_id, phase and plan_digest as the bundle layout below defines, when it derives the inventory, and the doctor MUST refuse an adoption inventory whose identity is missing or malformed, names another run, names a phase other than the one its file name carries, or names a plan digest other than the run's proven plan's own (the frozen plan that re-seals its own bytes and that its approval binds), so an inventory copied from another run or phase, an empty retirement record included, never evaluates as this run's record.",
+        )),
+        ('4.2', ('An implementation MUST register the imported', 'The section 14.1 completion checks MUST still'), (
+            'Tooling that carries the section 9.2 ceiling refuses an above-ceiling declaration as a fail-closed INVALID finding; tooling released before that ceiling grades such a store as legacy instead, a disclosed residual of section 9.2.',
+            'Activated 1.3.0 tooling MUST register on homes 1 the imported managed leaves, the adoption archive .working/archive/adoption/<run-id>/, the Move destination .working/archive/moved/, and the evidence bundles .working/imported/<kind>/<run-id>/, all recognized by containment as OPF control area, and MUST add the four section 8.3 imported-series checks to the doctor roster.',
+            'C-EVIDENCE-ENUM MUST NOT run or read anything until homes 2 is activated; on homes 1 the section 14.1 completion checks MUST carry the evidence digest verification themselves.',
+            'The boundary below applies only to a store that declares both homes = 2 and spec_version = "2.0.0" once the tooling activates that generation.',
+        )),
+        ('4.2', ('The owning writer MUST derive',), (
+            "The owning writer or migration MUST derive each inventory from the run's transaction record or receipt and MUST publish it exclusively with the retained bytes.",
+        )),
+        ('4.2', ('Partial status is receipt-bound',), (
+            'For legacy stores, other kinds cannot substantiate partial import status until their plan readers are registered.',
+            'At 1.3.0, partial status is receipt-bound under section 11, not inferred from staging.',
+        )),
+        ('4.2', ('Ordinary transaction operands,',), (
+            "In homes 2, ordinary transaction operands, including those of an open transaction being recovered, MUST NOT equal, descend from, or contain journals/; a legacy store's transactions and recovery keep their legacy operand handling, and no shipped writer targets that home.",
+        )),
+        ('4.2', ('Discovery precedes the manifest:',), (
+            'Discovery precedes the manifest, so it cannot know the generation: it MUST examine manifest.toml in every immediate subdirectory, including journals/, MUST fail closed on a reserved-name match or ambiguity, and MUST NOT read deeper there.',
+        )),
+        ('8.1', ('- maintainer_decision and preference_pattern are baseline types;',), (
+            '- maintainer_decision and preference_pattern are baseline as of spec_version 1.1.0; they were module-tier in 1.0.0.',
+            'With that change the governance module carries maintainer_action alone, and the now-empty decision-support module is retired.',
+            'A store upgrades across the change with the additive migration (section 9.2).',
+        )),
+        ('8.2', ('counters.toml MUST hold independent',), (
+            'counters.toml MUST hold independent monotonic high-water values per series and namespace, BI for clean backlog items and the quoted TOML key "imported:BI" for imported backlog items, with the imported series\' rows required once the store declares spec_version 1.3.0 or later, one for each enabled type except legacy_fragment, since the imported series refuses LF and so has no "imported:LF" row.',
+        )),
+        ('8.2', ('The doctor MUST require the imported counter rows,',), (
+            'The doctor MUST require the imported counter rows once the store declares spec_version 1.3.0 or later, whether a 1.3.0 opf init or the section 9.2 upgrade created them.',
+        )),
+        ('8.2', ('The claim additionally begins',), (
+            'At homes 2 the claim additionally begins with one irrevocable reservation, journals/<kind>/allocations/<run-id>.toml (sections 4.2 and 8.8), which MUST hold exactly format = "opf.journal.allocation/v1", the run\'s kind, run_id and operation_id, and a non-empty [claims] table mapping each claimed counter key, a record namespace or, for a run of the import engine, a quoted imported-series "imported:<NS>" key, to that run\'s new high-water value, an integer of at least 1 and at most 2**63 - 1 so every conforming TOML reader can parse it.',
+        )),
+        ('8.2', ('The next-ID derivation applies per series key:', 'The doctor MUST likewise treat'), (
+            'The next-ID derivation applies per series key: at homes 2 the next ID under a counter key, the clean <NS> and quoted "imported:<NS>" number lines independently, is one more than the maximum of the counters.toml high-water and every reservation\'s [claims] value for that counter key, so recovery MUST treat a reserved number as issued even where no published record carries it.',
+        )),
+        ('8.8', ('Its clean-series subcommands use',), (
+            'That key was added while base 1.2.0 was still unreleased, so no released 1.2.0 store or tooling predates it, and it carries no spec_version bump.',
+            'Its clean-series subcommands use the strict record model; the new import write mode uses the separate 1.3.0 imported model.',
+        )),
+        ('8.8', ('3. Claim each new ID',), (
+            '3. Claim each new ID as one atomic act (section 8.2).',
+            'At homes 1 the counters.toml advance MUST be an operand of the same journaled transaction, under the held lease, and IDs MUST be reported only once that transaction has completed, so a rollback never withdraws an ID anyone has seen.',
+            'At homes 2 the claim is an irrevocable reservation in the journal home, made before the reversible publication (section 4.2).',
+        )),
+        ('8.8', ('That journal is .working',), (
+            'The reference tooling keeps that journal under .aiqt/record/journal at homes 1 and under .working/journals/record/journal at homes 2.',
+        )),
+        ('8.8', ('The journal is .working',), (
+            'The journal remains .aiqt/record/journal at homes 1 and .working/journals/record/journal at homes 2.',
+        )),
+        ('9', ('[opf] standard = "opf"',), (
+            '[opf] standard = "opf" # discovery token; exact value required spec_version = "1.3.0" # OPFiles base spec version this store conforms to layout = "inline" # storage layout: "inline" or "per-record" (was layout_profile) posture = "required" # "off", "warn", or "required" (section 11) import_status = "none" # "none", "partial", or "complete" [store] sync_target = "" # the store\'s dedicated sync target (section 5.7); empty under the # in-repo default, where the store rides the product repository [modules] # base-level optional capability modules (generic, not AIQT-specific) governance = true # the [profiles.aiqt] profile below requires these three enabled delivery_assurance = false operational_policy = true # (required by [profiles.aiqt].required_modules) concurrent_operation = true # (required by [profiles.aiqt].required_modules) # --- Profiles: additive requirement bundles, namespaced, ignored by base-only tooling --- [profiles.aiqt] version = "1.0.0" # AIQT profile version, independent of spec_version above base_compat = ">=1.0.0 <2.0.0" # base spec_versions this profile applies to posture_floor = "required" # effective posture = strictest(base.posture, this) required_modules = ["governance", "operational_policy", "concurrent_operation"] verification_floor = "triple-family" # AIQT reference-suite policy; base tools ignore this extension_namespace = "x-aiqt" # record-level namespace this profile owns (section 8.7) # A second adopter could later add, ignored by everyone who does not support it: # [profiles.acme] # version = "0.1.0" # base_compat = ">=1.0.0 <2.0.0" [types.backlog_item] namespace = "BI" # ...',
+        )),
+        ('9.2', ('Base spec 2.0.0 is the baseline,', 'A store that omits [opf].homes,', 'This specification defines no earlier base version,'), (
+            'The homes-2 generation is declared by spec_version = "2.0.0" with required integer [opf].homes = 2, and a store is at homes 2 only when it is created there (section 4.2).',
+            'Absent or 1 denotes legacy homes; unknown future generations MUST be refused.',
+            'The homes-2 declaration does not itself change the runtime supported version or init format.',
+            'This section defines no homes-generation upgrade: no homes-1 store is migrated to homes 2 and no OPF control area is relocated for the homes generation, and once homes 2 is activated opf upgrade MUST refuse a homes-1 store by name rather than migrate it (section 4.2).',
+        )),
+        ('9.2', ('Base spec 2.0.0 is the baseline,', 'A store that omits [opf].homes,', 'This specification defines no earlier base version,'), (
+            'The homes-generation upgrade targets spec_version = "2.0.0" with required integer [opf].homes = 2.',
+            'Absent or 1 denotes legacy homes for migration; unknown future generations MUST be refused.',
+            'The homes-generation target does not itself change the runtime supported version or init format.',
+            'The migration MUST refuse a store resolved outside the product root until a multi-root coordinator exists.',
+        )),
+        ('9.2', ('A base-schema version bump MUST ship',), (
+            "A base-schema version bump MUST ship a tested, in-place store-schema upgrade (opf upgrade) in at least one published upgrade-capable implementation (section 16.1), the reference tooling, so that a store below the new version has an upgrade path once that upgrade activates; the path holds only within this section's preconditions and refusals and that implementation's disclosed residuals.",
+        )),
+        ('9.2', ('Every implementation MUST apply',), (
+            "Every implementation class MUST apply the version ceiling's refusal at the end of this section, a fresh-only implementation at its section 16.1 admission check; a fresh-only implementation that supports a version below the reserved homes-2 declaration (section 4.2) MUST NOT apply the ceiling's homes-2 recognition and MUST refuse that declaration under section 16.1.",
+        )),
+        ('9.2', ('Repeated upgrade is a verified no-op', 'Declaring a spec_version above', 'A store refused only at that ceiling', 'A spec_version below 2.0.0'), (
+            'The allowed delta is expressed as ensure-present and ensure-absent over the whole 1.0.0 origin family, so a governance-enabled, a decision_support-enabled, a bare, and a view-omitting 1.0.0 store all migrate under one rule and the normative text cannot diverge from the tooling.',
+            "For the 1.0.0 to 1.1.0 upgrade the allowed delta is: rename the base table [devprocess] to [opf] and its standard discovery token from devprocess to opf (the OPFiles rebrand), carrying every other base field over unchanged; bump spec_version to 1.1.0; remove the retired decision_support module key where present; add each of the [types] rows for contribution, maintainer_decision, and preference_pattern not already declared by an enabled 1.0.0 module (a governance-enabled store already declares maintainer_decision and a decision_support-enabled store preference_pattern; the row moves from module tier to baseline unchanged); add the two new view rows (CONTRIBUTIONS.md and the DECISIONS.toml projection); widen the existing DECISIONS.md composed view's sources from the two 1.0.0 decision sources (pending_decision, autonomous_decision) to the four required at 1.1.0 by adding maintainer_decision and preference_pattern where that view is declared (a 1.0.0 store that declares no DECISIONS.md gains none and stays valid, since no composed view is required); extend counters.toml with the CN/MD/PP zeros while preserving every existing high-water; and create each missing empty *.index.toml file for the three baseline types, skipping any that already exist (such as a maintainer_decision.index.toml where governance was enabled, whose records are preserved byte-for-byte).",
+            'The upgrade weakens nothing: preference_pattern simply moves to always-on, so a populated decision-support index is kept as is.',
+            'Base spec 1.2.0 admits one new managed machine-store file, .working/toml/init.toml: the bootstrap provenance a coupled opf init records (its format is frozen in OPF-INIT-D2B).',
+            'It is a managed leaf when present and is never required, so a store without it stays valid.',
+            'For the 1.1.0 to 1.2.0 upgrade the allowed schema delta is the spec_version bump alone: no other manifest field, schema file, or counter changes, and the upgrade MUST NOT create provenance for an existing store (none is ever fabricated).',
+            'Declared views are then regenerated, so a stale committed view can change.',
+            'A 1.0.0 store takes the 1.0.0 delta above directly to 1.2.0.',
+            'For the 1.2.0 to 1.3.0 upgrade, the allowed schema delta is the version bump, registration and create-only initialization of missing imported managed leaves for enabled types other than legacy_fragment, and addition of missing imported counter rows at zero only where no imported ancestry exists, never an "imported:LF" row.',
+            'Where imported ancestry exists in a namespace, the imported counter row added for it MUST hold the highest imported ID number in that namespace, the largest <n> of its imported:<NS>-<n> IDs.',
+            'Existing records, evidence, clean counters and imported high-water values MUST be preserved; a populated collision, missing ancestral counter or unprovable prestate refuses.',
+            "The upgrade MUST refuse before any write a store whose [unmanaged] entry equals or contains a discovery candidate (section 14.2), which an earlier store can carry, naming the entry and the candidate; the remedy is the adopter's own fresh plan re-dispositioning that candidate (section 14.2), recorded before the upgrade is retried.",
+            'The upgrade MUST NOT create historical records, adoption approval or provenance, MUST NOT change posture or import status, and MUST NOT add imported views.',
+            "The bump changes no record's bytes, but it does change what a legacy importer-authored clean record confers, because the section 8.6 firewall keys on provenance: the upgrade report MUST enumerate every legacy importer-authored clean record whose current authority the firewall withdraws, naming each backlog item that leaves the actionability join, each block that stops granting a stop, each ratified done item whose only receipt is legacy importer-authored and so stops holding a valid receipt, and each record that ceases to be a current state under section 8.6, so that authority change is reported, never silent.",
+            'Where a withdrawn authority would leave the post-upgrade doctor below VALID, a receipt-stripped done item included, the upgrade MUST refuse before any write, naming each such record and the remedy: a maintainer-authored clean record that restores or supersedes the withdrawn authority under section 8.6, for a receipt-stripped done item the section 8.6 maintainer_decision route, recorded before the upgrade is retried; every named remedy MUST be performable through the sanctioned writer without hand-editing canonical files.',
+            'An unresolved legacy import MUST be reconciled under its original contract before upgrading; legacy LF records and evidence remain readable and MUST NOT be silently converted.',
+            'A completed legacy import upgrades in place: its import_status MUST stay "complete", substantiated by its preserved legacy run evidence under section 11, and adoption approval, receipt or provenance MUST NOT be fabricated for it.',
+            'The bump also activates the homes-1 recognition of the adoption and import control paths and the four imported-series checks of section 4.2; the upgrade itself MUST NOT create such a folder.',
+            'Earlier stores compose their applicable deltas with this delta; repeated upgrade is a verified no-op only after full doctor VALID.',
+            'The 1.3.0 delta remains a target contract until a tested upgrade and its required readers activate; import writing is a separate later activation.',
+            "Declaring a spec_version above the tooling's supported version MUST be refused at validation as a fail-closed INVALID finding naming the tooling-upgrade remedy, never treated as supported; the 1.2.0 reference validator that ships this ceiling already refuses a 1.3.0 declaration with exactly that finding.",
+            'Only the reserved homes-2 declaration of section 4.2 stays recognized, and that recognition keeps legacy homes-1 grading until its own activation, never homes-2 validation.',
+            'Two residuals are disclosed rather than silent: tooling released before this ceiling treats an above-ceiling declaration as legacy and can report it VALID, and the recognized homes-2 pair is graded under legacy rules, not refused.',
+            'Both residuals end when pre-ceiling tooling leaves use and homes 2 activates.',
+        )),
+        ('12', ('The imported series MUST NOT rotate:',), (
+            'The imported series MUST NOT rotate at 1.3.0: <type>.imported.index.toml and worklog.imported.toml sit outside the rotation thresholds and their records MUST NOT move to the record archive.',
+        )),
+        ('14.1', ('Clean-start adoption and import ship with',), (
+            'Clean-start adoption and import ship on homes 1 with explicit evidence coverage: their completion checks MUST re-read inventories and payload digests themselves, because C-EVIDENCE-ENUM is inactive until homes 2.',
+        )),
+        ('14.2', ('A keep declaration whose path',), (
+            'A keep declaration whose path equals or contains a discovery candidate MUST refuse at plan time, naming that candidate, the same way a collision refuses below, and the section 9.2 upgrade into 1.3.0 refuses a store that already carries such an entry.',
+        )),
+        ('14.2', ('Transaction records live under',), (
+            'In homes 2, transaction records live under .working/journals/adoption/; homes 1 retains its legacy journal paths and completion-carried evidence checks.',
+        )),
+        ('14.3', ('This is the historical-release path:',), (
+            'This remains the historical-release path at 1.3.0: the ledger is not an imported record type, its spans MUST NOT refer to imported:WL IDs, and import MUST NOT create a separate version or changelog TOML file.',
+        )),
+        ('15', ('OPF MUST NOT read OPF artefacts',), (
+            'On a homes-2 store, OPF MUST NOT read OPF artefacts from former .aiqt/ locations or touch unrelated AIQT material, since homes 2 has no homes migration (section 4.2).',
+        )),
+        ('16.1', ('The reference tooling does not yet implement base 2.0.0:',), (
+            "The reference tooling targets the upgrade-capable class: its opf upgrade, in the repository's reference code, carries a store from base 1.0.0 or 1.1.0 to base 1.2.0, within its disclosed residuals, and its upgrade into base 1.3.0 remains a target contract (section 9.2).",
+        )),
+        ('17', ('- Adoption and import run with C-EVIDENCE-ENUM,', 'Version-control history over the tracked store'), (
+            "- On homes 1, under the section 4.2 target contract and only once activated 1.3.0 tooling ships, the adoption and import control areas (.working/imported/<kind>/<run-id>/, .working/archive/adoption/<run-id>/ and .working/archive/moved/) are recognized by containment but not re-enumerated by doctor: the completion checks verify their evidence digests when they run, and C-EVIDENCE-ENUM is inactive until homes 2 (section 4.2), so a file added or altered there after completion, a tampered retire preimage no record references included, is outside doctor's coverage until homes 2 activates.",
+            "This bullet discloses that target contract's residual and claims no shipped tooling behaviour.",
+            "Version-control history over the tracked store is the control, and activated 1.3.0 tooling's C-IMPORTED-PROVENANCE still re-verifies every preserved original an imported record references.",
+        )),
+    )
+    retired_known = {
+        '4.2': (
+            'A 1.3.0 opf init MUST write at zero the imported counter row of each type that has an imported leaf (section 8.2).',
+            'In homes 2, OPF MUST NOT write state outside .working/ except the operation-lock and coupled-init substrate in the git common directory, and MUST NOT write any under .aiqt/.',
+            'In homes 2, staging/ MUST be walked and stray-graded, including empty runs; an unknown kind MUST always be a finding.',
+            'Homes 2 has no legacy journal transport: no homes-1 journal is carried into journals/, and a homes-2 store is never recovered from one (section 15).',
+            "Legacy journal transport MUST preserve bytes through the migration's receipt binding.",
+        ),
+        '9.2': (
+            'The bump to the homes-2 declaration (spec_version = "2.0.0" with [opf].homes = 2) is the one exception: it ships no upgrade, and a store below it has no upgrade path into homes 2 (section 4.2).',
+        ),
+        '14.1': (
+            'The former --scan, --plan, --review and --apply modes MUST refuse with a pointer to adoption and the prompt pack when this contract activates.',
+        ),
+        '15': (
+            'In homes 2, .aiqt/ is AIQT-owned material, not an OPF state home; OPF operates without it.',
+            'Only homes migration MAY read explicitly inventoried OPF artefacts from former .aiqt/ locations.',
+        ),
+    }
+    # Retired sentences no row restores: deleted outright, or a qualifier dropped from a sentence
+    # whose current pin is a substring of the retired one; the earlier 17 row's sentences moved here
+    # when the devprocess pin they anchored on was deleted, and the earlier 16.1 ceiling row's
+    # sentence when the ruling deleted the refusal-list item it anchored on.
+    for section, sentences in (
+        ('4.2', (
+            'Verification stops at the first finding, a bundle without an inventory or an inventory in the recognized legacy format, so a cannot-evaluate that a later inventory would yield is not reported for that bundle.',
+            "Except for an inventory in the recognized legacy format below, which is its named finding, C-EVIDENCE-ENUM MUST yield cannot-evaluate for an adoption inventory whose identity is missing or malformed, names another run, names a phase other than the one its file name carries, or names a plan digest other than its bundle's own sealed plan.toml digest, and for every inventory of an adoption bundle whose plan.toml is absent, unreadable or not canonical, names another run, or carries a plan_digest that does not re-seal its own bytes, so an inventory copied from another run or phase never evaluates as this run's record.",
+            'The recognized legacy format opf.ingest.evidence-inventory/v1 MUST be refused as the named legacy-ingest-inventory finding under C-EVIDENCE-ENUM, without migration or rewriting; completed-ingest replay cannot evaluate that bundle.',
+            'A fresh-only implementation (section 16.1) refuses such an inventory earlier, as unsupported-legacy-state at admission, and MUST NOT then grade that store under C-EVIDENCE-ENUM.',
+            'The legacy imports/ exclusion remains registered until its writers migrate.',
+        )),
+        ('8.3', (
+            "| Field | Requirement | Meaning | |---|---|---| | id | required | <NS>-<n>, matching the type's namespace | | type | required | the type name; must match the file the record lives in | | status | required | per the status grammar (section 8.4) | | proposed_from | optional | the unqualified state held before the current /proposed status, written by the authoring verb (section 8.8); legal only on a /proposed status, and only naming a legal predecessor state for the type | | title | required | one line, human-oriented | | created_at | required | RFC 3339 UTC, read from the clock at creation | | updated_at | required | RFC 3339 UTC, read from the clock at the last transition | | actor.kind | required | maintainer, assistant, automation, or importer | | actor.id | optional | identity detail within the adopter's own vocabulary | | summary | optional | short prose body | | links | optional | array of {rel, id}; rel from the closed link vocabulary (section 8.6) | | refs | optional | array of captured references (section 8.6) | | x-<vendor> | optional | registered vendor extension tables only (section 8.7) | An importer MAY omit created_at where the source genuinely does not record it; the omission is recorded as unknown via the import provenance reference, never guessed.",
+            'This legacy permission does not replace the following 1.3.0 imported-series contract.',
+        )),
+        ('8.6', (
+            'After the section 9.2 upgrade an existing legacy importer-authored clean record MUST keep its bytes, its recorded state and its place in the clean series, and remains readable history there; what the upgrade changes, and its report enumerates (section 9.2), is authority alone: such a record leaves every current-state join, its open or active backlog items leave actionability, and its blocks stop granting a stop.',
+        )),
+        ('8.8', (
+            'A fresh-only implementation (section 16.1) performs that reconciliation only after its section 16.1 read-only pre-scan and within the section 16.1 recovery bound, and runs its admission check after it.',
+        )),
+        ('9.1', (
+            'Implementation conformance classes (section 16.1) are defined by the base, not by profiles.',
+            'A profile MAY require an upgrade-capable implementation, because that adds a requirement.',
+            "A profile, a store manifest field, or a command-line request MUST NOT declare, grant, or relax an implementation's class.",
+        )),
+        ('11', (
+            'A fresh-only implementation (section 16.1) MUST NOT use the preserved-legacy-evidence route: it substantiates partial and complete only through an adoption receipt with completion results, and it refuses a partial or complete status in a store that holds no adoption receipt as legacy state under section 16.1, which yields cannot-evaluate instead where it cannot establish whether the store holds one.',
+            'The section 16.1 admission check belongs to neither layer above: it MUST run at every posture, and off and warn MUST NOT disable or soften it.',
+        )),
+        ('14.1', (
+            'Legacy runs MAY occupy .working/staging/import/<run-id>/ or .working/staging/ingest/<run-id>/.',
+            'Their evidence inventories and readers remain available; old acceptance records describe those runs and MUST NOT authorize a new adoption or retirement.',
+            'A legacy import completed under the pre-1.3.0 contract MUST keep its recorded status, substantiated by its preserved run evidence (section 11); a retrospective approval or receipt MUST NOT be fabricated.',
+            "Preserved legacy run evidence is that run's durable archive in its recorded legacy home, for the reference tooling .aiqt/import-archive/<run-id>/, holding the run's acceptance record and its evidence inventory in the retained legacy format; substantiation MUST re-read that inventory and digest-match every file it enumerates, and a missing, unreadable or digest-mismatched item MUST leave the status unsubstantiated, failing closed under section 11.",
+            'A fresh-only implementation (section 16.1) provides none of these legacy readers: it MUST refuse, under section 16.1, a store that holds a listed legacy-state item, MUST NOT alter its recorded status, and MUST NOT substantiate a status from legacy run evidence; a legacy run that leaves no listed item is a disclosed residual (section 17).',
+            'Old import and ingest orchestration MUST be retired by staged decoupling only after clean-start adoption ships.',
+            'Pending legacy review MUST NOT become implicit approval.',
+        )),
+        ('16.1', (
+            'An implementation whose declaration lacks only its class MUST be treated as upgrade-capable, and every upgrade requirement binds it.',
+            "- with the section 9.2 version ceiling's finding, a store whose manifest declares a spec_version above the supported one, the reserved homes-2 declaration (section 4.2) included when the supported version is below it, naming the declared and supported versions and the tooling-upgrade remedy.",
+        )),
+        ('17', (
+            'That in-place rewrite covers only a bump that ships an upgrade.',
+            'The bump to the homes-2 declaration ships none (section 9.2), so no store-breaking rename can ship with it: a homes-2 manifest keeps the [opf] base table name and the opf discovery token, and the bump leaves unchanged the manifest of a homes-1 store, which homes 2 does not migrate (section 4.2).',
+            'The retired 1.0.0 token devprocess is recognized by opf upgrade, purely to carry a legacy store forward, and by a fresh-only implementation (section 16.1), purely to refuse that store by name.',
+            'The retired token devprocess is recognized by a fresh-only implementation (section 16.1), purely to refuse that store by name.',
+            '- A fresh-only implementation (section 16.1) proves tested admission and refusal behaviour, not authenticated history: a version declaration and the absence of listed legacy state cannot prove that a store was never upgraded or hand-rewritten, and the closed legacy-state list catches only what it lists.',
+            'It does not list a legacy staging run under .working/staging/import/ or .working/staging/ingest/ that carries no legacy-format inventory, a legacy .archive/ entry that section 9.2 leaves in place with a standing finding, or a legacy run archive outside .working/, which only the import_status item reaches.',
+            "Admission parses only the section 16.1 candidates and a recovery journal of the implementation's own writer (sections 8.8, 14.1, and 14.2), and never reads beneath a path registered under [unmanaged] that section 14.2 permits, so a listed item defined by file content and kept outside those candidates, such as a legacy-format inventory kept under such a path or anywhere but the root of a staging or evidence run folder, goes undetected; an [unmanaged] entry that section 14.2 forbids is a cannot-evaluate input, never a reason to leave a path unsearched.",
+            "Admission recognizes only the adoption receipts of the implementation's own section 14 adoption writer, so where another implementation's writer placed a store's adoption receipt under .working/imported/adoption/ at another path or in another format, and that area holds no adoption receipt of the implementation's own writer, the check cannot establish whether that store holds an adoption receipt, and a partial or complete import_status there is cannot-evaluate: never refused as legacy, but not admitted either, even where a current-format adoption set that status.",
+            'An adoption receipt kept outside .working/imported/adoption/, which section 14.2 does not permit, decides nothing, so where that area holds no file, a store at the supported version whose import_status is partial or complete is refused as unsupported-legacy-state.',
+            'A refusal at its pre-scan leaves a store unchanged, and no refusal offers preservation, repair, or continuity; an adopter whose store holds legacy state, an upgraded store with pre-1.3.0 import history included, needs an upgrade-capable implementation for that store.',
+            'The lease and recovery steps of sections 5.7, 8.8, 14.1, and 14.2 run after a read-only pre-scan and before the admission check that follows them (section 16.1).',
+            "The pre-scan refuses, before any write, a store whose manifest declares a version or generation that the check refuses or that shows a listed legacy-state item, the live bytes of an operand of an interrupted transaction included, and defers only the cannot-evaluate classification of an unreadable, malformed, contradictory, or absent operand of such a transaction within the recovery bound, together with a discovery outcome that such an operand alone decides, so a store that only the later check refuses or cannot evaluate, as where such an operand stays contradictory after recovery or the recovery's own result meets a refusal, or where something that does not take the lease changed the store between the pre-scan and the recovery, may carry the effects of a completed recovery of the implementation's own interrupted transaction, within the section 16.1 recovery bound, and of the section 5.7 reconciliation of a dead run's leftover lease.",
+            "A command that writes and takes its lease after admission confirms, once that lease is taken and observable and before any other write, that the lease.toml carries its own claim and that every directory listing, existence-probe result, and candidate the admission check read is unchanged apart from exactly the bytes its own claim of the lease wrote; a stop at that recheck writes nothing but what section 5.7 requires to end the command's own claim: it releases a lease.toml that carries its own claim and leaves untouched one that does not.",
+            "That stop restores nothing else, so a change that another process made and the recheck detected stays in the tree; where the store has a sync target, that target's history can keep the lease's claim and release, and where the concurrent-operation module is enabled the session_lease record of that claim and its release remain.",
+            "Within the section 16.1 recovery bound, a fresh-only implementation trusts its own writer's recovery journal, as section 8.8, 14.1, or 14.2 recovery does, to complete or roll back an interrupted transaction before the admission check that follows recovery runs; a command that performs no such recovery, a read-only command included, reports a store with a candidate that an interruption left unreadable, malformed, or contradictory as cannot-evaluate until a recovering command recovers it, and a clone without the journal (section 4.2) stays cannot-evaluate.",
+            'Only the transactions section 16.1 lists are recovered that way: a candidate torn by any other write, such as a section 12 rotation or a non-green outcome event appended to an adoption receipt, is classed like any other candidate even where the implementation journals that write, so one left unparseable stays cannot-evaluate for every command of a fresh-only implementation, its own writers included, until something outside that implementation, such as a hand edit, repairs it, and one left parseable is not recognized as torn.',
+            "A section 14.1 restore after a committed apply is new approved work, not recovery, and the section 16.1 rule that keeps a first adoption's store manifest apart from a foreign source at a candidate path binds only that first adoption, so a restore that copies archived bytes to a candidate path, such as an importer-authored worklog.toml restored over the live one, leaves a store that every command of a fresh-only implementation, its own writers included, then refuses where those bytes show a listed item, as unsupported-legacy-state where the store stays at the supported version, or reports as cannot-evaluate where it classes them unreadable, malformed, or contradictory.",
+            'A change made after the recheck by anything that does not take the lease, such as a hand edit or a branch switch, is outside admission.',
+            'Until validation tooling ships, a class claim is self-asserted (section 16).',
+        )),
+    ):
+        retired_known[section] = retired_known.get(section, ()) + sentences
+    retired_runs += (
+        ("9.2", ("A schema-level bump MUST be additive",), (
+            'A purely schema-level bump MUST be additive, using atomic replacement of existing files, '
+            'create-only writes for new index files, and regeneration of declared views through '
+            'exclusively created temporary files followed by atomic rename.',)),
+        ("9.2", ("The upgrade MUST run under the store consistency contract",), (
+            'A homes-generation bump MUST additionally relocate OPF control areas as a versioned, '
+            'journaled, fail-closed relocation.',
+            'Every destination MUST be digest-verified before its source is removed.',
+            'Both kinds of upgrade MUST run under the store consistency contract and the single-writer '
+            'lease (section 5.7).')),
+        ("9.2", ("The upgrade MUST NOT write the adoption archive ",), (archive.replace(
+            "The upgrade MUST NOT write the adoption archive ",
+            "Both upgrade kinds, on the schema-level path and the homes-generation relocation path, the "
+            "homes-2 path included, alike, MUST NOT write the adoption archive ", 1),)),
+    )
+    # The maintainer ruling of 2026-10-23: one implementation model, no legacy state, no legacy_fragment
+    # type and no imports reserved name. Each row restores the pre-ruling pins verbatim in place of the
+    # pins that replaced them.
+    retired_runs += (
+        ('4.2', ('# optional 1:1 index mirrors',), (
+            '# optional 1:1 index mirrors (section 10.1) toml/ manifest.toml # store manifest and discovery marker (section 9) counters.toml # per-namespace ID high-water marks (section 8.2) version.toml # version and release ledger (section 6.1) worklog.toml # durable operational record (section 6.2) <type>.imported.index.toml # imported records per enabled type except LF (section 8.3) worklog.imported.toml # imported worklog, on its own ID number line lease.toml # single-writer lease, present only while held (section 5.7) init.toml # bootstrap provenance of a coupled init (section 9), if present backlog_item.index.toml # typed record files (section 8) done.index.toml finding.index.toml pending_decision.index.toml autonomous_decision.index.toml block.index.toml handoff.index.toml reference.index.toml contribution.index.toml maintainer_decision.index.toml preference_pattern.index.toml archive/ 2026/ archive.toml # enumerates rotated IDs and spans (section 12) done.index.toml worklog.toml archive/ moved/<source-path> # default Move destinations (section 14.2) adoption/<run-id>/ # retire preimages and archived occupying sources (section 14.2) imported/<kind>/<run-id>/ # durable originals, inventories, approvals and receipts (section 14) staging/<kind>/<run-id>/ # short-lived staging, evidence-gated reclamation (section 14.1) journals/<kind>/ # reserved recovery state, never a view or ordinary op target journal/ # crash-durable frames runs/<run-id>/transaction.toml # gate-readable projections allocations/<run-id>.toml # irrevocable ID reservations (section 8.2) When the store has been relocated, the .working/ tree lives at the store repository root exactly as drawn, and the product repository keeps only the pointer and the public deliverables.',
+        )),
+        ('4.2', ('The imported files are registered managed leaves',), (
+            'The imported files are registered managed leaves beside the clean-series files, using the same enabled-type roster except legacy_fragment; worklog uses worklog.imported.toml instead of an imported index.',
+        )),
+        ('4.2', ('opf init MUST create the imported leaves',), (
+            'opf init MUST create the imported leaves for every enabled type except legacy_fragment, create-only and empty; enabling a further type or module other than legacy_fragment later MUST create its imported leaf in the same act as its clean index.',
+            'legacy_fragment has no imported leaf and no imported counter row, since the imported series refuses the LF namespace (section 8.2).',
+        )),
+        ('4.2', ('Enabling a further type or module',), (
+            "Enabling a further type or module other than legacy_fragment MUST also add its imported counter row in the same act as its clean index, at zero only where no imported ancestry exists and otherwise at the largest <n> of that namespace's imported:<NS>-<n> IDs.",
+        )),
+        ('4.2', ("The apply side's bundle verifier",), (
+            "The apply side's bundle verifier, through which opf adopt status reports a run, MUST hold every adoption inventory to that bar against its bundle's own plan.toml: it MUST yield cannot-evaluate for an inventory that names a phase other than the one its file name carries or a plan digest other than that plan's, and, except for an inventory in the recognized legacy format below, which is its named finding, for every inventory of a bundle whose plan.toml is absent, unreadable or not canonical, names another run, or carries a plan_digest that does not re-seal its own bytes, an empty base inventory included (a bundle with no inventory is its own named finding).",
+        )),
+        ('4.4', ('The names imported, archive',), (
+            'The names imports, imported, archive, staging, and journals are reserved at the store level for OPF control area and MUST NOT be used as a machine subdirectory name; discovery fails closed on a machine store so named.',
+            'The legacy staging name imports remains reserved so legacy content cannot be re-absorbed.',
+        )),
+        ('4.5', ('An ambiguous outcome and an input', 'A zero-match outcome over a present',), (
+            'A fresh-only implementation (section 16.1) MUST recognize a candidate manifest.toml whose base table is the retired [devprocess] only to refuse that store as unsupported-older-store; the recognition is not a discovery match.',
+            'For a fresh-only implementation, a recognized legacy candidate, an ambiguous outcome, and an input that discovery cannot read or parse are a failed discovery of an existing store and MUST NOT be treated as an absent store that permits initialization or adoption; a recognized legacy candidate beside a matching store makes the outcome ambiguous, which yields cannot-evaluate, not unsupported-older-store, a refusal that applies only where no matching store accompanies the legacy candidate.',
+            'A fresh-only implementation MUST NOT treat a zero-match outcome over a present .working/ as authorizing initialization or adoption by itself.',
+            'In every command that resolves a store and meets that outcome, as part of its section 16.1 admission check and so before every write that check precedes, it MUST run the section 16.1 legacy-state search over that .working/ tree and MUST refuse each listed item it finds as unsupported-legacy-state, beside the zero-match cannot-evaluate result; where that .working/ holds no recognized legacy candidate and no section 16.1 legacy-state item, only a section 14 first adoption authorizes initialization there, through an investigation that distinguishes first adoption from re-adoption and records a digest-stamped inventory, and one approved plan that gives every foreign file a disposition before init-store (section 14.1).',
+            'Because a zero-match outcome discovers no store manifest, that search MUST apply the section 16.1 rule for a store with no discovered manifest, exactly as section 16.1 states it, and a cannot-evaluate result of that search authorizes neither initialization nor adoption.',
+        )),
+        ('8.1', ('| Tier | Type | Namespace |',), (
+            '| Tier | Type | Namespace | |---|---|---| | Baseline | backlog_item | BI | | Baseline | done | DN | | Baseline | worklog | WL | | Baseline | finding | FN | | Baseline | pending_decision | PD | | Baseline | autonomous_decision | AD | | Baseline | block | BL | | Baseline | handoff | HO | | Baseline | reference | RF | | Baseline | contribution | CN | | Baseline | maintainer_decision | MD | | Baseline | preference_pattern | PP | | Governance module | maintainer_action | MA | | Delivery-assurance module | artifact | AR | | Delivery-assurance module | gate_run | GR | | Delivery-assurance module | release | RL | | Delivery-assurance module | waiver | WV | | Operational-policy module | mode | MO | | Operational-policy module | tier_assessment | TA | | Concurrent-operation module | session_lease | SL | | Migration quarantine (importer-only) | legacy_fragment | LF | | Reserved, excluded | transaction | TX | | Reserved, unassigned | (none) | CL | Notes on the roster: - The word "changelog" is not a record type.',
+        )),
+        ('8.1', ('- Imported history uses the same enabled types',), (
+            'legacy_fragment (LF) is deprecated for new stores as of 1.3.0, not removed: its taxonomy row and legacy validation remain for existing stores and evidence.',
+            'New imports MUST use the imported series and verbatim unparsed text (section 8.3), not LF quarantine.',
+            'LF MUST NOT be scaffolded.',
+            'A fresh-only implementation (section 16.1) provides no legacy LF validation and MUST refuse a store that declares the legacy_fragment type or holds an LF record.',
+            '- Imported history uses the same enabled types except legacy_fragment (section 8.2) in a separate series, not additional record types.',
+        )),
+        ('8.2', ('counters.toml MUST hold independent',), (
+            'The imported series MUST refuse the LF namespace, since new imports do not use LF quarantine (section 8.1).',
+            'counters.toml MUST hold independent monotonic high-water values per series and namespace, BI for clean backlog items and the quoted TOML key "imported:BI" for imported backlog items, with the imported series\' rows required, one for each enabled type except legacy_fragment, since the imported series refuses LF and so has no "imported:LF" row.',
+        )),
+        ('8.3', ('A conforming imported series can reach doctor VALID',), (
+            'A conforming imported series can reach doctor VALID: it MUST NOT enter the legacy importer or module-schema deferral seam.',
+        )),
+        ('8.3', ('C-IMPORTED-IDS owns every', 'C-CONTAINMENT recognizes',), (
+            'C-CONTAINMENT recognizes the imported managed leaves, C-LINKS resolves the union of both series, and C-IMPORTED-SEGREGATION enforces section 8.6.',
+        )),
+        ('8.5', ('| Module types, in outline',), (
+            '| Module types, in outline (full schemas ship with the module schemas release): maintainer_action open > done or dropped; artifact staged > promoted or rejected; gate_run recorded with a three-valued verdict field (pass, fail, cannot_evaluate), never folded into status; release planned > published or abandoned; waiver active > expired or revoked, expiry required at creation; mode active > retired; tier_assessment recorded; session_lease held > released or reconciled; legacy_fragment quarantined > resolved or ignored.',
+        )),
+        ('8.6', ('Imported history has an authority firewall', 'A clean-series record MUST NOT carry',), (
+            'Imported history has an authority firewall, enforced by the writer and doctor and keyed on provenance rather than on series alone: it covers every record whose actor.kind is importer, in the imported series or written into the clean series by the pre-1.3.0 legacy importer.',
+        )),
+        ('8.6', ("A clean done record's receipt_of",), (
+            "A clean done record's receipt_of MUST target a clean backlog item, and a clean backlog item reaching ratified done MUST hold a clean receipt authored by a non-importer actor; a legacy importer-authored receipt satisfies, as recorded history, only the legacy importer-authored backlog item it was recorded with.",
+            "One exception is defined so that the section 9.2 refusal always has a writer-performable remedy: where that upgrade withdraws a ratified done item's only receipt as legacy importer-authored, a maintainer-authored clean maintainer_decision that links corrects to that item and records that its completion stands MUST satisfy the item's receipt obligation in place of the withdrawn receipt; opf record create authors such a decision, doctor and the upgrade MUST accept it, and a maintainer who instead judges the work unfinished MUST record a new clean backlog item linking derives_from back, never reopen the terminal done.",
+            'That acceptance binds an upgrade-capable implementation (section 16.1); a fresh-only implementation never reaches it, because the withdrawn legacy receipt is legacy state that it MUST refuse under section 16.1.',
+        )),
+        ('8.6', ('C-IMPORTED-SEGREGATION enforces this firewall',), (
+            'C-IMPORTED-SEGREGATION enforces this firewall over importer-authored records in both series.',
+        )),
+        ('8.8', ('The clean-series subcommands MUST also refuse',), (
+            'The clean-series subcommands MUST also refuse an importer-authored record as their operand: acting on imported or legacy importer-authored history is a new clean record linking back (section 8.6).',
+        )),
+        ('9.2', ('A base-schema version bump MUST ship', 'Every requirement of this section on an upgrade', 'Every implementation MUST apply',), (
+            "A base-schema version bump MUST ship a tested, in-place store-schema upgrade (opf upgrade) in at least one published upgrade-capable implementation (section 16.1), the reference tooling, so that a store below the new version has an upgrade path; the path holds only within this section's preconditions and refusals and that implementation's disclosed residuals.",
+            'Every requirement of this section on an upgrade, its deltas, preconditions, report, refusals, and remedies binds an upgrade-capable implementation; a fresh-only implementation implements none of them and MUST instead refuse under section 16.1.',
+            "Every implementation class MUST apply the version ceiling's refusal at the end of this section, a fresh-only implementation at its section 16.1 admission check.",
+        )),
+        ('11', ('"complete" means every such source', 'A partial or complete status that no adoption receipt',), (
+            '"complete" means every such source has a green completion result and recorded retirement under section 14.1 with a live full doctor VALID, or that a pre-1.3.0 legacy import finished and its preserved legacy run evidence substantiates it; the section 9.2 upgrade preserves that legacy status without fabricating an approval or receipt.',
+            'A partial or complete status that neither an adoption receipt with completion results nor preserved legacy import evidence substantiates MUST fail closed, as does a missing, unreadable or contradictory input.',
+        )),
+        ('12', ('Open records, active blocks',), (
+            'Open records, active blocks, unresolved decisions, unresolved fragments, unexpired waivers, the current handoff, and the unreleased worklog tail MUST NOT rotate.',
+        )),
+        ('14.1', ('Post-adoption import MUST use',), (
+            'Post-adoption import MUST use the approved, versioned prompt pack, with an example for every record type in the section 8.1 roster except the excluded transaction, the unassigned CL namespace, and the deprecated legacy_fragment.',
+        )),
+        ('14.2', ('A no-follow existence probe of manifest.toml',), (
+            'A no-follow existence probe of manifest.toml in an immediate subdirectory of .working/, a kept one included, used only by discovery, by this rule, and by the section 16.1 admission check, is not a read of a kept path.',
+        )),
+        ('14.2', ('A fully reversed first adoption',), (
+            'A fresh-only implementation (section 16.1) performs that recovery only after its section 16.1 read-only pre-scan and within the section 16.1 recovery bound, and runs its admission check after it.',
+            'In a first adoption, its apply also archives and removes every occupying source at a section 16.1 candidate path before it writes the store manifest, and its plan refuses a foreign source at such a path that is no planned managed destination (section 16.1).',
+        )),
+        ('16.1', ('The base defines one implementation model', 'An implementation supports base spec_version 2.0.0',), (
+            'The base defines two implementation conformance classes, upgrade-capable and fresh-only.',
+            'A class changes which requirements bind an implementation only where this specification says so; a declared scope, exclusion, profile, or posture MUST NOT otherwise waive a base requirement.',
+            'Current-format requirements, the imported series, adoption, and the section 8.6 authority firewall included, bind both classes.',
+            'An upgrade-capable implementation meets every section 9.2 requirement for each earlier base version and generation and grades legacy state under sections 8.1, 8.6, 11, and 14.1.',
+        )),
+        ('16.1', ('An implementation MUST declare,',), (
+            'A fresh-only implementation supports exactly one base spec_version, one homes generation, and one worklog storage generation, initializes stores directly at them, and implements no section 9.2 upgrade and no legacy-state grading.',
+            'An implementation MUST declare, in the documentation of each release and in every report its emitter writes, its release identity, its class, and its supported spec_version, homes generation, and worklog storage generation.',
+        )),
+        ('16.1', ('Each digest in a report MUST be written',), (
+            "Each digest in a report MUST be written as 64 lowercase hexadecimal digits, and the runtime result MUST be written as one of the tokens of the three-valued gate_run verdict field (section 8.5): cannot_evaluate where that run's runtime check yielded cannot-evaluate or another rule of this section made that run yield cannot-evaluate, the admission check over the store that run resolved included, and otherwise pass where it authorized store operations and fail where it did not.",
+        )),
+        ('16.1', ('A report deviates from the expected report',), (
+            'A report deviates from the expected report where any of the four compared parts is omitted, written in another form, or holds another value; no other content of a report is compared, the base result of a report a reference run emits over a store its admission check refuses (the base-result part below) apart.',
+        )),
+        ('16.1', ('A reference run of a release MUST NOT',), (
+            'A reference run of a release MUST NOT emit a report that deviates from the expected report, and its runtime check MUST NOT authorize any store operation where the expected runtime result is cannot_evaluate or where its admission check, the pre-scan included, refused the store that run resolved.',
+        )),
+        ('16.1', ('A failure of either rule is shown',), (
+            'A failure of either rule is shown for a checker where one of its own attempts or reference runs shows it, and established for that checker where a second of its own attempts or reference runs, made on the same platform and version, shows a failure of the same rule and, under the reference-run rule, in the same part, the four compared parts of the report and the store and base-result parts below each one part; attempts and reference runs that show no failure, however many there are, never counter a shown or established failure.',
+        )),
+        ('16.1', ('The two rules above are the one path',), (
+            "The two rules above are the one path from attempts and reference runs to a verdict: a breach of any requirement of this section that an attempt or a reference run shows in what those rules compare, the four compared parts of a report, not-read beside another runtime result, a run's cannot-evaluate and the store operations it performs, a restatement a report states, and the store and base-result parts below included, MUST be judged solely as a failure of the availability rule or of the reference-run rule, shown and established only as those rules provide, never as nonconformance on one showing; only what a checker inspects in the bytes the release ships or reads in the documentation of the release decides a verdict under this section without that procedure.",
+        )),
+        ('16.1', ('Every requirement of this section that those rules do not compare',), (
+            "Every requirement of this section that those rules do not compare is a requirement on the bytes the release ships, on the documentation of the release, or on a checker's own conduct and reporting: in particular, a requirement on the conduct of the implementation's commands outside what the parts above read, the fresh-only admission, lease, recovery, and sync conduct below included, is a property of the bytes the release ships, and a breach of it is judged by that inspection alone, never by this procedure.",
+        )),
+        ('16.1', ('Under the reference-run rule the same-part',), (
+            "Under the reference-run rule the same-part condition applies to every failure, a store operation performed where the expected runtime result is cannot_evaluate or where that run's admission check, the pre-scan included, refused the store that run resolved included: that operation is a failure in a part of its own, the store part, shown and reproduced only by a run that performs such an operation, never by a deviating report.",
+            'A report a reference run emits over a store its admission check refuses is compared in one more part of its own, the base-result part: it deviates there where that report breaches the refusal-report rule below, by a base result other than indeterminate or by not naming what that rule has it name, and such a breach in such a report is judged only there, under the reference-run rule and the same-part condition, never as a direct verdict.',
+        )),
+        ('16.1', ('A declaration that is absent,', 'The rules on an absent,',), (
+            'A declaration that is absent, or that omits its release identity, its spec_version, its homes generation, or its worklog storage generation, is malformed rather than one that declares no class: it MUST yield cannot-evaluate and MUST NOT authorize any store operation.',
+            'A declaration that carries its release identity, its spec_version, its homes generation, and its worklog storage generation, and omits only its class, declares no class: it MUST NOT be treated as malformed for that omission, and the implementation that ships it MUST be treated as upgrade-capable unless the declaration is malformed or contradictory on other grounds.',
+            'The rules on an absent, unreadable, malformed, contradictory, or classless declaration govern the file alone: a runtime check MUST apply them to the installed copy as it stands, a check of the documentation or of the reports MUST apply them to that file as the release ships it, and each check MUST NOT take a class or any other field from the documentation of the release or from any report.',
+            "Where that documentation states a class that the file omits, the release does not conform to this section and a conformance claim MUST NOT be made for it, because the documentation's restatement states a field the file does not carry; where a report a reference run of that release emits states such a class, that report's restatement differs from the file's declaration the same way, a deviation of the restatement part judged under the reference-run rule like any other, never a direct verdict.",
+            'The file declares no class only where it omits its class and no other field: a file that is absent, or that also omits its release identity, its spec_version, its homes generation, or its worklog storage generation, is malformed and MUST yield cannot-evaluate.',
+            'A fresh-only implementation MUST run an admission check in every command that resolves a store, at every posture, before any other grading and before any write, the claim of the single-writer lease (section 5.7) included, apart from the lease reconciliation and recovery that the recovery bound below leaves to sections 5.7, 8.8, 14.1, and 14.2, which the read-only pre-scan below precedes.',
+            "The check MUST run after any section 5.7 comparison against the sync target that the command performs, over the state that comparison found, and a fresh-only implementation's opf sync MUST NOT bring in, by a fast-forward, a state that the check, run first over the fetched target state, refuses or cannot evaluate, nor send, by a push of pending local commits (section 5.7), a state that the check, run first over the local state it would push, refuses or cannot evaluate.",
+            'A command that writes, and does not already hold the lease from the recovery below, MUST, after admission, take the lease.toml that section 5.7 has it take in the machine store and make it observable at the sync target where the store has one (section 5.7) before any other write, the session_lease record that section 5.7 has it record for that lease where the concurrent-operation module is enabled included.',
+            "Once that lease is taken and observable, and before any other write, it MUST confirm that the lease.toml carries its own claim and that every directory listing, existence-probe result, and candidate the check read is unchanged from what the check read, apart from exactly the bytes that its own claim of the lease wrote under section 5.7: the directory entries that claim created, a file that claim created, the lease.toml included, holding only what that claim wrote, and, in a file that claim rewrote, such as a <type>.index.toml or worklog ledger that gains its session_lease record, only that claim's own change, so that file MUST equal the bytes the check read with exactly that change applied, and a change to any other record or byte of it is a difference, never exempt as part of a file the claim wrote.",
+            'Where anything else differs, or the lease.toml does not carry its own claim, it MUST stop as cannot-evaluate and write nothing but what section 5.7 requires to end its own claim: it MUST release its own lease (section 5.7) where the lease.toml carries its own claim, so the lease path ends as it was before the claim, and MUST leave that lease.toml untouched where it does not, since section 5.7 forbids seizing a lease from a live holder.',
+            'The check MUST compare parsed versions, never strings, and MUST refuse:',
+            '- as unsupported-older-store, a store whose manifest declares a spec_version below the supported one, or whose base table is the retired [devprocess] (section 4.5), naming the declared version or table, the supported version, the store location, and the remedy: upgrade the store with an upgrade-capable implementation, then retry;',
+            '- as unsupported-store-generation, a store whose homes or worklog storage generation differs from the supported one, naming each generation found and supported;',
+            '- as unsupported-legacy-state, a store at the supported version that holds legacy state, or a zero-match .working/ that holds it (section 4.5), naming each item and its path;',
+            "- with the section 9.2 version ceiling's finding, a store whose manifest declares a spec_version above the supported one, naming the declared and supported versions and the tooling-upgrade remedy.",
+            'Legacy state is this closed list: a clean-series record, active or archived, whose actor.kind is importer (section 8.6); a declared legacy_fragment type or an LF record (section 8.1); a partial or complete import_status in a store that holds no adoption receipt (sections 11 and 14.1); an evidence inventory in the legacy format opf.ingest.evidence-inventory/v1 (section 4.2); a .working/IMPORT-REPORT.md; and a legacy .working/imports/ directory (section 4.4).',
+            'Extending the list is a specification change.',
+            'The check MUST search the .working/ tree of the store repository for each item, its staging and imported areas and the record archive included, within the three limits that follow, and, where discovery finds a store manifest, MUST read import_status from it; a legacy run archive outside .working/, for the reference tooling .aiqt/import-archive/, is reached only through the import_status item.',
+            'The check MUST enumerate .working/ and every directory beneath the discovered machine store, .working/staging/ and .working/imported/, and a directory among these that it cannot enumerate yields cannot-evaluate.',
+            'Outside those directories, a candidate lies only at a manifest.toml in an immediate subdirectory of .working/, which the check MUST reach only by a no-follow existence probe of that name (section 14.2), never by enumerating that subdirectory; a probe it cannot complete yields cannot-evaluate, and no other directory can hold a candidate or a path-defined item, so the check enumerates no other, the recovery journal below aside.',
+            'First, the check MUST match the two path-defined items, a .working/IMPORT-REPORT.md and a legacy .working/imports/ directory, at those live paths only; a copy preserved under .working/archive/adoption/<run-id>/ (section 14.2) is adoption evidence, not legacy state.',
+            'Second, the check MUST NOT read the contents of, or enumerate beneath, a path registered under [unmanaged] that section 14.2 permits: it matches such a path against a path-defined item by the path alone, makes no access beneath it but the existence probe above, and leaves any other listed item kept inside it unsearched, a gap section 17 discloses.',
+            'That limit applies to no other [unmanaged] entry: an entry that equals, contains, or lies within a reserved control area (section 14.2) or the machine store, that equals or contains .working/ itself or a discovery candidate (section 14.2), or that names an OPF-managed file or view is a contradictory input, and the check MUST yield cannot-evaluate for it, never admission.',
+            "Third, to find the items defined by file content, the check MUST parse exactly these candidates and no other file, the recovery journal below aside, a boundary section 17 discloses: each candidate manifest.toml that discovery reads (section 4.5), the discovered store manifest included; as candidate records, the record files of the discovered machine store, active and archived, meaning the worklog ledger worklog.toml and the imported worklog worklog.imported.toml (sections 6.2 and 8.3), each <type>.index.toml and <type>.imported.index.toml, each per-record file under a <type>/ directory (section 9), and each index, worklog ledger, and record file under its record archive archive/<YYYY>/ (section 12); as candidate inventories, each inventory.toml and inventory-<phase>.toml at the root of a run folder .working/staging/<kind>/<run-id>/ or .working/imported/<kind>/<run-id>/; and, in each run folder .working/imported/adoption/<run-id>/ (section 14.2), as candidate adoption receipts, each file at an adoption receipt path of the implementation's own section 14 adoption writer.",
+            'Where discovery finds no store manifest, as over a zero-match .working/ (section 4.5), the import_status item and the declared legacy_fragment type item do not apply and no file is a candidate record; the check still parses each candidate inventory and candidate adoption receipt present and matches both path-defined items, and an unreadable, malformed, or contradictory candidate that is present, a candidate manifest.toml that discovery reads (section 4.5) included, MUST yield cannot-evaluate, never admission.',
+            'The check MUST classify each candidate it reads by the rules that follow, whether or not discovery finds a store manifest, and MUST yield cannot-evaluate, never admission, for each candidate those rules class as unreadable, malformed, or contradictory.',
+            'A candidate is unreadable where the check cannot read its bytes.',
+            "A candidate adoption receipt is malformed where its bytes do not parse in the receipt format of the implementation's own section 14 adoption writer, since this specification fixes no adoption receipt path or format; every other candidate is malformed where its bytes do not parse as TOML.",
+            'A candidate manifest.toml whose [opf] table declares standard = "opf" is a discovery match (section 4.5), and that match is contradictory where the file also carries a [devprocess] table, where its spec_version is absent or does not parse as a version, where a present [opf].homes or [opf].worklog value is not a TOML integer, or where a present import_status is not none, partial, or complete.',
+            'A candidate manifest.toml that carries an [opf] table whose standard is absent or any other value is contradictory, a mistyped or altered discovery token (section 17) included; one that carries a [devprocess] table and no [opf] table is a recognized legacy candidate (section 4.5); and one that carries neither table is foreign content, neither a match nor a contradiction, that a section 14 first adoption dispositions.',
+            "Any other candidate is contradictory where a value that decides a listed item, a record's actor.kind or type or an inventory's format, is absent where its envelope or format requires it, or is present and not a string.",
+            'Section 14.2 places adoption evidence under .working/imported/adoption/<run-id>/, and the check MUST decide from that area alone whether a store holds an adoption receipt.',
+            'A candidate adoption receipt that is neither unreadable nor malformed establishes that the store holds one, and a store whose .working/imported/adoption/ is absent or holds no file holds none.',
+            "Where that area holds a file but no candidate adoption receipt, as where another implementation's writer placed its receipt at another path, the check cannot establish whether the store holds an adoption receipt, and for a partial or complete import_status it MUST yield cannot-evaluate, never unsupported-legacy-state and never admission.",
+            "A file there at no adoption receipt path of the implementation's own writer is not a candidate adoption receipt and, as a possible receipt, bears only on that decision; the third limit above alone decides whether it is a candidate inventory, so an inventory.toml or inventory-<phase>.toml at the root of a run folder there is one, parsed and classified as any other.",
+            'An adoption receipt kept outside .working/imported/adoption/, which section 14.2 does not permit, decides nothing, a gap section 17 discloses.',
+            "A fresh-only implementation's own adoption writer MUST make its adoption receipt crash-durable before it begins to write the partial or complete import_status that receipt substantiates, whether or not both writes share a transaction, and any reversal of that status MUST make the prior import_status crash-durable before it removes that receipt, so no interruption, recovered or not, leaves its own store holding that status without that receipt.",
+            "In a first adoption, a fresh-only implementation's own section 14 adoption writer MUST NOT leave the store manifest that its apply writes in the live tree beside a foreign source at a candidate path, a path at which a file is a candidate record under the third limit above once that manifest exists.",
+            'Its plan MUST refuse at plan time, naming the path, the same way a collision refuses (section 14.2), a foreign source at a candidate path that is no planned managed destination, and a keep whose [unmanaged] entry the rules above class as a contradictory input.',
+            "Its apply MUST archive and remove every occupying source at a candidate path (section 14.2), in that section's order of copy, verify, commit, and remove, before it begins to write the store manifest.",
+            'A recovery that completes that apply forward MUST keep that order, and a reversal of that apply MUST restore the manifest path to its journaled prestate, and make that prestate durable, before it restores any source to a candidate path.',
+            'So no interruption of that apply, recovered or not, leaves that manifest discovered beside a live foreign source at a candidate path: before the manifest is written no file is a candidate record, and once it is written no foreign source remains at a candidate path.',
+            "A fresh-only implementation MUST follow the lease rules of section 5.7 and the recovery rules of sections 8.8, 14.1, and 14.2 unchanged and in the order those sections set, exactly as an upgrade-capable implementation does: after resolving the store, a command reconciles a leftover lease and completes or rolls back, from its journal, an interrupted journaled transaction of the implementation's own writer, a section 8.8 authoring or import transaction, a section 14.2 apply, or a section 14.1 retirement, removal, relocation, or reclamation transaction, as those sections require, and its admission check then runs over the store those steps left, before any other write.",
+            'Before either step and before any other write, every store-resolving command MUST run the admission check once as a pre-scan that writes nothing, over the store as the command found it, and where the pre-scan refuses the store or yields cannot-evaluate, the command MUST report every finding it meets and stop, the lease reconciliation and the recovery unperformed.',
+            'The pre-scan MUST defer to the admission check that follows recovery only the cannot-evaluate classification of a candidate that is an operand of an interrupted transaction whose journal lies within the recovery bound below and that the pre-scan classes as unreadable, malformed, or contradictory or finds absent, together with a discovery outcome that such an operand alone decides, as where apply removed an occupying manifest.toml (section 14.2), and MUST defer nothing else.',
+            'That deferral covers no refusal: the pre-scan MUST still refuse, before any write, each spec_version, homes generation, or worklog storage generation that a deferred candidate declares and the check refuses, and each listed legacy-state item that the live bytes of a deferred candidate show, so a store whose manifest declares a version or generation that the check refuses, or that shows a listed legacy-state item, the live bytes of an operand included, is refused before any write, the lease reconciliation and the recovery unperformed.',
+            "Within that order a recovery bound applies: a fresh-only implementation MUST recover only a journal in its own writer's format for the supported version and generations whose operands all lie at paths that the transaction's section, at that version and those generations, lets that kind of transaction write, none of them a path-defined legacy-state item.",
+            "The bound reads the journal's format and its operands' paths, never the content of a journaled prestate or planned poststate, so a section 14.2 apply journal whose preimages are an occupying source's foreign bytes, TOML or not, lies within it, and each section's own refusal of an operand changed since the interruption, such as that of section 8.8, still applies.",
+            "Every store-resolving command that finds its own writer's recovery journal naming an interrupted transaction MUST read that journal in its pre-scan, the one input beyond the candidates and directories above that the check reads, and MUST yield cannot-evaluate, never admission, before any write, the lease reconciliation included, where it cannot read that journal or parse it in that format, or where an operand lies outside those paths.",
+            "After a section 8.8 reconciliation, that reconciliation's refusal of the new operation still applies, whatever the admission check that follows it finds.",
+            'A command that performs no such recovery defers nothing and classes every candidate by the rules above, a candidate torn by an interruption included, and so does every command for a candidate that no such journal names as an operand.',
+            "Where a store meets more than one refusal above, the section 9.2 ceiling included, the check MUST report every finding it meets, and that store's refusal fixture asserts each of them.",
+            "An input the check cannot read, parse, or enumerate MUST yield cannot-evaluate, never admission; the pre-scan's deferral of a candidate is not admission, and the check that follows recovery classes that candidate afresh.",
+            'Each refusal MUST be a fail-closed INVALID finding, never VALID.',
+            'Where its admission check, the pre-scan included, refuses a store or yields cannot-evaluate, a fresh-only implementation MUST NOT grade the rest of that store, write, stage, or partially upgrade any file, rewrite a version declaration, fabricate provenance, or invoke another upgrader, the section 5.7 claim and release of a lease the command takes aside; the store and product trees, ignored files and the lease path included, MUST stay byte-identical to the state the command found where the pre-scan stops it, and otherwise to the state that the lease reconciliation and recovery above left, apart from that claim and release.',
+            'A fresh-only implementation that provides an upgrade command MUST refuse an older store with the same finding and MUST NOT report a successful upgrade; it MAY report a no-op on a supported store only after full doctor VALID.',
+            'Admission MUST NOT substitute for any other applicable check.',
+            'For a store its admission check refuses, a report MUST give the base result as indeterminate, naming the class, the supported version and generations, and the finding; it MUST NOT give conformant_for_declared_scope, nor nonconformant on that refusal alone.',
+            'That sentence is the refusal-report rule the base-result part above compares, so in a report a reference run emits, a breach of it deviates there, never as a direct verdict.',
+            'A claim of the fresh-only class MUST cite refusal evidence: for each finding above and each legacy-state item, a fixture that every store-resolving command refuses with that finding, asserting each seeded legacy-state item by its path, with both trees byte-identical; for the section 9.2 ceiling, whose finding carries no token in this specification, the fixture asserts an INVALID finding that names the declared and supported versions and the tooling-upgrade remedy.',
+            "The importer-authored clean-series item's fixtures MUST include five separate fixtures that each seed exactly one importer-authored clean record, one an entry in the active worklog.toml ledger, one an entry in an archived worklog ledger, one an active typed record in its <type>.index.toml, one an active typed record in a per-record file under a <type>/ directory (section 9), and one an archived typed record, and the import_status item's fixtures MUST include one whose .working/imported/adoption/ holds no file, refused with that item's finding, and one whose .working/imported/adoption/<run-id>/ holds a file at no adoption receipt path of the implementation's own writer and no candidate adoption receipt, which every store-resolving command MUST report as cannot-evaluate, never as unsupported-legacy-state and never as admission, with both trees byte-identical.",
+            "The recovery bound's fixtures MUST include, for each kind of recovery journal the implementation's own writers keep, the section 8.8 journal and the section 14.2 apply journal included: one whose candidate is torn under such a journal within the bound, which a command that performs that recovery recovers and then admits, the section 14.2 one interrupted after apply removed an occupying manifest.toml; one whose journal names a path-defined legacy-state item as an operand and one whose journal does not parse in its writer's format, each of which every store-resolving command MUST report as cannot-evaluate, never as admission, with both trees byte-identical; and one at the supported version that holds such a journal, whose operands all parse, and a listed legacy-state item that is no operand of it, which every store-resolving command MUST refuse with that item's finding, with both trees byte-identical.",
+            "The section 14.2 apply journal's fixtures MUST also include a first adoption interrupted after its apply journal was durably committed, once apply had removed a foreign source that does not parse as TOML from a planned machine-store record path, such as worklog.toml, journaling its preimage, and had written the current-format manifest, which a command that performs that recovery completes forward and then admits.",
+            "They MUST also include a first adoption over a foreign worklog.toml at a planned machine-store record path that parses and holds an importer-authored entry, interrupted with its apply journal durably committed and with it not committed, once after apply archived and removed that source and before it wrote the store manifest and once after it wrote that manifest, and one interrupted during the reversal of an uncommitted apply after that reversal restored the manifest path's prestate and before it restored that source; a command that performs that recovery MUST complete each committed apply forward and finish reversing each uncommitted one, its pre-scan not stopping it, and the admission check that follows MUST find no legacy-state item, admitting each store that recovery completed forward; for each store whose apply that recovery finished reversing, the fixture MUST assert that no store manifest remains, that the foreign worklog.toml is back at its path, byte-identical to its plan digest, and that the check reports the zero-match cannot-evaluate result (section 4.5).",
+            "A first adoption's fixtures MUST also include a plan over a foreign per-record file under a <type>/ directory of the planned machine store, which that plan MUST refuse at plan time, naming that path, and a zero-match .working/ whose .working/imported/adoption/<run-id>/ holds a file at an adoption receipt path of the implementation's own writer that does not parse in that writer's receipt format, which every store-resolving command, a first adoption included, MUST report as cannot-evaluate, each before any write, with both trees byte-identical.",
+            "The pre-scan's fixtures MUST include, each with the concurrent-operation module enabled and with it disabled, a store whose manifest declares a spec_version below the supported one and that holds a dead run's leftover lease.toml, with the module that run's held session_lease record, and an interrupted journal of the implementation's own writer whose operands all parse, which every store-resolving command MUST refuse as unsupported-older-store before any write, with both trees byte-identical, that lease.toml and that journal included.",
+            "They MUST also include, each with a dead run's leftover lease.toml and an interrupted journal of the implementation's own writer within the recovery bound that names the candidate below as an operand, one whose live manifest.toml declares a spec_version below the supported one and an import_status that is not none, partial, or complete, which every store-resolving command MUST refuse as unsupported-older-store, and one at the supported version whose live <type>.index.toml holds one importer-authored record and one record whose actor.kind is absent, which every store-resolving command MUST refuse as unsupported-legacy-state, each before any write, with both trees byte-identical, that lease.toml and that journal included.",
+            "The recheck's fixtures MUST include one, with the concurrent-operation module enabled and its session_lease records kept in their <type>.index.toml, in which another process sets actor.kind to importer in an existing record of that index after admission and before the command's claim, which then rewrites that index; the command MUST stop at the recheck as cannot-evaluate and write nothing but the section 5.7 release of its own lease.",
+            'Missing evidence makes the claim indeterminate, never a pass.',
+            "A fresh-only claim MUST NOT imply upgrade compatibility or continuity from the implementation's own earlier releases; moving to a later base version requires a new declaration and new evidence.",
+        )),
+        ('17', ('A requirement of section 16.1 on the conduct',), (
+            "A requirement of section 16.1 on the conduct of the implementation's commands that its two rules do not compare, the fresh-only admission, lease, recovery, and sync conduct included, is judged only by that inspection, so a conduct breach a checker cannot attribute to the bytes the release ships decides nothing for that checker, and one it can attribute is decided by what that inspection finds in those bytes, never by the observed run itself on any number of showings.",
+        )),
+    )
+    # Later wording fixes (the 4.2 doctor-parity and bundle-deletion wording, the 17 conduct wording,
+    # and the 16.1 wording the deleted admission check left with no rule behind it): each row restores
+    # the pin the fix rewrote.
+    retired_runs += (
+        ('4.2', ('The doctor MUST decide that a run is admitted', 'That parity covers adoption admission and recorded retirement alone'), (
+            'The doctor MUST decide that a run is admitted, and that its retirement is recorded, from the committed adoption evidence alone, the bundle under .working/imported/adoption/<run-id>/ and the run archive, which travel with every clone, and MUST NOT read the machine-local journal, so a clone without journals grades exactly as the original store.',
+        )),
+        ('4.2', ('Deleting a whole bundle',), (
+            'Deleting a whole bundle, inventory and payload together, is outside this local snapshot check; independent history is required to detect that loss.',
+        )),
+        ('16.1', ('The following writes, and no others, are not store operations', 'A run that stops as cannot-evaluate and writes nothing', 'Every other write within a store the run resolved'), (
+            'A write this section or section 5.7 itself requires is not a store operation under this section, for the runtime-result comparison and the store part below alike: the claim of the single-writer lease a command takes, its release, the session_lease record of that claim and of that release, and the lease reconciliation and recovery writes sections 5.7, 8.8, 14.1, and 14.2 require, so a run that stops as cannot-evaluate and writes nothing but what section 5.7 requires to end its own claim performed no store operation.',
+        )),
+        ('16.1', ('The expected report of a release',), (
+            "The expected report of a release is fixed by the bytes the release ships alone, apart from the runtime result, the one part also coupled to the run it concerns: its restatement is the declaration of that file as the release ships it, each of its digests equals the SHA-256 digest of that file's bytes as the release ships them, and its runtime result is cannot_evaluate exactly where a rule of this section makes those bytes, or the store that run resolved as the checker observes it, yield cannot-evaluate, and otherwise pass or fail, between which this section, as it now stands, sets no rule.",
+        )),
+        ('16.1', ('The runtime-result part also deviates',), (
+            "The runtime-result part also deviates where its token disagrees with whether that run authorized store operations, the performed operations the checker observes; this comparison reads the run's writes, the store-coupled cannot-evaluate rule above reads the store that run resolved, and together they make the runtime result the only part of the expected report not fixed by the shipped bytes alone.",
+        )),
+        ('16.1', ('The behaviour-coupled comparisons are exactly two,',), (
+            "The behaviour-coupled comparisons are exactly two, the token comparison above and the store part below, and they read only the writes the checker observed: a run for which the checker cannot determine whether it observed every write gives it no evidence under either comparison, so a result-part or store-part failure that only those two comparisons of such runs could show MUST be reported as unresolved, never as established, a residual section 17 discloses; the rest of the expected-report comparison, the store-coupled cannot-evaluate expected result included, reads such a run's report as any other, over the store that run resolved as the checker observes it.",
+        )),
+        ('17', ('- Adoption and import run with C-EVIDENCE-ENUM,',), (
+            '- Adoption and import run with C-EVIDENCE-ENUM, which re-enumerates their control areas (.working/imported/<kind>/<run-id>/, .working/archive/adoption/<run-id>/ and .working/archive/moved/) on every doctor run, and the section 14.1 completion checks still verify their evidence digests themselves when they run; C-EVIDENCE-ENUM asserts membership, not authenticated actor history, and deleting a whole bundle, inventory and payload together, is outside its local snapshot check (section 4.2).',
+        )),
+    )
+    # The maintainer ruling of 2026-10-24 removed the section 9.2 remedy adoption and every special
+    # case that existed only for it: each row restores the pins it removed or rewrote, verbatim, in
+    # place of the pins that replaced them.
+    retired_runs += (
+        ('4.2', ('Ordinary transaction operands,',), (
+            "Ordinary transaction operands, including those of an open transaction being recovered, MUST NOT equal, descend from, or contain journals/; the one exception is a section 9.2 remedy adoption's disposition of the old tree's files under that name, which are foreign content the store being adopted into never wrote, not its journal state (sections 9.2 and 14.2).",
+            "A section 9.2 remedy adoption bounds this grading the same way: from the recorded approval until its retirement is recorded, an old-tree file under imported/, archive/, staging/ or journals/ that the approved plan enumerates as a frozen retire, move or migrate source (section 14.2) is bounded adoption state, never the adopted-into store's own evidence or staging, and, while its live bytes still match its plan digest, C-EVIDENCE-ENUM and this staging grading MUST grade it as migration_incomplete detail under the section 11 bounded treatment, never as a finding or cannot-evaluate, so the section 14.1 completion check stays reachable while the file stays frozen in place; a drifted or vanished source and an unenumerated path take no bounded treatment (section 11).",
+        )),
+        ('4.5', ('A discovered manifest that the section 9.2 validation refusals refuse',), (
+            'A discovered manifest that the section 9.2 validation refusals refuse for declaring a spec_version below 2.0.0, whatever its [opf].homes, marks no store: for adoption, it and the files beneath its .working/ MUST be treated as foreign content, never as a store, so the section 9.2 remedy adoption over them is a section 14 first adoption (sections 8.2, 9.2, and 14.1).',
+        )),
+        ('9.2', ('A spec_version below 2.0.0', 'A manifest so refused,', 'A tree under a manifest so refused', 'Files remaining under the reserved store control children', 'A manifest declaring a spec_version of 2.0.0 or above', 'Before any command writes to a store,'), (
+            "A spec_version below 2.0.0 names no version this specification defines, and validation MUST refuse it as a fail-closed INVALID finding naming the remedy, since this section defines no upgrade into 2.0.0: a fresh 2.0.0 store whose section 14 adoption gives the old store's files a disposition as foreign content.",
+            "That adoption is a first adoption: a manifest refused for declaring a spec_version below 2.0.0, whatever its [opf].homes, and the files beneath its .working/ are foreign content for adoption, never a store (sections 4.5 and 14.1), no prior OPF ancestry exists to seed, and the new store's counters start at zero (section 8.2); the old tree's reserved-name children (archive/, imported/, staging/, and journals/) are part of that foreign content and take their dispositions under section 14.2.",
+            "Because the new store's counters start at zero, a number the old tree's records carried can be issued again in the new store's own series; the old tree's records are foreign content, never the new store's history, so no series within one store ever reissues an ID (section 8.2).",
+            'A manifest declaring a spec_version of 2.0.0 or above whose [opf].homes is missing or not the integer 2 is refused as a store by the [opf].homes refusal above, never foreign content: that refusal MUST NOT be read as authorizing initialization or adoption, and the remedy adoption above does not apply to it (sections 4.5, 8.2, and 14.1).',
+            'Before any command writes to a store, the claim, release, or reconciliation of the single-writer lease (section 5.7), a fast-forward by opf sync, and the recovery of sections 8.8, 14.1, and 14.2 included, every implementation MUST apply these validation refusals and the [opf].homes refusal above to the store manifest that discovery finds there, so a store they refuse stays byte-identical; the one exception is the section 14 adoption that the remedy above names, every write that adoption requires included: its investigation, its staged plan and approval, its apply, and the recovery of that apply (sections 14.1 and 14.2).',
+            'Before that apply, every write of that adoption into the discovered .working/ tree MUST land under the reserved control-area children of section 4.2, its staging and evidence homes, and MUST leave every discovered file, the refused manifest included, byte-identical; only the apply gives a discovered file its disposition.',
+        )),
+        ('14.2', ('A fully reversed first adoption',), (
+            "A fully reversed first adoption leaves .working/ holding its retained journal, so the store location reads as present without a manifest (section 4.5), and journal state that a foreign tree planted there is touched only by a fail-closed refusal, never consumed as recovery state; clearing it is the operator's own act outside any OPF operation, a same-user residual of the class section 14.1 discloses, except where a section 9.2 remedy adoption's approved plan dispositions it as foreign content (the reserved-names rule below).",
+        )),
+        ('14.2', ('Once apply commits, a file under',), (
+            "Once apply commits, a file the store's own apply archived under .working/archive/adoption/<run-id>/ MUST keep that store-relative path and those exact bytes: it MUST NOT be written, rewritten, relocated or removed within its store by any OPF operation, and the enforcement pack MUST deny writes there (section 14.1).",
+        )),
+    )
+    retired_known['9.2'] = retired_known['9.2'] + (
+        'Unproven legacy .archive/ entries MUST remain in place with a standing finding until dispositioned.',
+    )
+    # Deleted outright with the section 9.2 remedy adoption (maintainer ruling, 2026-10-24).
+    for section, sentences in (
+        ('8.2', (
+            'A store manifest the section 9.2 validation refusals refuse for declaring a spec_version below 2.0.0, whatever its [opf].homes, is foreign content for adoption, never a store (sections 4.5 and 14.1), so the section 9.2 remedy adoption over it is a genuinely first adoption: no prior OPF ancestry exists to seed, and its counters start at zero.',
+        )),
+        ('14.1', (
+            "Investigation MUST treat an adoption over a discovered manifest that the section 9.2 validation refusals refuse for declaring a spec_version below 2.0.0, whatever its [opf].homes, as a first adoption: that manifest is foreign content for adoption, never a store (sections 4.5 and 9.2), every file of the old tree, its reserved-name children included, takes a disposition under section 14.2, and the new store's counters start at zero (section 8.2).",
+        )),
+        ('14.2', (
+            'Those rules protect the control area of the store being adopted into.',
+            "In the section 9.2 remedy adoption the refused manifest marks no store (sections 4.5 and 9.2), so the old tree's files under those reserved names are foreign content, not OPF control area: detection MUST surface each of them, and each MUST take a migrate, move or retire disposition, never keep, because the rule above keeps every [unmanaged] declaration outside the reserved names.",
+            'The section 4.2 journal-operand rule, the archive-immutability rule above, and the evidence-immutability rule below likewise protect only what the store being adopted into wrote: its own journal state, the files its own applies archived, and the evidence its own runs committed.',
+            "The old tree's files under the reserved names are foreign content that store never wrote, so those rules do not reach them: executing their dispositions MUST handle each one as an ordinary foreign operand, journaled, digest-verified and recorded like every other disposition, and MUST NOT consume any of them as journal, recovery, archive or evidence state (sections 4.2 and 9.2).",
+        )),
+    ):
+        retired_known[section] = retired_known.get(section, ()) + sentences
+    for section, starts, old in retired_runs:
+        pins = _CONTRACT[section]
+        at = [i for i, f in enumerate(pins) if f.startswith(starts[0])]
+        at0 = at[0] if len(at) == 1 else len(pins)
+        run = pins[at0:at0 + len(starts)]
+        body = _sections(text)[section]
+        normalized_body = " ".join(body.replace("`", "").split())
+        anchored = len(at) == 1 and len(run) == len(starts) and all(
+            f.startswith(s) for f, s in zip(run, starts)) and normalized_body.count(" ".join(run)) == 1
+        prefix = "spec " + section + " missing contract: "
+        name = section + "-" + starts[0] + "-" + old[0][:40]
+        check("spec-retired-run-spec-restored-" + name,
+              lambda a=anchored, r=run, o=old, b=body, nb=normalized_body, p=prefix: a and all(
+                  p + f in found for found in [contract_findings(text.replace(
+                      b, "\n\n" + nb.replace(" ".join(r), " ".join(o), 1) + "\n\n", 1))] for f in r))
+        with patch.dict(_CONTRACT, {section: pins[:at0] + old + pins[at0 + len(starts):]}):
+            check("spec-retired-run-pin-restored-" + name,
+                  lambda a=anchored, o=old, p=prefix: a and all(
+                      p + f in found for found in [contract_findings(text)] for f in o))
+    # Each retired-only sentence is absent from its section as written.
+    for section, sentences in retired_known.items():
+        for sentence in sentences:
+            check("spec-retired-known-absent-" + section + "-" + sentence[:40], lambda s=section, n=sentence:
+                  n not in _normalized(_sections(text)[s]))
+    # The quotation-regression set, run against the live spec and again against a spec that already
+    # holds a landed, registered quotation (below), each check named with prefix.
+    transport = "Legacy journal transport MUST preserve bytes through the migration's receipt binding."
+    explanation = "Homes 2 has no homes migration, so this rule no longer applies."
+    quotation = _normalized(_RETIRED_QUOTATION + "\n> " + transport)
+    import io
+    from contextlib import redirect_stdout
+    module = sys.modules[__name__]
+
+    def quotation_regressions(text, prefix, check=check):
+        check = (lambda name, thunk, check=check: check(prefix + name, thunk))
+        # The default entry refuses each retired fragment in its own section: the live section holds none
+        # outside a registered quotation, each fragment occurs in the retired pins or text above and names
+        # a retired term (_RETIRED_TERMS), and planting it at the end of its section turns the gate red
+        # with its own finding. Each fragment is paired: the same text in the exact retired-text quotation
+        # form is not a restoration, and every near miss of that form, a negated sentence included, still
+        # is, as is the fragment wrapped across lines in operative text or written with a backslash
+        # escape or hard line break.
+        retired_text = " ".join([" ".join(old) for _s, _p, old in retired_runs]
+                                + [" ".join(known) for known in retired_known.values()])
+        # Emptying or narrowing the registry would retire its vectors silently: its shape is pinned.
+        check("spec-retired-registry", lambda: tuple(_RETIRED) == (
+            "4.2", "4.4", "4.5", "8.1", "8.2", "8.3", "8.5", "8.6", "8.8", "9", "9.1", "9.2", "11", "12", "13", "14.1", "14.2", "14.3", "15", "16.1", "17") and
+              tuple(map(len, _RETIRED.values())) == (47, 2, 7, 6, 7, 2, 1, 5, 8, 2, 3, 36, 5, 2, 1, 9, 9, 1, 3, 44, 17))
+        near_misses = (
+            ("plain", "Retired text, quoted and not in force:\n{}"),
+            ("inline", "> Retired text, quoted and not in force: {}"),
+            ("lead-in", "> Retired text, not in force:\n> {}"),
+            ("case", "> retired text, quoted and not in force:\n> {}"),
+            ("indented", "  > Retired text, quoted and not in force:\n  > {}"),
+            ("no-quote-line", "> Retired text, quoted and not in force:\n{}"),
+            ("lazy", "> Retired text, quoted and not in force:\n> Quoted.\n{}"),
+            ("inside-quote", "> Note.\n> Retired text, quoted and not in force:\n> {}"),
+            ("inside-quote-paragraph", "> Note.\n>\n> Retired text, quoted and not in force:\n> {}"),
+            # The earlier quote opened, or continued by a blank, after one to three spaces.
+            ("inside-indented-quote", " > Note.\n >\n> Retired text, quoted and not in force:\n> {}"),
+            ("inside-quote-indented-blank", "> Note.\n  >\n> Retired text, quoted and not in force:\n> {}"),
+            ("inside-quote-three-spaces", "   > Note.\n   >\n> Retired text, quoted and not in force:\n> {}"),
+            ("negated", 'The retired sentence "{}" no longer applies; homes 2 has no homes migration.'),
+            # Each of these breaks one condition alone: the lead-in indented, text after it, or a
+            # trailing space; the line after it opens with ">" and the line above it is blank.
+            ("indented-lead-in", "  > Retired text, quoted and not in force:\n> {}"),
+            ("lead-in-extra", "> Retired text, quoted and not in force: See section 4.2.\n> {}"),
+            ("lead-in-trailing-space", "> Retired text, quoted and not in force: \n> {}"),
+            # The lead-in in the exact form but not rendered as text: hidden by an HTML comment (with
+            # and without a blank line above), in fenced code, or a lazy continuation of an earlier quote.
+            ("comment-hidden", "<!--\n> Retired text, quoted and not in force:\n> -->\n> {}"),
+            ("comment-hidden-blank", "<!--\n\n> Retired text, quoted and not in force:\n> -->\n> {}"),
+            ("after-html-block", "<div>\n</div>\n\n> Retired text, quoted and not in force:\n> {}"),
+            ("fenced", "```\n> Retired text, quoted and not in force:\n> {}\n```"),
+            ("fenced-blank", "~~~\n\n> Retired text, quoted and not in force:\n> {}\n~~~"),
+            ("lazy-above", "> Note.\nA lazy continuation line.\n> Retired text, quoted and not in force:\n> {}"),
+        )
+        # A fragment wrapped across lines in operative text is read joined, with each line's block-quote
+        # markers removed: in an ordinary or nested quote, a quote in a list item, a near miss of the
+        # lead-in, a quote after a quotation block, and a lazy line.
+        wrapped = (
+            ("quote", "> This requirement is in force:\n> {}\n> {}"),
+            ("nested", "> > {}\n> > {}"),
+            ("spaced", "   > {}\n   >   {}"),
+            ("list", "- > {}\n  > {}"),
+            ("paragraphs", "> {}\n>\n> {}"),
+            ("lead-in", "> Retired text, not in force:\n> {}\n> {}"),
+            ("after-quotation", _RETIRED_QUOTATION + "\n> Quoted.\n\n> {}\n> {}"),
+            ("lazy", "> {}\n{}"),
+            # A backslash hard line break, in operative text and in a quote.
+            ("hard-break", "{}\\\n{}"),
+            ("quote-hard-break", "> {}\\\n> {}"),
+        )
+        # A fragment holding backslash escapes, each ASCII punctuation character escaped, is read as
+        # rendered, in operative text and in a quote; a fragment with no such character has no escape.
+        escaped = (("escaped", "{}"), ("quote-escaped", "> {}"))
+
+        def planted(body, block, spec=text):
+            return spec.replace(body, body.rstrip("\n") + "\n\n" + block + "\n\n", 1)
+
+        def retired_absent(spec, section, fragment):
+            # The retired-text check's readings hold no fragment, and the section as written holds one
+            # only inside a quotation the registry tiles (_Q).
+            return not any(fragment in reading for reading in _readings(spec)[section][1]) and (
+                fragment not in _normalized(_sections(spec)[section]) or any(
+                    fragment in q for q in _CONTRACT[section] if isinstance(q, _Quoted)))
+
+        def halves(fragment):
+            words = fragment.split(" ")
+            return " ".join(words[:len(words) // 2]), " ".join(words[len(words) // 2:])
+
+        def restores(found, section):
+            return [f for f in found if f.startswith("spec {} restores retired ".format(section))]
+        for section, fragments in _RETIRED.items():
+            body = _sections(text)[section]
+            for fragment in fragments:
+                finding = "spec {} restores retired text: {}".format(section, fragment)
+                check("spec-retired-absent-" + section + "-" + fragment, lambda s=section, f=fragment:
+                      retired_absent(text, s, f))
+                check("spec-retired-flip-" + section + "-" + fragment,
+                      lambda b=body, f=finding, frag=fragment: text.count(b) == 1 and
+                      f in contract_findings(text.replace(b, b.rstrip("\n") + "\n" + frag + "\n\n", 1)))
+                check("spec-retired-term-" + section + "-" + fragment, lambda frag=fragment:
+                      any(term in frag.lower() for term in _RETIRED_TERMS))
+                check("spec-retired-quoted-" + section + "-" + fragment, lambda b=body, s=section, frag=fragment:
+                      text.count(b) == 1 and not restores(contract_findings(planted(
+                          b, _RETIRED_QUOTATION + "\n> " + frag)), s))
+                for form, shape in near_misses:
+                    check("spec-retired-near-miss-" + form + "-" + section + "-" + fragment,
+                          lambda b=body, f=finding, block=shape.format(fragment): text.count(b) == 1 and
+                          f in contract_findings(planted(b, block)))
+                for form, shape in wrapped:
+                    check("spec-retired-wrapped-" + form + "-" + section + "-" + fragment,
+                          lambda b=body, f=finding, frag=fragment, block=shape.format(*halves(fragment)):
+                          text.count(b) == 1 and frag not in block and f in contract_findings(planted(b, block)))
+                if re.search(r"[!-/:-@\[-`{-~]", fragment):
+                    for form, shape in escaped:
+                        check("spec-retired-" + form + "-" + section + "-" + fragment,
+                              lambda b=body, f=finding, frag=fragment, block=shape.format(re.sub(
+                                  r"[!-/:-@\[-`{-~]", lambda m: "\\" + m.group(0), fragment)):
+                              text.count(b) == 1 and frag not in block and f in contract_findings(planted(b, block)))
+                check("spec-retired-known-" + section + "-" + fragment,
+                      lambda frag=fragment: frag in retired_text)
+        # The reported false positive, paired: an explanatory sentence quoting the retired journal transport
+        # rule is operative text and red; the same rule in a quotation block, with the explanation kept as
+        # its own paragraph above it, is not a restoration.
+        body = _sections(text)["4.2"]
+        check("spec-retired-quotation-reported-red", lambda b=body: text.count(b) == 1 and
+              restores(contract_findings(planted(b, 'The retired sentence "' + transport + '" no longer '
+                                                 'applies; homes 2 has no homes migration.')), "4.2"))
+        explained = explanation + "\n\n" + _RETIRED_QUOTATION + "\n> " + transport
+        check("spec-retired-quotation-reported-green", lambda b=body: text.count(b) == 1 and
+              contract_findings(planted(b, explained)) == contract_findings(text))
+        # The landed fixture below holds only its own quotation: its base is the spec with every
+        # quotation block of section 4.2 removed, each where removing it drops one block from the
+        # reading, and its registry is the section's without the _Q entries, so a quotation the spec
+        # already holds neither doubles the fixture's block nor satisfies its entry.
+        base, base_registry = text, tuple(f for f in _CONTRACT["4.2"] if not isinstance(f, _Quoted))
+        while _readings(base)["4.2"][2]:
+            start, end = _section_spans(base)["4.2"]
+            lines = base[start:end].split("\n")
+            held = len(_readings(base)["4.2"][2])
+            for i in [i for i, line in enumerate(lines) if line == _RETIRED_QUOTATION]:
+                j = i + 1
+                while j < len(lines) and lines[j].startswith(">"):
+                    j += 1
+                removed = base[:start] + "\n".join(lines[:i] + lines[j:]) + base[end:]
+                if len(_readings(removed)["4.2"][2]) == held - 1:
+                    base = removed
+                    break
+            else:
+                break
+        with patch.dict(_CONTRACT, {"4.2": base_registry}):
+            check("spec-retired-quotation-landed-base", lambda: not _readings(base)["4.2"][2]
+                  and tiles(base, "4.2") and not contract_findings(base))
+        body = _sections(base)["4.2"]
+        # The same quotation landed through the registry: with the explanation pinned (_D) and the block
+        # tiled (_Q), every predicate is green together, the default entry (main), the section tiling,
+        # the pins, the keyword lint and the retired-text absence; the block's quoted text stays out of
+        # the pins and the retired-text check. Each registry shortcut is red: the block registered as an
+        # ordinary pin (missing, since no pin reads quoted text) or as _D (missing, and a keyword on a
+        # descriptive pin), the _Q entry without its block in the spec, the block in a near-miss form,
+        # the _Q entry without its ">" markers (tiling), and a _Q entry holding part of the block, its
+        # lead-in and the quoted sentence's opening or the quoted line alone (exact, not a substring).
+        landed = planted(body, explained, base)
+        registry = base_registry + (_D(explanation), _Q(quotation))
+        missing = "spec 4.2 missing retired-text quotation: " + quotation
+        with tempfile.TemporaryDirectory(prefix="opf-homes-quotation-") as tmp:
+            landed_spec = Path(tmp) / "OPF-SPEC.md"
+            landed_spec.write_text(landed, encoding="utf-8")
+            with patch.dict(_CONTRACT, {"4.2": registry}), patch.object(module, "SPEC", landed_spec):
+                buf = io.StringIO()
+                with redirect_stdout(buf):
+                    landed_rc = main([])
+                check("spec-retired-quotation-landed", lambda r=landed_rc, out=buf.getvalue():
+                      r == 0 and out == "" and tiles(landed, "4.2") and not contract_findings(landed)
+                      and not keyword_findings() and retired_absent(landed, "4.2", transport)
+                      and transport in _normalized(_sections(landed)["4.2"])
+                      and not any(transport in reading for reading in _readings(landed)["4.2"][1])
+                      and transport not in _readings(landed)["4.2"][0]
+                      and _readings(landed)["4.2"][2] == (quotation,))
+                check("spec-retired-quotation-landed-unregistered-spec", lambda:
+                      missing in contract_findings(base) and not tiles(base, "4.2"))
+                near = planted(body, explained.replace(_RETIRED_QUOTATION, "  " + _RETIRED_QUOTATION, 1), base)
+                check("spec-retired-quotation-landed-near-miss", lambda: missing in contract_findings(near) and
+                      restores(contract_findings(near), "4.2") and not retired_absent(near, "4.2", transport))
+            for shortcut, entry in (("plain", str(quotation)), ("descriptive", _D(quotation))):
+                with patch.dict(_CONTRACT, {"4.2": registry[:-1] + (entry,)}):
+                    check("spec-retired-quotation-landed-" + shortcut, lambda e=entry, s=shortcut:
+                          tiles(landed, "4.2") and "spec 4.2 missing contract: " + e in contract_findings(landed)
+                          and (s == "plain" or any(e in f for f in keyword_findings())))
+            with patch.dict(_CONTRACT, {"4.2": registry[:-1] + (_Q(_RETIRED_QUOTATION + " " + transport),)}):
+                check("spec-retired-quotation-landed-no-markers", lambda: not tiles(landed, "4.2")
+                      and any(f.startswith("spec 4.2 missing retired-text quotation: ")
+                              for f in contract_findings(landed)))
+            for name, part in (("opening", _RETIRED_QUOTATION + "\n> " + transport.split(" MUST ", 1)[0]),
+                               ("quoted-line", "> " + transport)):
+                with patch.dict(_CONTRACT, {"4.2": registry[:-1] + (_Q(_normalized(part)),)}):
+                    check("spec-retired-quotation-landed-part-" + name, lambda p=_normalized(part):
+                          p != quotation and p in quotation
+                          and "spec 4.2 missing retired-text quotation: " + p in contract_findings(landed))
+        # A pin holding the marker the pins read in place of a block is missing, so no registry edit lets
+        # a pin span a block.
+        body = _sections(text)["4.2"]
+        spanning = text.replace(body, body.rstrip("\n") + "\n\nBefore.\n\n" + _RETIRED_QUOTATION
+                                + "\n> Quoted.\n\nAfter.\n\n", 1)
+        with patch.dict(_CONTRACT, {"4.2": _CONTRACT["4.2"] + (_D("Before. " + _QUOTATION_JOINT + " After."),)}):
+            check("spec-retired-quotation-joint-pin", lambda: "spec 4.2 missing contract: Before. "
+                  + _QUOTATION_JOINT + " After." in contract_findings(spanning))
+        # A lead-in with no ">" line after it opens no block: it is operative text the pins read, so a
+        # sentence around it reads it, and a fragment split around it is not joined.
+        check("spec-retired-quotation-lead-in-alone", lambda: _read_section(
+            "\nA.\n" + _RETIRED_QUOTATION + "\nB.\n", {4})[0] == "A. " + _RETIRED_QUOTATION + " B."
+            and _read_section("\nA.\n" + _RETIRED_QUOTATION + "\n> B.\n", {4})[0] == "A. " + _QUOTATION_JOINT)
+        # Two quotation blocks in one section are each read as one, the second found at its own offset;
+        # a near miss after a block is still read.
+        second = _RETIRED_QUOTATION + "\n> " + _RETIRED["4.2"][0] + "\n\nBetween.\n\n" + _RETIRED_QUOTATION
+        check("spec-retired-quotation-two-blocks", lambda b=body: not restores(contract_findings(planted(
+            b, second + "\n> " + transport)), "4.2") and restores(contract_findings(planted(
+                b, second.replace("\n\n" + _RETIRED_QUOTATION, "\n\n " + _RETIRED_QUOTATION) + "\n> "
+                + transport)), "4.2"))
+        # A line indented four spaces is no block-quote line: after a blank it opens indented code, so a
+        # lead-in below it opens its own quote and is a quotation.
+        check("spec-retired-quotation-after-indented-code", lambda b=body: text.count(b) == 1 and not restores(
+            contract_findings(planted(b, "    > Code.\n" + _RETIRED_QUOTATION + "\n> " + transport)), "4.2"))
+        # A quotation block is not in force, so a pin moved into one is missing; the same pin moved into a
+        # near miss of the form is operative text and still present.
+        pin = _pin("4.2", "A writer MUST NOT accept a format")
+        normalized_body = " ".join(body.replace("`", "").split())
+        unpinned = text.replace(body, "\n\n" + normalized_body.replace(pin, "", 1) + "\n\n", 1)
+        unpinned_body = _sections(unpinned)["4.2"]
+
+        def moved(block):
+            return unpinned.replace(unpinned_body, unpinned_body.rstrip("\n") + "\n\n" + block + "\n\n", 1)
+        check("spec-retired-quotation-pin-moved", lambda: normalized_body.count(pin) == 1 and
+              "spec 4.2 missing contract: " + pin in contract_findings(moved(_RETIRED_QUOTATION + "\n> " + pin)))
+        check("spec-retired-quotation-pin-near-miss", lambda: normalized_body.count(pin) == 1 and
+              "spec 4.2 missing contract: " + pin in contract_findings(unpinned) and
+              "spec 4.2 missing contract: " + pin not in contract_findings(moved(
+                  "Retired text, quoted and not in force:\n" + pin)))
+        # Text split around a quotation block fails closed for both checks: a pin split there is missing,
+        # and a retired fragment split there is still red.
+        words = pin.split(" ")
+        split_pin = " ".join(words[:4]) + "\n\n" + _RETIRED_QUOTATION + "\n> Quoted.\n\n" + " ".join(words[4:])
+        check("spec-retired-quotation-pin-split", lambda: len(words) > 4 and
+              "spec 4.2 missing contract: " + pin in contract_findings(moved(split_pin)) and
+              "spec 4.2 missing contract: " + pin not in contract_findings(moved(split_pin.replace(
+                  "\n\n" + _RETIRED_QUOTATION + "\n> Quoted.\n\n", " ", 1))))
+        halves = transport.split(" MUST ", 1)
+        check("spec-retired-quotation-fragment-split", lambda b=body: text.count(b) == 1 and len(halves) == 2 and
+              "spec 4.2 restores retired text: " + transport in contract_findings(planted(
+                  b, halves[0] + " MUST\n\n" + _RETIRED_QUOTATION + "\n> Quoted.\n\n" + halves[1])))
+        # Retired sentences that name no retired term are not fragments: a future 2.x or
+        # worklog-generation upgrade stating them again in its section is not a restoration.
+        for section, sentence in (
+                ("4.2", "The owning writer or migration MUST derive each inventory from the run's transaction "
+                        "record or receipt and MUST publish it exclusively with the retained bytes."),
+                ("9.2", "A worklog-generation bump MUST additionally move the worklog ledger as a versioned, "
+                        "journaled, fail-closed relocation. Every destination MUST be digest-verified before its "
+                        "source is removed. Both kinds of upgrade MUST run under the store consistency contract "
+                        "and the single-writer lease (section 5.7). The migration MUST refuse a store resolved "
+                        "outside the product root until a multi-root coordinator exists.")):
+            body = _sections(text)[section]
+            check("spec-retired-generic-" + section, lambda b=body, s=section, n=sentence: text.count(b) == 1
+                  and not restores(contract_findings(planted(b, n)), s))
+    quotation_regressions(text, "")
+    # A spec that already holds the same quotation, landed and registered in section 4.2 (the
+    # explanation pinned _D, the block tiled _Q): it is green, and every quotation regression holds
+    # over it too, so the regressions plant their fixture on a base free of it.
+    quoted_spec = text.replace(_sections(text)["4.2"], _sections(text)["4.2"].rstrip("\n") + "\n\n"
+                               + explanation + "\n\n" + _RETIRED_QUOTATION + "\n> " + transport + "\n\n", 1)
+    with patch.dict(_CONTRACT, {"4.2": _CONTRACT["4.2"] + (_D(explanation), _Q(quotation))}):
+        check("spec-landed-quotation", lambda: text.count(_sections(text)["4.2"]) == 1
+              and not contract_findings(quoted_spec) and not keyword_findings() and tiles(quoted_spec, "4.2")
+              and _readings(quoted_spec)["4.2"][2] == _readings(text)["4.2"][2] + (quotation,))
+        quotation_regressions(quoted_spec, "landed-")
+    # Appendix E guard: every informative section is keyword-free, the guard sees Appendix E,
+    # and planting a requirement keyword there, in prose, a bare code span, or a fenced block,
+    # turns the gate red with that keyword's finding; the quotation form (a code span holding
+    # exactly the keyword after "the keyword" or "the term") stays green, planted as its own
+    # paragraph since the anchor paragraph is a declaration candidate, where a backtick is
+    # refused; unmarking Appendix E turns the gate red too, so the guard cannot be sidestepped
+    # by unmarking.
+    informative_anchor = "This appendix is informative:"
+    check("spec-informative-clean", lambda: not informative_findings(text))
+    check("spec-informative-appendix-e", lambda: any(
+        t.startswith("Appendix E") for t, _ in _informative_sections(text)))
+    for word in ("MUST", "MUST NOT", "SHALL", "REQUIRED", "SHOULD", "MAY", "RECOMMENDED",
+                 "OPTIONAL"):
+        planted = text.replace(informative_anchor,
+                               informative_anchor + " A checker " + word + " share each record.", 1)
+        quoted = text.replace(informative_anchor,
+                              informative_anchor + "\n\nNormative sections use the keyword `"
+                              + word + "`.", 1)
+        check("spec-informative-flip-" + word.replace(" ", "-"), lambda m=planted, w=word.split()[0]:
+              text.count(informative_anchor) == 1 and any(
+                  f.endswith("carries requirement keyword " + w) and "Appendix E" in f
+                  for f in informative_findings(m)))
+        check("spec-informative-quoted-green-" + word.replace(" ", "-"),
+              lambda q=quoted: not informative_findings(q))
+    for plant, name in (
+            (" A checker `MUST` share records.", "bare-codespan"),
+            (" The rule `MUST NOT` applies here.", "codespan-no-lead-in"),
+            ("\n\n```text\nA checker MUST share records.\n```\n", "fenced-keyword"),
+    ):
+        planted = text.replace(informative_anchor, informative_anchor + plant, 1)
+        check("spec-informative-markup-red-" + name, lambda m=planted: any(
+            "carries requirement keyword MUST" in f and "Appendix E" in f
+            for f in informative_findings(m)))
+    check("spec-informative-lowercase-green", lambda: not informative_findings(text.replace(
+        informative_anchor, informative_anchor + " A checker must share records.", 1)))
+    check("spec-informative-unmarked-red", lambda: "spec informative guard: Appendix E not marked"
+          " informative" in informative_findings(text.replace("(informative)", "", 1).replace(
+              informative_anchor, "This appendix recommends practice:", 1)))
+    # Informative status is inherited by every descendant heading at any level, a fenced line
+    # that looks like a heading bounds nothing, and a deeper heading marked informative under a
+    # normative parent is guarded on its own.
+    appendix_tail = "a release's documentation can name one as the platform it documents."
+    sub3 = text.replace(appendix_tail, appendix_tail
+                        + "\n\n### E.1 Record sharing\n\nA checker MUST share records.", 1)
+    sub4 = text.replace(appendix_tail, appendix_tail
+                        + "\n\n#### E.1.1 Sharing detail\n\nEvery record SHOULD be shared.", 1)
+    fence_break = text.replace(appendix_tail, appendix_tail
+                               + "\n\n```markdown\n## not a heading\n```\n\nA checker MUST obey.", 1)
+    marked4 = text.replace(
+        "## 15. Genericization boundary",
+        "#### 14.9 Notes (informative)\n\nA checker MUST keep notes.\n\n## 15. Genericization"
+        " boundary", 1)
+    for name, planted, kw in (("subsection-3", sub3, "MUST"), ("subsection-4", sub4, "SHOULD"),
+                              ("fence-no-boundary", fence_break, "MUST"),
+                              ("marked-level-4", marked4, "MUST")):
+        check("spec-informative-inherit-" + name, lambda m=planted, w=kw:
+              text.count(appendix_tail) == 1 and any(
+                  ("carries requirement keyword " + w) in f for f in informative_findings(m)))
+    # Round-19 guard vectors: heading titles are scanned like bodies (a keyword in a
+    # descendant title or in a marked heading's own title is red), the exempt quotation form
+    # covers "the term" and a sentence-start "The", a fence closes only on a matching delimiter
+    # (same character, at least the opening length, nothing else on the line), the
+    # same-or-shallower reset ends inheritance, and "This subsection is informative" marks its
+    # heading informative. Each vector discriminates one guard behaviour: reverting that
+    # behaviour alone turns the vector red.
+    title_sub = text.replace(appendix_tail, appendix_tail
+                             + "\n\n### E.9 Checkers MUST share records\n\nDetails.", 1)
+    title_marked = text + "\n\n## Appendix Z: what checkers MUST do (informative)\n\nDetails.\n"
+    fence_tilde = text.replace(appendix_tail, appendix_tail
+                               + "\n\n```text\n~~~\n## not a boundary\n```\n\nA checker MUST obey.", 1)
+    fence_short = text.replace(appendix_tail, appendix_tail
+                               + "\n\n````markdown\n```\n## not a boundary\n````\n\nA checker MUST obey.", 1)
+    sub_marked = (text + "\n\n## Appendix Z: subsection notes\n\nThis subsection is informative:"
+                  " background only. A checker MUST share records.\n")
+    for name, planted, kw in (("title-descendant", title_sub, "MUST"),
+                              ("title-marked", title_marked, "MUST"),
+                              ("fence-tilde-inside-backticks", fence_tilde, "MUST"),
+                              ("fence-short-inside-longer", fence_short, "MUST"),
+                              ("subsection-mark", sub_marked, "MUST")):
+        check("spec-informative-guard-red-" + name, lambda m=planted, w=kw: any(
+            ("carries requirement keyword " + w) in f for f in informative_findings(m)))
+    for name, planted in (
+            ("quoted-term", text.replace(informative_anchor, informative_anchor
+             + "\n\nNormative sections use the term `MUST`.", 1)),
+            ("quoted-sentence-start", text.replace(informative_anchor, informative_anchor
+             + "\n\nThe keyword `MUST NOT` is quoted here.", 1)),
+            ("reset-same-level", text
+             + "\n\n## Appendix Z: operative addendum\n\nThe gate MUST stay green.\n"),
+            ("reset-shallower", text + "\n\n# Coda\n\nThe gate MUST stay green.\n"),
+    ):
+        check("spec-informative-guard-green-" + name,
+              lambda m=planted: not informative_findings(m))
+    # Round-20 guard vectors: headings and fences are read as CommonMark reads them. A heading
+    # takes 0 to 3 columns of indentation and a space or tab after its hashes; a line of 4 or
+    # more columns (a tab counts 4) is no heading and no fence; a backtick fence's info string
+    # holds no backtick; a fence closes only on 0 to 3 columns, a run at least as long, then
+    # spaces or tabs alone; lines end at LF, CR LF or CR only. A heading inside a list item or
+    # block quote bounds nothing but is kept where it says "(informative)", and a raw HTML
+    # block is a finding. Each red vector plants an informative heading the guard must see or
+    # keeps an informative scope open; each green vector is the matching form that is no
+    # heading, a fence that masks, or a boundary that ends the scope. A green whose text is
+    # no heading holds the title-only label "Z - informative", which a body does not read
+    # (a body reads "(informative)", PR #481 QA round 10), so it turns red only where the
+    # guard reads that text as a heading.
+    normative = text + "\n## Normative\n\n"
+    informative = text + "\n## Z (informative)\n\n"
+    plant = "\n\nA checker MUST share records.\n"
+    stays = "\n\nThe gate MUST stay green.\n"
+    for name, planted in (
+            ("heading-indent-1", normative + " ## Z (informative)" + plant),
+            ("heading-indent-3", normative + "   ## Z (informative)" + plant),
+            ("heading-tab-separator", normative + "##\tZ (informative)" + plant),
+            ("setext-equals", normative + "Z (informative)\n===" + plant),
+            ("setext-dash", normative + "Z (informative)\n---" + plant),
+            ("setext-continued", normative + "Z notes\n    (informative)\n---" + plant),
+            ("quote-heading", normative + "> ## Z (informative)\n>\n> A checker MUST obey.\n"),
+            ("list-heading", normative + "- ## Z (informative)\n\n  A checker MUST obey.\n"),
+            ("list-setext", normative + "- Z (informative)\n  ---\n\n  A checker MUST obey.\n"),
+            ("fence-inline-code-line", normative + "```literal```\n\n## Z (informative)" + plant),
+            ("fence-indented-code", normative + "    ```\n\n## Z (informative)" + plant),
+            ("fence-tab-indented", normative + "\t```\n\n## Z (informative)" + plant),
+            ("fence-two-backticks", normative + "``\n\n## Z (informative)" + plant),
+            ("fence-two-tildes", normative + "~~\n\n## Z (informative)" + plant),
+            ("fence-after-list-item", informative + "- note\n```\n## Normative\n```" + plant),
+            ("setext-after-ordered-two", normative + "Z notes\n2. more (informative)\n---"
+             + plant),
+            ("setext-then-equals", text + "\n# Z (informative)\n\nCoda\n---\n===" + plant),
+            ("close-indented-4", informative + "```text\n    ```\n## Normative\n```" + plant),
+            ("close-trailing-text", informative + "```text\n```not-a-close\n## Normative\n```"
+             + plant),
+            ("close-trailing-nbsp", informative + "```text\n```\u00a0\n## Normative\n```" + plant),
+            ("indented-4-no-boundary", informative + "    ## Normative" + plant),
+            ("tab-indent-no-boundary", informative + "\t## Normative" + plant),
+            ("list-heading-no-boundary", informative + "- note\n\n  ## Normative" + plant),
+            ("quote-heading-no-boundary", informative + "> ## Normative" + plant),
+            ("lazy-no-boundary", informative + "- note\nlazy line\n  ## Normative" + plant),
+            ("lazy-indented-no-boundary", informative + "   10. note\n    ## x\nplain\n===" + plant),
+            ("reference-setext-no-boundary", informative + "[ref]: /url\n===" + plant),
+            ("separator-u2028", informative + "note\u2028## Normative\u2028A checker MUST obey.\n"),
+            ("separator-formfeed", informative + "note\x0c## Normative\x0cA checker MUST obey.\n"),
+    ):
+        check("spec-informative-commonmark-red-" + name, lambda m=planted: any(
+            "carries requirement keyword MUST" in f for f in informative_findings(m)))
+    for name, planted in (
+            ("heading-indent-4", normative + "    ## Z - informative" + plant),
+            ("heading-tab-indent", normative + "\t## Z - informative" + plant),
+            ("boundary-indent-3", informative + "   ## Coda" + stays),
+            ("boundary-tab-separator", informative + "##\tCoda" + stays),
+            ("boundary-setext", informative + "Coda\n----" + stays),
+            ("boundary-list-closed", informative + "- note\n## Coda" + stays),
+            ("boundary-after-list-blank", informative + "- note\n\n ## Coda" + stays),
+            ("boundary-thematic-closes-list", informative + "- note\n***\n  ## Coda" + stays),
+            ("boundary-cr", informative + "note\r## Coda\r\rThe gate MUST stay green.\n"),
+            ("boundary-after-ordered-item", informative + "- note\n10. item\n  ## Coda" + stays),
+            ("boundary-quote-closes-list", informative + "- note\n> quote\n  ## Coda" + stays),
+            ("boundary-paragraph-after-list", informative + "- note\n\nplain\n  ## Coda" + stays),
+            ("boundary-setext-after-list-break", informative + "- note\n***\nCoda\n===" + stays),
+            ("thematic-after-blank", normative + "Z - informative\n\n---" + plant),
+            ("paragraph-ends-at-fence", normative + "Z - informative\n```\n```\n---" + plant),
+            ("paragraph-ends-at-heading", normative + "Z - informative\n## Normative\n---" + plant),
+            ("paragraph-ends-at-thematic", normative + "Z - informative\n***\n---" + plant),
+            ("paragraph-ends-at-list", normative + "Z - informative\n- item\n---" + plant),
+            ("setext-then-underline-text", normative + "Z (informative)\n---\n===\n\n## Coda"
+             + stays),
+            ("fence-indent-3", normative
+             + "   ```\n## Z - informative\nA checker MUST obey.\n   ```\n"),
+            ("fence-tilde-backtick-info", normative
+             + "~~~ a`b\n## Z - informative\nA checker MUST obey.\n~~~\n"),
+            ("fence-unclosed", normative + "```\n## Z - informative\nA checker MUST obey.\n"),
+            ("close-indent-3", informative + "```text\n## x\n   ```\n\n## Coda" + stays),
+            ("close-trailing-space", informative + "```text\n## x\n``` \t\n\n## Coda" + stays),
+            ("close-longer-run", informative + "```text\n## x\n`````\n\n## Coda" + stays),
+    ):
+        check("spec-informative-commonmark-green-" + name,
+              lambda m=planted: not informative_findings(m))
+    # Each HTML vector opens one block type alone (no line of it is a lone tag of another type).
+    for name, planted in (("div", "<DIV>text\n\n## Z\n"), ("comment", "<!--\n## Z\n-->\n"),
+                          ("heading", "<h2>Z (informative)</h2>\n"), ("in-list", "- <div>\n"),
+                          ("pre", "<pre>text\n## Z\n"), ("processing", "<?x\n## Z\n?>\n"),
+                          ("declaration", "<!X\n## Z\n>\n"), ("cdata", "<![CDATA[\n## Z\n]]>\n"),
+                          ("custom-tag", "<custom-tag>\n## Z\n")):
+        check("spec-informative-commonmark-html-red-" + name, lambda m=normative + planted: any(
+            f.startswith("spec informative guard: raw HTML block at line ")
+            for f in informative_findings(m)))
+    check("spec-informative-commonmark-closing-sequence-title", lambda: (
+        "spec informative section Z (informative) carries requirement keyword MUST"
+        in informative_findings(normative + "## Z (informative) ##" + plant)))
+    # Container, inline and fail-closed vectors. A list item interrupts a paragraph only where
+    # it holds content and, when ordered, starts at 1, so a list-shaped line otherwise
+    # continues it into a setext heading; a list item's content column counts the 1 to 4
+    # columns after its marker; a fence inside a block quote or list item masks its lines and
+    # closes with its container; a keyword in underscore emphasis, split by inline markup, or
+    # written with character references or an invisible format character is read; an HTML
+    # tag holding ">" in a quoted attribute opens a raw HTML block; and a lazy block-shaped
+    # line at 4 or more columns, a block quote continued at 4 or more columns, or a paragraph
+    # opening like a reference definition is a finding, since renderers read them
+    # differently. Each red vector is green without its fix, or (the two ends-with vectors)
+    # where a container's fence outlives it; each green vector is the benign form, its
+    # unread heading text holding the title-only label "Z - informative" (a body reads
+    # "(informative)").
+    for name, planted in (
+            ("setext-ordered-two-continues", normative + "Z (informative)\n2. item\n---" + plant),
+            ("setext-ordered-paren-continues", normative + "Z (informative)\n3) item\n===" + plant),
+            ("setext-empty-bullet-continues", normative + "Z (informative)\n*\n---" + plant),
+            ("list-content-column-4", informative
+             + "-   item\n  ```\n## Normative\nA checker MUST obey.\n```\n"),
+            ("ordered-content-column-4", informative
+             + "1.  item\n   ~~~\n## Normative\nA checker MUST obey.\n~~~\n"),
+            ("quote-fence-ends-with-quote", informative + "> ```\n```\n## Normative\n```" + plant),
+            ("list-fence-ends-with-item", informative + "- ```\n```\n## Normative\n```" + plant),
+            ("quote-space-then-3", normative
+             + ">    ## Z (informative)\n>\n> A checker MUST obey.\n"),
+            ("quote-continued-space-then-3", normative
+             + "> a\n>    ## Z (informative)\n> A checker MUST obey.\n"),
+            ("indented-code-then-underline", informative + "    Coda\n---" + stays),
+            ("setext-arabic-indic-digit-continues", normative + "Z (informative)\n\u0661. item\n---"
+             + plant),
+            ("setext-fullwidth-digit-continues", normative + "Z (informative)\n\uff11) item\n==="
+             + plant),
+    ):
+        check("spec-informative-container-red-" + name, lambda m=planted: any(
+            "carries requirement keyword MUST" in f for f in informative_findings(m)))
+    for name, planted in (
+            ("quote-fence-masks", normative
+             + "> ```\n> ## Z - informative\n> A checker MUST obey.\n> ```\n"),
+            ("list-fence-masks", normative
+             + "- ```\n  ## Z - informative\n  A checker MUST obey.\n  ```\n"),
+            ("ordered-fence-masks-column-4", normative
+             + "1.  ~~~\n    ## Z - informative\n    A checker MUST obey.\n    ~~~\n"),
+            ("ordered-one-interrupts", normative + "Z - informative\n1. item\n---" + plant),
+            ("fence-in-item-then-boundary", informative
+             + "-   item\n    ```\n    ## x\n    ```\n## Coda" + stays),
+            ("five-columns-after-marker", informative + "-     ~~~\n  ```\n## Coda\n```" + stays),
+            ("blank-item-closes-on-blank", informative + "-\n\n  ## Coda" + stays),
+            ("lazy-underline-is-thematic", normative + "> Z - informative\n---" + plant),
+            ("quote-fence-closed-then-boundary", informative + "> ```\nplain\n## Coda" + stays),
+            ("list-fence-closed-then-boundary", informative + "- ```\nplain\n## Coda" + stays),
+    ):
+        check("spec-informative-container-green-" + name,
+              lambda m=planted: not informative_findings(m))
+    # Inline vectors. A keyword is read through an underscore run CommonMark could read as
+    # emphasis and never through an intraword one; split by markup the guard removes, written
+    # with character references, invisible or combining characters, or compatibility forms;
+    # and an informative section fails closed on a link target or inline HTML the guard does
+    # not read. Each red vector is green without the behaviour it names; each green vector is
+    # red under the over-broad form of it (an intraword underscore read as a boundary, every
+    # link or autolink refused, whitespace or a line break dropped, case folded).
+    # Red vectors plant inside the Appendix E anchor paragraph (a declaration candidate, so
+    # each also trips allowlist refusals their any() ignores); green vectors assert zero
+    # findings, so each plants as its own non-candidate paragraph after the anchor, where
+    # the candidate scan does not run.
+    for name, plant_kw in (("underscore", "_MUST_"), ("double-underscore", "__MUST__"),
+                           ("underscore-in-emphasis", "*_MUST_*"),
+                           ("underscore-in-parentheses", "(_MUST_)"),
+                           ("underscore-after-markup", "a*_MUST_"),
+                           ("split-strong", "MU**ST**"), ("split-code-span", "MU`ST`"),
+                           ("split-strong-then-underscore", "**MU**_ST_"),
+                           ("split-strikethrough", "MU~~ST~~"),
+                           ("split-link", "[MU](/u)ST"), ("split-link-title", '[MU](/u "t")ST'),
+                           ("split-reference", "[MU][r]ST"), ("split-collapsed", "[MU][]ST"),
+                           ("decimal-reference", "&#77;UST"), ("hex-reference", "&#x4D;UST"),
+                           ("reference-then-markup", "&#77;UST*s"),
+                           ("reference-unterminated", "MUST&#65 x"),
+                           ("soft-hyphen", "M&shy;UST"), ("zero-width-space", "MU\u200bST"),
+                           ("grapheme-joiner", "MU\u034fST"),
+                           ("variation-selector", "MU\ufe0fST"),
+                           ("grapheme-joiner-reference", "MU&#x34F;ST"),
+                           ("hangul-filler", "MU\u3164ST"), ("control-character", "MU\x01ST"),
+                           ("fullwidth", "\uff2d\uff35\uff33\uff34"),
+                           ("mathematical-bold", "\U0001d40c\U0001d414\U0001d412\U0001d413"),
+                           ("link-shaped-target", "x](M**U**ST)"),
+                           ("link-shaped-reference", "[x][M**U**ST]"),
+                           ("link-shaped-code-span", "x](MU`S`T)"),
+                           ("link-shaped-title", 'x](/u "M**U**ST")'),
+                           ("link-shaped-escaped", "\\](M**U**ST)"),
+                           ("link-shaped-zero-width", "[x][MU\u200bST]"),
+                           ("enclosing-mark", "MU\u20ddST"), ("unassigned", "MU\ufdd0ST"),
+                           ("private-use", "MU\ue000ST"), ("surrogate", "MU\ud800ST"),
+                           ("superscript-digit", "MUST\u00b9"),
+                           ("superscript-reference", "MU**ST**&sup1;"),
+                           ("subscript-digit", "MUST\u2081"),
+                           ("circled-digit", "MUST\u2460"),
+                           ("autolink-scheme", "M<UST:q>")):
+        planted = text.replace(informative_anchor, informative_anchor + " A checker " + plant_kw
+                               + " share each record.", 1)
+        check("spec-informative-inline-red-" + name, lambda m=planted: any(
+            "carries requirement keyword MUST" in f and "Appendix E" in f
+            for f in informative_findings(m)))
+    for name, plant_kw in (("underscore-lowercase", "_must_"),
+                           ("underscore-longer-word", "_MUSTER_"),
+                           ("reference-lowercase", "&#109;ust"),
+                           ("underscore-identifier", "MUST_DO"),
+                           ("underscore-intraword", "x_MUST_y"),
+                           ("underscore-suffix", "DO_MUST"),
+                           ("underscore-leading-identifier", "_MUST_DO"),
+                           ("underscore-inside-word", "MU_ST"),
+                           ("no-break-space", "MU\u00a0ST"), ("line-break", "MU\nST"),
+                           ("fullwidth-lowercase", "\uff4d\uff55\uff53\uff54"),
+                           ("plain-link", '[a guide](/a_b-c.d "Guide")'),
+                           ("plain-link-single-quoted", "[a guide](/u 'Guide')"),
+                           ("plain-reference", "[a guide][ref]"),
+                           ("less-than", "a < b and c <= d"),
+                           ("link-title-space", '[here](/x "two words")'),
+                           ("link-title-angle-brackets", '[here](/x "a>b" ) and [it](/y "a < b")'),
+                           ("link-shaped-lowercase", "x](m**u**st)"),
+                           ("superscript-longer-word", "MUSTER\u00b9")):
+        check("spec-informative-inline-green-" + name, lambda m=text.replace(
+            informative_anchor, informative_anchor + "\n\nA checker " + plant_kw + " share.",
+            1): not informative_findings(m))
+    # A URI autolink in an informative section is read, not refused, by the section scan; it
+    # is planted as its own paragraph since the anchor paragraph is a declaration candidate
+    # (its declaration holds the word), where an autolink is refused.
+    check("spec-informative-inline-green-autolink", lambda m=text.replace(
+        appendix_tail, appendix_tail + "\n\nSee <https://example.org/a_b> for more.", 1):
+          not informative_findings(m))
+    tag = 'a "<" that may open inline HTML'
+    for name, plant_kw, form in (
+            ("link-nested-parentheses", "[MU](/a(b(c)))ST", "a link or image target"),
+            ("link-title-nested-parentheses", '[MU](/a "a(b(c))")ST', "a link or image target"),
+            ("link-title-close-parenthesis", 'MU[](/u "a)b")ST', "a link or image target"),
+            ("link-escaped-parenthesis", "MU[](a\\)b)ST", "a link or image target"),
+            ("link-parenthesized-title", "MU[](/u (a\\)b))ST", "a link or image target"),
+            ("link-angle-destination", "[MU](<a b>)ST", "a link or image target"),
+            ("reference-escaped-label", "[MU][a\\]b]ST", "a link or image target"),
+            ("link-title-backslash", 'MU[](/u "a\\b")ST', "a link or image target"),
+            ("link-title-mixed-quote", "MU[](/u 'a\"b')ST", "a link or image target"),
+            ("html-split-tag", 'MU<span title=">">ST', tag),
+            ("html-split-comment", "MU<!-- x -->ST", tag),
+            ("html-comment-holding-gt", "MU<!-- a > b -->ST", tag),
+            ("html-empty-comment", "MU<!-->ST", tag),
+            ("html-hidden-text", "MU<span hidden>x</span>ST", tag),
+            ("html-in-code-span", "`<b>`", tag),
+            ("less-than-letter", "where a<b holds", tag),
+            ("reference-undecoded", "MU&xsplit;ST",
+             "a character reference the guard does not decode")):
+        planted = text.replace(informative_anchor, informative_anchor + " A checker " + plant_kw
+                               + " share each record.", 1)
+        check("spec-informative-inline-unread-red-" + name, lambda m=planted, w=form: any(
+            ("carries " + w) in f and "Appendix E" in f and "guard does not read" in f
+            for f in informative_findings(m)))
+    for name, planted in (("quoted-attribute", '<a title=">">\n## Z\n'),
+                          ("single-quoted-attribute", "<a title='>'>\n## Z\n")):
+        check("spec-informative-commonmark-html-red-" + name, lambda m=normative + planted: any(
+            f.startswith("spec informative guard: raw HTML block at line ")
+            for f in informative_findings(m)))
+    for name, planted in (("less-than-text", "< 3 columns and <= 4\n"),
+                          ("in-fence", "```\n<div>\n```\n"), ("indented-code", "    <div>\n")):
+        check("spec-informative-commonmark-html-green-" + name,
+              lambda m=normative + planted: not informative_findings(m))
+    for name, planted in (("lazy-block-shaped", "1.   item\n    ## x\n"),
+                          ("quote-continued-at-4", "> a\n    > b\n"),
+                          ("quote-continued-at-4-after-heading", "> # H\n    > b\n"),
+                          ("reference-definition", "[r]: /u\n"),
+                          ("reference-escaped-label", "[a\\]b]: /u\n"),
+                          ("reference-open-label", "[a\nb]: /u\n"),
+                          ("digit-arabic-indic", "\u0661. item\n"),
+                          ("digit-fullwidth", "\uff11) item\n"),
+                          ("digit-mixed", "1\u0661. item\n"),
+                          ("tab-after-quote", ">\tb\n"), ("tab-after-list-marker", "-\tb\n"),
+                          ("tab-in-continuation", "- a\n\tb\n"),
+                          ("tab-nested-containers",
+                           "> > -  \tb\nZ (informative)\n-\n\nA checker MUST share records.\n")):
+        check("spec-informative-unread-red-" + name, lambda m=normative + planted: any(
+            f.startswith("spec informative guard: line ") and "read differently" in f
+            for f in informative_findings(m)))
+    for name, planted in (("lazy-plain-text", "1.   item\n    lazy text\n"),
+                          ("quote-continued-at-3", "> a\n   > b\n"),
+                          ("link-paragraph", "[text](/u) and more\n"),
+                          ("digit-ascii", "1. item\n"), ("digit-ascii-ten", "1234567890. item\n"),
+                          ("digits-without-marker", "\u0661\u0662 items\n"),
+                          ("tab-after-content", "> a\tb\n- c\td\n"),
+                          ("tab-blank-in-list", "- a\n\t\n  b\n")):
+        check("spec-informative-unread-green-" + name,
+              lambda m=normative + planted: not informative_findings(m))
+    # Marker vectors. A heading title or body is informative where its marker reads so after
+    # the normalization the keyword scan uses (character references decoded, markup and
+    # invisible characters removed, compatibility forms folded, a URI autolink read as its
+    # URI), in any ASCII letter case through the shared case fold and with any whitespace
+    # run read as one space, a body also as each of its paragraphs' text with block-quote
+    # markers removed, every paragraph read and none skipped; a heading title that is a
+    # declaration candidate and holds a character outside plain prose is a finding of its
+    # own, at the title line holding it. Each red vector is green without the behaviour it
+    # names; each green vector is an ordinary heading or body that marks nothing. These reds
+    # are regression coverage for the reader: each passes on the round-8 parent too (any()
+    # reads the keyword finding and ignores the allowlist refusals many of them now also
+    # trip); the round-9 behaviour changes are pinned by the allowlist vectors below, which
+    # fail on that parent.
+    notes = normative + "## Z notes\n\n"
+    for name, planted in (
+            ("heading-reference", normative + "## Z (&#105;nformative)" + plant),
+            ("heading-hex-reference", normative + "## Z (&#x69;nformative)" + plant),
+            ("heading-strong", normative + "## Z (informa**tive**)" + plant),
+            ("heading-underscore", normative + "## Z (_informative_)" + plant),
+            ("heading-code-span", normative + "## Z (`informative`)" + plant),
+            ("heading-zero-width", normative + "## Z (informa\u200btive)" + plant),
+            ("heading-fullwidth-parentheses", normative + "## Z \uff08informative\uff09" + plant),
+            ("heading-split-link", normative + "## Z (inform[at](/u)ive)" + plant),
+            ("heading-escaped-parentheses", normative + "## Z \\(informative\\)" + plant),
+            ("heading-inner-spaces", normative + "## Z ( informative )" + plant),
+            ("setext-reference", normative + "Z (&#105;nformative)\n---" + plant),
+            ("list-heading-reference", normative
+             + "- ## Z (&#105;nformative)\n\n  A checker MUST obey.\n"),
+            ("quote-heading-strong", normative
+             + "> ## Z (informa**tive**)\n>\n> A checker MUST obey.\n"),
+            ("body-reference", notes + "This section is &#105;nformative." + plant),
+            ("body-strong", notes + "This section is informa**tive**." + plant),
+            # Regression coverage only (codex round-8 note): this vector passes on the
+            # round-8 parent too, since the joined form removes a plain link target and the
+            # declaration is read; the refusal it now also trips is pinned by the allowlist
+            # vectors, which fail on that parent.
+            ("body-split-link", notes + "This section is [informa](/u)tive." + plant),
+            ("body-zero-width", notes + "This section is informa\u200btive." + plant),
+            ("body-line-break", notes + "This section\nis informative." + plant),
+            ("body-lowercase", notes + "Note that this section is informative." + plant),
+            ("heading-title-case", normative + "## Z (Informative)" + plant),
+            ("heading-uppercase", normative + "## Z (INFORMATIVE)" + plant),
+            ("body-quote-wrapped", notes + "> This section\n> is informative." + plant),
+            ("body-quote-nested", notes + "> > This section\n> > is informative." + plant),
+            ("body-quote-in-list", notes + "- > This section\n  > is informative." + plant),
+            ("body-list-in-quote", notes + "> - This section\n>   is informative." + plant),
+            # Round-5 MAJOR 1: a near-duplicate of a quoted declaration elsewhere in its
+            # section skips nothing; every own paragraph is read.
+            ("body-quote-dup-prefix", notes + "> This section\n> is informative.\n\n"
+             "xThis section\nis informative." + plant),
+            ("body-quote-dup-suffix", notes + "> This section\n> is informative\n\n"
+             "This section\nis informativex." + plant),
+            ("body-quote-dup-code-span", notes + "> This section\n> is informative\n\n"
+             "`aThis section\nis informative`" + plant),
+            # A URI autolink shows its URI as its text, so a declaration it completes is
+            # read and marks its section; in a candidate the autolink itself is also refused
+            # (the candidate-red autolink vectors).
+            ("body-autolink-uri", notes + "This section is <informative:x>." + plant),
+            ("body-autolink-split", notes + "This section is informa<tive:x>tive." + plant),
+            # A disclosed over-fire: the declaration is read wherever it stands in a sentence,
+            # so a sentence that denies it marks its section informative too.
+            ("body-negated-over-fire", notes + "Nothing in this section is informative."
+             + plant)):
+        check("spec-informative-marker-red-" + name, lambda m=planted: any(
+            "carries requirement keyword MUST" in f for f in informative_findings(m)))
+    for name, planted in (
+            ("title-hidden-html", normative + "## Z (informa<span hidden>x</span>tive)" + plant),
+            ("title-unread-link", normative + "## Z (inform[at](/u(x))ive)" + plant),
+            ("title-html-in-list", normative + "- ## Z (informa<b hidden>x</b>tive)\n"),
+            ("title-html-setext", normative + "Z <b hidden>(informative)</b>\n---" + plant),
+            ("title-undecoded-reference", normative + "## Z (informa&xsplit;tive)" + plant),
+            ("title-format-character", normative + "## Z (informa\u200btive)" + plant),
+            ("title-unread-autolink", normative + "## Z <informative:x>" + plant)):
+        check("spec-informative-marker-title-red-" + name, lambda m=planted: any(
+            f.startswith("spec informative guard: heading at line ") and "could hide" in f
+            for f in informative_findings(m)))
+    # A setext title finding names the title line holding the form, not the first title line
+    # or the underline.
+    check("spec-informative-marker-title-red-setext-line", lambda: any(
+        f.startswith("spec informative guard: heading at line {} ".format(
+            normative.count("\n") + 2)) and "could hide" in f
+        for f in informative_findings(
+            normative + "Z notes\nmore informa<b hidden>x</b>tive\n---" + plant)))
+    # Round-9 allowlist title vectors: the title scan shares _unread_markup_at, so each
+    # character class pinned by the allowlist paragraph vectors is refused in a candidate
+    # heading title too; each vector here fails on the round-8 parent (an image renders as
+    # its alt attribute, never as shown text, so in a title as in a paragraph the round-8
+    # forms read nothing in it).
+    for name, planted in (
+            ("image-alt", normative + "## Z (informa![.](/1px.png)tive)" + plant),
+            ("image-empty-alt", normative + "## Z (informa![](/1px.png)tive)" + plant),
+            ("backtick", normative + "## Z informa`x`tive notes" + plant),
+            ("email-autolink-digit", normative + "## Z <1@e.org> informative notes" + plant),
+            ("dotless-i-split", normative + "## Z (\u0131nforma<b></b>tive)" + plant)):
+        check("spec-informative-allowlist-title-red-" + name, lambda m=planted: any(
+            f.startswith("spec informative guard: heading at line ") and "could hide" in f
+            for f in informative_findings(m)))
+    for name, planted in (
+            ("heading-word", normative + "## Informative references" + stays),
+            ("heading-word-in-parentheses", normative + "## Z (see the informative note)" + stays),
+            ("heading-normative", normative + "## Z (normative)" + stays),
+            ("heading-informed", normative + "## Z (informed)" + stays),
+            ("heading-strong-word", normative + "## Z **notes**" + stays),
+            ("heading-plain-link", normative + "## Z [a guide](/u)" + stays),
+            ("heading-autolink", normative + "## Z <https://example.org/a>" + stays),
+            ("heading-code-span-tag", normative + "## API `<type>` overview" + stays),
+            ("list-heading-word", normative + "- ## Z informative notes\n\n  The gate MUST stay.\n"),
+            ("body-informed", notes + "This section is informed by Appendix E." + stays),
+            ("body-guidance", notes + "Appendix E gives informative guidance." + stays),
+            ("body-other-subject", notes + "That section is informative." + stays),
+            ("body-paragraph-then-quote", notes + "This section\n> is informative." + stays),
+            ("body-quote-two-paragraphs", notes + "> This section\n>\n> is informative."
+             + stays),
+            ("body-quote-informed", notes + "> This section\n> is informed by Appendix E."
+             + stays),
+            ("body-quote-informed-last", notes + "> This section\n> is informed by Z."
+             + stays)):
+        check("spec-informative-marker-green-" + name, lambda m=planted: not informative_findings(m))
+    # Declaration-candidate vectors. A paragraph (block-quoted or not, in any section) or a
+    # heading title is a declaration candidate where the letters of "informative" can be
+    # assembled, in order, from the letter runs of its text (character references decoded,
+    # invisible characters dropped, compatibility forms folded, case folded by the shared
+    # fold), each non-ASCII letter standing for any letter of the word, runs between the
+    # pieces skipped. Inside a candidate nothing is masked and nothing but plain prose is
+    # read: each character outside the allowlist (ASCII letters, ASCII digits, space and the
+    # marks _PLAIN_PROSE_MARKS names) is a finding naming the section and the character,
+    # whatever the section's classification. The vectors in this loop predate the allowlist
+    # and are regression coverage: each fails when a refusal class or candidacy step is
+    # removed, and each passed on the round-8 parent too (its per-form refusals caught
+    # them); the round-9 allowlist vectors further down each fail on that parent. Each green
+    # vector is a paragraph that is no candidate, so its markup (a code-span "<type>", an
+    # autolink, an undecoded reference, a control character, a stray "](" before a backtick)
+    # is not scanned at all (a fenced block and indented code are excluded as blocks, the
+    # commonmark-html-green vectors).
+    could_hide = "guard does not read and which could hide an informative declaration"
+    html_form = _char_label("<")
+    ref_form = _char_label("&")
+    ctrl_form = _char_label("\x01")
+    fmt_form = _char_label("\u200b")
+    target_form = _char_label("[")
+    for name, planted, form in (
+            ("tag-split", "This section is informa<b></b>tive.", html_form),
+            ("break-tag", "This section<br>is informative.", html_form),
+            ("break-tag-closed", "This section<br />is informative.", html_form),
+            ("quote-break-tag", "> This section<br>\n> is informative.", html_form),
+            ("mixed-separators", "This<br>section is in<b>forma</b>tive.", html_form),
+            ("break-then-comment", "This<br>section is informa<!-- note -->tive.", html_form),
+            ("comment-split", "This section is informa<!-- x -->tive.", html_form),
+            ("comment-multiline", "This section is informa<!-- x\ny -->tive.", html_form),
+            ("empty-comment", "This section is informa<!-->tive.", html_form),
+            ("cdata-split", "This section is informa<![CDATA[x]]>tive.", html_form),
+            ("processing-instruction", "This section is informa<?x y?>tive.", html_form),
+            ("html-declaration", "This section is informa<!X y>tive.", html_form),
+            ("closing-tag", "This section is informa</b>tive.", html_form),
+            ("quoted-attribute", 'This section is informa<span title=">"></span>tive.',
+             html_form),
+            ("quoted-attribute-split",
+             "This section is in<span title='a>b'>form</span>ative.", html_form),
+            ("link-wrapped-comment", "This section is [informa<!-- x -->tive](u).", html_form),
+            ("hidden-element", "This section is informa<span hidden>x</span>tive.", html_form),
+            ("attribute-text",
+             'This section <span title="is informative">holds rules</span>.', html_form),
+            ("tag-beyond-paragraph", "a <? b\n\nThis section is informa<b></b>tive.\n\nc ?>",
+             html_form),
+            ("quoted-tag-paragraph", "> x <a title='This section\n> is informative'>y</a>",
+             html_form),
+            ("undecoded-reference", "This section is informa&xsplit;tive.", ref_form),
+            # Candidacy is decided from the letters in the folded forms: character
+            # references decoded, invisible characters dropped, compatibility forms folded,
+            # case ignored; each vector here is a candidate only through the named step.
+            ("candidate-reference-decoded", "This section is &#105;nforma<b></b>tive.",
+             html_form),
+            ("candidate-filler-dropped", "This section is informa\u3164<b></b>tive.",
+             html_form),
+            ("candidate-fullwidth-folded",
+             "This section is \uff49\uff4e\uff46\uff4f\uff52\uff4d\uff41<b></b>"
+             "\uff54\uff49\uff56\uff45.", html_form),
+            ("candidate-case-folded", "THIS SECTION IS INFORMA<B></B>TIVE.", html_form),
+            # The first and last pieces may be a suffix and a prefix of their runs, so the
+            # word embedded in a longer run is a candidate too, an over-fire (a rendered
+            # embedding has no word boundary and can mark nothing, but candidacy stays the
+            # wider, fail-closed reading).
+            ("candidate-word-embedded-over-fire", "See Marxinforma<b></b>tivexy here.",
+             html_form),
+            # Nothing in a candidate is masked, so no pairing of backticks, autolinks or
+            # targets can shield a construct: a backslash, an unequal backtick run, an
+            # autolink or a real code span before or around the markup changes nothing;
+            # markup-shaped text inside a real code span or a URI autolink is refused too,
+            # the named over-fires.
+            ("backslash-masks-nothing", "\\` This section is informa<b></b>tive. `",
+             html_form),
+            ("autolink-masks-nothing",
+             "See <https://e.org/`> this section is informa<b></b>tive `x`.", html_form),
+            ("unequal-backtick-runs-mask-nothing",
+             "`` This section is informa<b></b>tive. ` x", html_form),
+            ("code-span-not-masked-over-fire", "See `informa<b></b>tive` in a sample.",
+             html_form),
+            ("autolink-uri-refused-over-fire", "This section is <informative:x>.",
+             html_form),
+            ("autolink-split-refused", "This section is informa<tive:x>tive.", html_form),
+            # A control or format character in a candidate is refused, never dropped and
+            # read around.
+            ("control-character-split", "This section is informa\x01tive.", ctrl_form),
+            ("format-character-split", "This section is informa\u200btive.", fmt_form),
+            # A "](" or "][" that opens no plain target is refused in any candidate: the
+            # joined reading form cannot remove it, so the declaration it splits (CommonMark
+            # reads nested or escaped parentheses and quoted titles into the destination or
+            # title and renders the link text) would otherwise stay unread. The round-7
+            # revision refused these only in a heading title or an informative section, a
+            # then-disclosed residual, so each target-split vector fails on it.
+            ("target-nested-parentheses-split", "This section is [informa](/u(x))tive.",
+             target_form),
+            ("target-escaped-parenthesis-split", "This section is [informa](/u\\)x)tive.",
+             target_form),
+            ("target-quoted-title-parenthesis-split",
+             'This section is [informa](/u "a)b")tive.', target_form),
+            ("target-angle-destination-split", "This section is [informa](<u x>)tive.",
+             target_form),
+            # Backtick-in-target compositions (PR #481 QA round 6): a backtick inside a
+            # destination, title or reference label desynchronised the old code-span
+            # masking; with nothing masked each hidden construct is read directly.
+            ("target-title-backtick-comment",
+             '[a](/u "`") This section is informa<!-- x -->tive. [b](/v "`")', html_form),
+            ("target-title-backtick-break",
+             '[a](/u "`") This section<br>is informative. [b](/v "`")', html_form),
+            ("target-title-backtick-hidden-span",
+             '[a](/u "`") This section is informa<span hidden>x</span>tive. [b](/v "`")',
+             html_form),
+            ("target-title-backtick-trailing",
+             '[x](/u "`") This section is informa<b></b>tive. `', html_form),
+            ("target-destination-backtick",
+             "[a](/u`) This section is informa<!-- x -->tive. [b](/v`)", html_form),
+            ("target-angle-destination-backtick",
+             "[a](<`>) This section is informa<!-- x -->tive. [b](<`>)", html_form),
+            ("image-destination-backtick",
+             "![a](/u`) This section is informa<!-- x -->tive. ![b](/v`)", html_form),
+            ("image-title-backtick",
+             '![a](/u "`") This section is informa<!-- x -->tive. ![b](/v "`")', html_form),
+            ("reference-label-backtick",
+             "[a][r`] This section is informa<!-- x -->tive. [b][s`]", html_form),
+            # PR #481 QA round-7 reproductions, verbatim: on the round-7 revision each
+            # escaped with zero findings (a false URI autolink holding a control character,
+            # or an unread email autolink holding a backtick, paired backticks differently
+            # from CommonMark and masked the comment or tag that hid the declaration); with
+            # nothing masked each is refused.
+            ("round7-autolink-control-backtick",
+             "See <http:x\x01`> a `This section is informa<!-- x -->tive. `", html_form),
+            ("round7-control-in-autolink-url",
+             "x <http://e.org/\x01`> x ` This section is informa<!-- x -->tive. `",
+             html_form),
+            ("round7-email-autolink-backtick",
+             "<1`x@e.org> This section is informa<!-- x -->tive. <2`y@e.org>", html_form),
+            ("round7-email-dot-local",
+             "<.`@e.org> This section is informa<!-- x -->tive. <.`@f.org>", html_form),
+            ("round7-email-break-split",
+             "<1`x@e.org> This section<br>is informative. <2`y@e.org>", html_form),
+            ("round7-email-trailing-backtick",
+             "<1`x@e.org> This section is informa<b></b>tive. `", html_form),
+            # Round-7 target-region probes, verbatim: each held a backtick in a region the
+            # old judge had to settle; the judge is gone and each is refused directly.
+            ("round7-angle-target-backtick",
+             "[a](<)`>) This section is informa<!-- x -->tive. [b](<)`>)", html_form),
+            ("round7-paren-destination-backtick",
+             "[a](/u(x)`) This section is informa<!-- x -->tive. [b](/v(x)`)", html_form),
+            ("round7-escaped-destination-backtick",
+             "[a](/u\\)`) This section is informa<!-- x -->tive. [b](/v\\)`)",
+             html_form),
+            ("round7-title-quote-backtick",
+             "[a](/u ')`') This section is informa<!-- x -->tive. [b](/v ')`')",
+             html_form)):
+        check("spec-informative-candidate-red-" + name, lambda m=notes + planted + plant,
+              w=form: any("section Z notes" in f and could_hide in f and ("carries " + w) in f
+                          for f in informative_findings(m)))
+    # The refusal names the paragraph line holding the construct, not the paragraph's first
+    # line.
+    second_line = notes + "This section\nis informa<b></b>tive." + plant
+    check("spec-informative-candidate-red-second-line", lambda m=second_line: any(
+        ("paragraph at line {} carries".format(m[:m.index("is informa<")].count("\n") + 1)) in f
+        for f in informative_findings(m)))
+    # Round-9 allowlist vectors (PR #481 QA round 8): a candidate is read only where every
+    # character of it is plain prose, and each character outside the set is refused by
+    # name. Every vector here fails on the round-8 parent, which read the planted text with
+    # no refusal finding, so each pins a round-9 behaviour change; and each fails again
+    # when its character class alone is returned to the allowlist, so each excluded class
+    # is pinned by a vector that holds no other refused character (the image and email
+    # vectors also pin their forms through "[" and "<"). An image renders as its alt
+    # attribute, never as shown text, so the round-8 joined form glued the alt letters into
+    # the word, no per-form refusal fired, and a declaration hid with zero findings; the
+    # "[" refusal covers every image and link form. A digit-led email autolink (<1@e.org>)
+    # opens with no letter, "/", "!" or "?", so the round-8 "<" form missed it; the
+    # allowlist refuses every "<". The "##Z (informative)" paragraphs moved here from the
+    # commonmark greens: CommonMark reads them as paragraphs (no space after the hashes; at
+    # most six hashes), a renderer that reads them as headings shows an informative heading
+    # the guard missed, and their "#" is now refused (the could-hide paragraph finding
+    # also pins that the guard keeps reading them as paragraphs).
+    for name, planted, ch in (
+            ("image-alt-split", "This section is informa![.](/1px.png)tive.", "["),
+            ("image-empty-alt", "This section is informa![](/1px.png)tive.", "["),
+            ("plain-link-split", "This section is [informa](/u)tive.", "["),
+            ("plain-reference-split", "This section is [informa][r]tive.", "["),
+            ("email-autolink-digit-local",
+             "See <1@e.org>: this section is informative.", "<"),
+            ("at-sign", "This section is informative; mail x@e.org.", "@"),
+            ("greater-than", "This section is informa>tive.", ">"),
+            ("code-span-backtick", "See `informative` in a sample.", "`"),
+            ("emphasis-asterisk", "This section is informa**tive**.", "*"),
+            ("emphasis-underscore", "This section is _informative_.", "_"),
+            ("strikethrough-tilde", "This section is informa~~x~~tive.", "~"),
+            ("backslash", "This section is informa\\tive.", "\\"),
+            ("plain-ampersand", "This section is informative for AT&T.", "&"),
+            ("decoded-reference", "This section is &#105;nformative.", "&"),
+            ("hash-heading-no-separator", "##Z (informative)", "#"),
+            ("hash-heading-seven-hashes", "####### Z (informative)", "#"),
+            ("equals-sign", "This section is informa=tive.", "="),
+            ("non-ascii-symbol", "This section is informa\u2606tive.", "\u2606"),
+            ("non-ascii-punctuation", "This section is informa\u2010tive.", "\u2010"),
+            ("non-ascii-space", "This section is informa\u00a0tive.", "\u00a0"),
+            ("non-ascii-digit", "This section is informative \u0661.", "\u0661"),
+            ("dotless-i-split", "This section is \u0131nforma<b></b>tive.", "<")):
+        check("spec-informative-allowlist-red-" + name, lambda m=notes + planted + plant,
+              w=_char_label(ch): any("section Z notes" in f and could_hide in f
+                                     and ("carries " + w) in f
+                                     for f in informative_findings(m)))
+    # Round-10 vectors (PR #481 QA round 9): inside a candidate a letter is read only if it
+    # is ASCII, every non-ASCII character, letters included, is refused by name, and in
+    # candidacy each non-ASCII letter stands for any letter of the word. Each red vector
+    # fails on the round-9 parent and on the round-8 one, which admitted every Unicode
+    # letter: there U+0130 case folded to "i" and a combining dot, so a plain declaration
+    # spelled with it was neither read nor refused; a Hangul filler, a letter the reading
+    # forms drop, stood unseen for the space between two words; a letter a Unicode fold
+    # expands (sharp s, a ligature) or an accented letter passed unnamed; and a letter no
+    # fold reads as one of the word's (an accented or Cyrillic i) made no candidate.
+    # body-dotless-i moved here from the marker reds: the ASCII fold no longer reads U+0131
+    # as "i", and its refusal now holds the text.
+    for name, planted, ch in (
+            ("dotted-capital-i-word", "This section is \u0130nformative.", "\u0130"),
+            ("dotted-capital-i-uppercase", "TH\u0130S SECTION IS INFORMATIVE.", "\u0130"),
+            ("dotted-capital-i-subject", "Th\u0130s section is informative.", "\u0130"),
+            ("body-dotless-i", "This section is \u0131nformative.", "\u0131"),
+            ("hangul-filler-3164", "This section is\u3164informative.", "\u3164"),
+            ("hangul-filler-ffa0", "This section\uffa0is informative.", "\uffa0"),
+            ("hangul-filler-115f", "This\u115fsection is informative.", "\u115f"),
+            ("hangul-filler-1160", "This section is\u1160informative.", "\u1160"),
+            ("sharp-s-in-word", "This section is informa\u00dfive.", "\u00df"),
+            ("sharp-s", "This section is informative; see Stra\u00dfe 1.", "\u00df"),
+            ("ligature-fi", "This section is informative for each \ufb01le.", "\ufb01"),
+            ("accented-letter", "This section is informative for the caf\u00e9.", "\u00e9"),
+            ("accented-letter-in-word", "This section is \u00eenformative.", "\u00ee"),
+            ("cyrillic-look-alike", "This section is \u0456nformative.", "\u0456")):
+        check("spec-informative-ascii-red-" + name, lambda m=notes + planted + plant,
+              w=_char_label(ch): any("section Z notes" in f and could_hide in f
+                                     and ("carries " + w) in f
+                                     for f in informative_findings(m)))
+    for name, planted, ch in (
+            ("dotted-capital-i", "## Z (\u0130NFORMATIVE)", "\u0130"),
+            ("dotless-i", "## Z (\u0131nformative)", "\u0131"),
+            ("cyrillic-look-alike", "## Z (\u0456nformative)", "\u0456"),
+            ("hangul-filler", "## Z\u3164(informative)", "\u3164")):
+        check("spec-informative-ascii-title-red-" + name, lambda m=normative + planted + plant,
+              w=_char_label(ch): any(f.startswith("spec informative guard: heading at line ")
+                                     and "could hide" in f and ("carries " + w) in f
+                                     for f in informative_findings(m)))
+    # Round-11 vectors (PR #481 QA round 10): a heading title and a body are each read for
+    # both marker forms, "(informative)" and the declaration, and a title also for the word
+    # set off as a label. Each red vector is plain ASCII and gave zero findings on the
+    # round-10 parent and the two revisions before it: a title stating the declaration
+    # (ATX, after a label, at a deeper level, setext), a title holding the word as a label,
+    # and a body holding "(informative)" were candidates of plain prose, so nothing refused
+    # them, and no marker the parent read held them. Each finding names the section the
+    # marker makes informative.
+    for name, planted, section in (
+            ("title-declaration", normative + "## This section is informative" + plant,
+             "This section is informative"),
+            ("title-declaration-after-label",
+             normative + "## Z: this section is informative" + plant,
+             "Z: this section is informative"),
+            ("title-declaration-level-3", notes + "### This section is informative" + plant,
+             "This section is informative"),
+            ("title-declaration-setext", normative + "This section is informative\n---" + plant,
+             "This section is informative"),
+            ("title-label-dash", normative + "## Z - Informative" + plant, "Z - Informative"),
+            ("title-label-leading", normative + "## Informative: Z notes" + plant,
+             "Informative: Z notes"),
+            ("body-parenthesized", notes + "(informative)" + plant, "Z notes"),
+            ("body-parenthesized-in-sentence",
+             notes + "These notes (informative) give background." + plant, "Z notes"),
+            ("body-parenthesized-quoted", notes + "> (Informative)" + plant, "Z notes")):
+        check("spec-informative-both-forms-red-" + name, lambda m=planted, s=section: (
+            "spec informative section {} carries requirement keyword MUST".format(s)
+            in informative_findings(m)))
+    # A title is read for the label form, a body is not, and the word among other words of
+    # a title marks nothing: each green is a plain candidate that holds no marker its place
+    # reads (the commonmark and container greens that once held "Z (informative)" in a body
+    # now hold the title-only label "Z - informative" for the same reason).
+    for name, planted in (
+            ("body-label", notes + "Z - informative" + stays),
+            ("body-label-leading", notes + "Informative: background only." + stays),
+            ("title-word-in-note", normative + "## Z (informed by the informative note)"
+             + stays)):
+        check("spec-informative-both-forms-green-" + name,
+              lambda m=planted: not informative_findings(m))
+    # Emoji shortcodes (PR #481 QA round 10): GitHub shows infor:m:ative with an emoji for
+    # :m:, so a candidate of allowed characters alone could show a different word; each
+    # red gave zero findings on the round-10 parent, and each now names the shortcode. A
+    # shortcode in a paragraph that is no candidate is not scanned.
+    for name, planted in (
+            ("paragraph-m", notes + "This section is infor:m:ative." + plant),
+            ("paragraph-o", notes + "This section is inf:o:rmative." + plant)):
+        check("spec-informative-shortcode-red-" + name, lambda m=planted: any(
+            "section Z notes" in f and could_hide in f and "carries an emoji shortcode ':" in f
+            for f in informative_findings(m)))
+    check("spec-informative-shortcode-title-red", lambda: any(
+        f.startswith("spec informative guard: heading at line ") and "could hide" in f
+        and "carries an emoji shortcode ':m:ative)'" in f
+        for f in informative_findings(normative + "## Z (infor:m:ative)" + plant)))
+    check("spec-informative-shortcode-green-not-candidate",
+          lambda: not informative_findings(notes + "Mark it :m: or :o: as needed." + stays))
+    # The reader shares the ASCII case fold (_fold_case) with candidacy, and each vector
+    # here fails where the reader alone uses a Unicode fold (str.casefold), in each
+    # direction. A Unicode fold reads U+0345 as a Greek iota, a letter, so the title
+    # "Z", U+0345, "informative" no longer sets the word off as a label and the section is
+    # no longer marked; and it expands U+0130 to "i" and a combining dot, which ends a word,
+    # so "This" after U+0130 would read as a declaration the ASCII fold does not read.
+    # Each text is a candidate and its non-ASCII character is refused either way.
+    check("spec-informative-reader-fold-red-combining-edge", lambda m=normative
+          + "## Z \u0345informative" + plant: (
+              "spec informative section Z \u0345informative carries requirement keyword MUST"
+              in informative_findings(m) and any(
+                  ("carries " + _char_label("\u0345")) in f for f in informative_findings(m))))
+    check("spec-informative-reader-fold-no-expansion", lambda m=notes
+          + "\u0130This section is informative." + plant: (
+              [f for f in informative_findings(m) if "requirement keyword" in f] == []
+              and any(("carries " + _char_label("\u0130")) in f
+                      for f in informative_findings(m))))
+    # A paragraph or heading title holding non-ASCII letters is no candidate, and is not
+    # refused for them, where its letters assemble no "informative" with each non-ASCII
+    # letter counted as any letter.
+    for name, planted in (
+            ("accented-and-sharp-s", notes + "The caf\u00e9 serves Stra\u00dfe guests."),
+            ("hangul-filler", notes + "Keep\u3164this list short."),
+            ("title-accented", normative + "## Z caf\u00e9 notes")):
+        check("spec-informative-ascii-green-" + name,
+              lambda m=planted + stays: not informative_findings(m))
+    for name, planted in (
+            ("code-span-tag", "The layout names `<type>` directories."),
+            ("code-span-reference", "Write `&xsplit;` for the raw form."),
+            ("multiline-code-span", "A `pin\nholds <type>` across lines."),
+            ("autolink-paragraph", "See <https://example.org/guide> for more."),
+            ("less-than-no-letter", "Keep a < b and a <= b ordered."),
+            ("decoded-reference", "Pins use &amp; and &#105; forms."),
+            ("plain-ampersand", "Pins cover AT&T and a & b."),
+            ("escaped-less-than", "Write \\<type> for a placeholder."),
+            ("plain-target-then-code-span",
+             "See [the guide](docs/a.md) and read `<type>` there."),
+            ("quoted-title-no-backtick", 'See [a](/u "t") for details.'),
+            ("bracket-no-link-code-span", "x](`) a ` <b> `"),
+            ("code-span-after-backtick-target", "See [a](/u`) and the `<type>` key."),
+            ("code-span-after-quoted-title", 'See [a](/u "t") and the `<type>` key.'),
+            ("informed-break-tag", "This section<br>is informed by Appendix E."),
+            ("informed-quoted-attribute",
+             "This section is in<span title='a>b'>form</span>ed by Appendix E."),
+            ("information-word-code-span", "The information lives in `<type>` keys."),
+            ("control-character-prose", "Keep a\x01b and c<d ordered."),
+            ("undecoded-reference-prose", "Write &xsplit; raw in prose.")):
+        check("spec-informative-candidate-green-" + name,
+              lambda m=notes + planted + stays: not informative_findings(m))
+    # The default entry runs the informative guard: over a spec with a planted violation,
+    # main([]) is red with the guard's own finding, so unwiring informative_findings from
+    # main() is a named failure here; the unmodified baseline stays green with no output.
+    with tempfile.TemporaryDirectory(prefix="opf-homes-main-") as tmp:
+        planted_spec = Path(tmp) / "OPF-SPEC.md"
+        planted_spec.write_text(text.replace(
+            informative_anchor, informative_anchor + " A checker MUST share each record.", 1),
+            encoding="utf-8")
+        with patch.object(module, "SPEC", planted_spec):
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                planted_rc = main([])
+        check("main-default-entry-runs-informative-guard",
+              lambda r=planted_rc, out=buf.getvalue():
+              r == 1 and "carries requirement keyword MUST" in out)
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        baseline_rc = main([])
+    check("main-default-entry-green-baseline", lambda r=baseline_rc, out=buf.getvalue():
+          r == 0 and out == "")
+    # Section 2 keyword lint: synthetic cases, then every registry marker and keyword flipped,
+    # then named fix-5a rewrites reverted.
+    check("spec-keywords", lambda: not keyword_findings())
+    lint_cases = (
+        ("A lease is never seized from a live holder.", True),
+        ("Installation must inspect the index first.", True),
+        ("MUSTERED rows and MAYBE rows.", True),
+        ("A lease MUST NOT be seized from a live holder.", False),
+        ("Choosing it SHOULD be a recorded decision.", False),
+        ("A phase inventory MAY be published.", False),
+        (_D("The closed kind vocabulary is import."), False),
+        (_D("A lease MUST NOT be seized."), True),
+        # A quotation entry is not linted, with a keyword or without one.
+        (_Q("> Retired text, quoted and not in force: > A lease MUST NOT be seized."), False),
+        (_Q("> Retired text, quoted and not in force: > A lease is never seized."), False),
+    )
+    for fragment, red in lint_cases:
+        check("keyword-lint-case-{!r}".format(str(fragment)), lambda f=fragment, r=red:
+              bool(keyword_findings({"14.2": (f,)})) == r)
+    # Stripping any marker, or lowercasing any pin's keywords, turns the lint red on that pin.
+    for registry, section, fragments in [(r, s, f) for r in (_CONTRACT, _PINNED) for s, f in r.items()]:
+        for index, fragment in enumerate(fragments):
+            if isinstance(fragment, _Descriptive):
+                flipped = str(fragment)
+            elif _KEYWORD.search(fragment):
+                flipped = _KEYWORD.sub(lambda m: m.group(0).lower(), fragment)
+            else:
+                continue  # an unmarked keywordless pin is already red under spec-keywords
+            expected = "spec {} requirement without a section 2 keyword: {}".format(section, flipped)
+            with patch.dict(registry, {section: fragments[:index] + (flipped,) + fragments[index + 1:]}):
+                check("keyword-flip-{}-{}".format(section, index), lambda e=expected: e in keyword_findings())
+    # Red on revert: each registered keyword rewrite, reverted in the spec together with its pin
+    # (the matching registry edit tiling cannot see), turns the keyword lint red; reverted in the
+    # spec alone, it turns the pin check red.
+    for section, new, old in _KEYWORD_REVERTS:
+        body = _sections(text)[section]
+        normalized_body = " ".join(body.replace("`", "").split())
+        pin = [f for f in _CONTRACT[section] if new in f]
+        reverted = pin[0].replace(new, old) if len(pin) == 1 else None
+        mutated = text.replace(body, "\n\n" + normalized_body.replace(new, old, 1) + "\n\n", 1)
+        registry = tuple(reverted if f is pin[0] else f for f in _CONTRACT[section]) if reverted else ()
+        with patch.dict(_CONTRACT, {section: registry}):
+            check("keyword-revert-registry-" + section + "-" + old, lambda r=reverted, s=section:
+                  r is not None and not _KEYWORD.search(r) and
+                  "spec {} requirement without a section 2 keyword: {}".format(s, r) in keyword_findings())
+            check("keyword-revert-unseen-by-pins-" + section + "-" + old, lambda m=mutated, s=section:
+                  not any(f.startswith("spec " + s + " missing contract") for f in contract_findings(m)))
+        check("keyword-revert-spec-" + section + "-" + old, lambda p=pin, m=mutated, s=section:
+              len(p) == 1 and "spec {} missing contract: {}".format(s, p[0]) in contract_findings(m))
+    for failure in failures:
+        print("FAIL: " + failure)
+    print("OPF-HOMES SELF-TEST: {} ({} checks)".format("FAILED" if failures else "OK", checked))
+    return 1 if failures else 0
+
+
+def main(argv=None):
+    args = sys.argv[1:] if argv is None else argv
+    try:
+        if args == ["--self-test"]:
+            return self_test()
+        if args:
+            print("check_opf_homes: unexpected arguments", file=sys.stderr)
+            return 2
+        spec_text = SPEC.read_text(encoding="utf-8")
+        findings = (contract_findings(spec_text) + keyword_findings()
+                    + surface_findings() + informative_findings(spec_text))
+        for finding in findings:
+            print("check_opf_homes: " + finding)
+        return 1 if findings else 0
+    except (OSError, UnicodeError, ValueError, AttributeError) as exc:
+        print("check_opf_homes: cannot evaluate: {}".format(exc), file=sys.stderr)
+        return 2
+
+# --- background fault channels of code loaded in process (atexit, worker thread, destructor) ----------
+# Fail-closed settlement for the background fault channels of the code this gate loads and runs in
+# process. _fail_closed_main installs the recorders BEFORE the gate's work (so before any in-process
+# load) and settles them AFTER it: a fault the interpreter reports only to stderr (a destructor, weakref
+# or similar callback through sys.unraisablehook; an unhandled exception ending a worker thread through
+# threading.excepthook) is recorded and forces exit 2 over a passing verdict, never a silent pass. Before
+# a passing verdict the settle waits (_SETTLE_SECONDS in all) for every other thread still running,
+# threading's census and the runtime's live count of low-level _thread workers together, so a worker's
+# later fault is recorded instead of killed silently by the exit, and a thread or low-level worker still
+# running at the bound fails the verdict closed (exit 2). On Linux the settle also waits on the OS's own
+# thread list for this process (_os_threads_pending), which still shows a worker while the runtime clears
+# its thread state (its thread-local and context values' destructors run there, after the runtime's live
+# count and threading's census already dropped it), a faulthandler watchdog and a thread a C extension
+# starts. The verdict then ends the process with os._exit, so an
+# atexit callback registered by loaded code can never run after it (that channel is unreachable, not
+# merely disclosed). Only a SystemExit with code None or 0 ending a worker thread is the interpreter's
+# normal SUCCESSFUL thread exit (default-hook parity) and is not recorded; any other code is an
+# unsuccessful exit a worker reported, so it is recorded.
+# A low-level _thread worker's SystemExit never reaches any hook (the interpreter drops it), so the
+# start entries and threading's saved module aliases of them are wrapped from before the gate's work and
+# a non-zero code ending such a worker is recorded as a fault there. The subinterpreter modules are made
+# unimportable before the gate's work, because a thread inside a subinterpreter reports its faults to
+# that interpreter's own hooks, never these recorders. Stated residuals, not closed: where the platform
+# has no per-process thread list (outside Linux) a thread outside the Python runtime stays invisible to
+# the census and the live count; and a process the loaded code starts is not followed, so one still
+# running after this gate ends is outside its verdict.
+# Each recorder chains to the hook it wrapped, so the usual traceback still reaches stderr after the
+# marker line. After the exit flushes the settle stops the collector, blocks every signal, runs any
+# handler already tripped, and re-reads the record and every liveness term, so a fault recorded or a
+# worker a signal handler started while a flush was blocked on a full pipe still fails the verdict, and
+# no loaded code can run between that last read and the exit.
+# Paths that end outside _gate_exit (a propagating KeyboardInterrupt, an escaping exception) already end
+# non-zero, and an ACCIDENTAL fault in an atexit callback cannot turn that non-zero end into exit 0, so
+# no background fault reads as a pass there. Residual: loaded code replacing these hooks, this record or
+# the exit itself is the reporting-machinery channel disclosed once in the _opf_views class disclosure
+# (deliberately hostile loaded code is accepted there and not closed).
+_LOADED_FAULTS = []
+# A started low-level worker's liveness flag, set synchronously at the start call: the runtime
+# live count misses the brief window before a just-started worker's OS thread registers, so the
+# settle also waits while any flag is set, never breaking on that transient zero.
+_LOADED_WORKERS = []
+_FAULT_MARKER = "LOADED-CODE-FAULT"
+
+
+def _install_fault_hooks():
+    # A local alias: opf.py's close-lifecycle census reads an attribute store through the bare module name
+    # as shadowing that module.
+    import threading as _threads
+
+    # The modules that create a subinterpreter are made unimportable (an import is an ImportError the
+    # gate's work fails on): a thread inside one reports its faults to that interpreter's own hooks.
+    for _name in ("_interpreters", "concurrent.interpreters", "_testinternalcapi", "_testcapi"):
+        sys.modules[_name] = None
+
+    previous_unraisable = sys.unraisablehook
+    previous_thread = _threads.excepthook
+
+    def _record(channel, chained, args):
+        _LOADED_FAULTS.append(channel)
+        try:
+            sys._loaded_code_fault = True
+            sys.stderr.write("{}: a {} fault was recorded; a passing verdict will fail closed\n".format(
+                _FAULT_MARKER, channel))
+        finally:
+            chained(args)
+
+    def _record_unraisable(args):
+        _record("destructor-or-callback", previous_unraisable, args)
+
+    def _benign_thread_exit(args):
+        # Only a worker thread ending by SystemExit(None) or SystemExit(0) is the interpreter's normal
+        # SUCCESSFUL thread exit (default-hook parity). Any other SystemExit code is an unsuccessful exit
+        # a worker reported, recorded like any other fault (never a silent pass); the code is read
+        # through exact built-in types alone and never formatted.
+        if args.exc_type is None or not issubclass(args.exc_type, SystemExit):
+            return False
+        code = getattr(args.exc_value, "code", None) if args.exc_value is not None else None
+        return code is None or (type(code) is int and code == 0)
+
+    def _record_thread(args):
+        if _benign_thread_exit(args):
+            previous_thread(args)
+        else:
+            _record("worker-thread", previous_thread, args)
+
+    sys.unraisablehook = _record_unraisable
+    _threads.excepthook = _record_thread
+
+    import _thread as _lowlevel
+
+    def _record_lowlevel_fault():
+        _LOADED_FAULTS.append("lowlevel-worker")
+        try:
+            sys._loaded_code_fault = True
+            sys.stderr.write("{}: a lowlevel-worker fault was recorded; a passing verdict will fail "
+                             "closed\n".format(_FAULT_MARKER))
+        except Exception:
+            pass
+
+    import types as _types
+    _bootstrap = _threads.Thread._bootstrap
+
+    def _genuine_bootstrap(target):
+        # A thread start is threading's own only when its target is exactly a bound method whose function
+        # is threading.Thread._bootstrap and whose instance is a threading.Thread (read through the exact
+        # method type, never an attribute the target supplies). Such a worker's fault already reaches
+        # threading.excepthook, so it is passed through untouched; wrapping it would also replace the
+        # target an audit-based observer reads, making threading's own start look like a raw one.
+        return (type(target) is _types.MethodType and target.__func__ is _bootstrap
+                and isinstance(target.__self__, _threads.Thread))
+
+    def _wrap_lowlevel(original):
+        # A raw low-level worker's SystemExit reaches no hook (the interpreter drops it), so the start
+        # entry wraps the worker's function and records a non-zero code as a fault (None or 0 is the
+        # successful low-level exit, default-interpreter parity; the code is read through exact built-in
+        # types alone and never formatted), and tracks the worker's liveness flag. A genuine threading
+        # start is passed through untouched.
+        def _start(function, *args, **kwargs):
+            if _genuine_bootstrap(function):
+                return original(function, *args, **kwargs)
+            state = [True]
+            def _run(*wargs, **wkwargs):
+                try:
+                    return function(*wargs, **wkwargs)
+                except SystemExit as exc:
+                    code = getattr(exc, "code", None)
+                    if not (code is None or (type(code) is int and code == 0)):
+                        _record_lowlevel_fault()
+                    raise
+                finally:
+                    state[0] = False
+            result = original(_run, *args, **kwargs)
+            _LOADED_WORKERS.append(state)
+            return result
+        return _start
+
+    _wrapped = []
+    for _entry in ("start_new_thread", "start_new", "start_joinable_thread"):
+        if hasattr(_lowlevel, _entry):
+            _original = getattr(_lowlevel, _entry)
+            _replacement = _wrap_lowlevel(_original)
+            setattr(_lowlevel, _entry, _replacement)
+            _wrapped.append((_original, _replacement))
+    for _alias in dir(_threads):
+        _value = getattr(_threads, _alias)
+        for _original, _replacement in _wrapped:
+            if _value is _original:
+                setattr(_threads, _alias, _replacement)
+
+
+# The OS's own list of this process's threads (Linux): it still shows a worker while the runtime clears
+# its thread state, a faulthandler watchdog and a thread a C extension starts. None where the platform has
+# no such list; the runtime's own counts then carry the settle alone (a stated residual).
+_TASK_DIR = "/proc/self/task" if sys.platform.startswith("linux") else None
+
+
+def _os_threads_pending():
+    """True while the OS lists a thread of this process besides the calling one, and when that list
+    exists but cannot be read (fail-closed); False where the platform has no such list."""
+    import os
+    if _TASK_DIR is None:
+        return False
+    try:
+        return len(os.listdir(_TASK_DIR)) != 1
+    except OSError:
+        return True
+
+
+def _drain_pending_signals():
+    """A Python-level call: the interpreter runs any signal handler already tripped on entry here."""
+    return None
+
+
+_SETTLE_SECONDS = 60.0
+
+
+def _gate_exit(code):
+    """Settle and END the process: before a passing verdict, wait (up to _SETTLE_SECONDS in all) for every
+    other thread still running, so a fault it raises later is recorded, never killed silently by the exit,
+    and fail closed (exit 2) if one still runs at the bound (the census covers threading's threads and,
+    through the runtime's live count, workers started through the low-level _thread entry points, so a
+    low-level worker still running at the bound also fails closed, and on Linux the OS's own thread list
+    covers a worker still clearing its thread state, a watchdog and a C extension's thread; elsewhere a
+    thread outside the Python runtime is invisible: a stated residual); force a recorded background fault
+    to exit 2 over a passing verdict, flush both streams, then stop the collector, block every signal, run
+    any handler already tripped and re-read the record and every liveness term AFTER the flushes (a fault
+    recorded or a worker started while a flush was blocked, on a full pipe say, must still fail the
+    verdict; its late marker is written straight to fd 2, past the buffers), then os._exit, so no atexit
+    callback registered by loaded code
+    runs after the verdict (the gate's own cleanup runs inside its work; this gate registers no atexit work
+    of its own)."""
+    import os
+    import threading as _threads
+    import time
+    import _thread as _lowlevel
+    if type(code) is bool:
+        code = 1 if code else 0
+    elif code is None:
+        code = 0
+    elif type(code) is not int:
+        # The code object is never formatted: a loaded object's __str__ must not run here.
+        sys.stderr.write("{}: a non-int SystemExit code at the gate entry; exit 1\n".format(_FAULT_MARKER))
+        code = 1
+    low = code & 0xFF
+    if code != 0 and low == 0:
+        # os._exit truncates its status to the low 8 bits, so this non-zero code would end the
+        # process with exit status 0, a silent pass; fail closed instead.
+        sys.stderr.write("{}: a SystemExit code outside the exit-status range at the gate entry; exit 2\n".format(
+            _FAULT_MARKER))
+        code = 2
+    else:
+        # os._exit refuses a code outside the C int range (OverflowError) instead of exiting, and
+        # that escape would let atexit callbacks registered by loaded code run after the verdict:
+        # take the low byte, the status any in-range code would report, so the exit below always runs.
+        code = low
+    if code == 0:
+        current = _threads.current_thread()
+        deadline = time.monotonic() + _SETTLE_SECONDS
+        while True:
+            running = [worker for worker in _threads.enumerate()
+                       if worker is not current and worker.is_alive()]
+            pending = (_lowlevel._count() or any(_state[0] for _state in _LOADED_WORKERS)
+                       or _os_threads_pending())
+            remaining = deadline - time.monotonic()
+            if (not running and not pending) or remaining <= 0:
+                break
+            if running:
+                running[0].join(min(remaining, 0.5))
+            else:
+                time.sleep(min(remaining, 0.05))
+        if running or pending:
+            sys.stderr.write("{}: a worker thread or low-level worker was still running at the verdict; "
+                             "fail-closed\n".format(_FAULT_MARKER))
+            code = 2
+    if code == 0 and (_LOADED_FAULTS or getattr(sys, "_loaded_code_fault", False)):
+        sys.stderr.write("{}: {} background fault(s) from loaded code over a passing verdict; "
+                         "fail-closed\n".format(_FAULT_MARKER, len(_LOADED_FAULTS) or 1))
+        code = 2
+    try:
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except Exception:
+        if code == 0:
+            code = 2
+    if code == 0:
+        # The verdict stands only once no loaded code can run before the exit: the collector is stopped,
+        # every signal is blocked (no other thread is left to take one), a handler already tripped runs
+        # now, and the record and every liveness term are read afresh, so a fault or a worker a handler
+        # started while a flush was blocked fails the verdict.
+        import gc as _gc
+        import signal as _signals
+        try:
+            _gc.disable()
+            _signals.pthread_sigmask(_signals.SIG_BLOCK, _signals.valid_signals())
+            _drain_pending_signals()
+        except BaseException:  # noqa: BLE001  a handler's own escape fails the verdict, never the exit
+            code = 2
+        if (_LOADED_FAULTS or getattr(sys, "_loaded_code_fault", False) or _lowlevel._count()
+                or any(_state[0] for _state in _LOADED_WORKERS) or _os_threads_pending()):
+            code = 2
+        if code != 0:
+            try:
+                os.write(2, ("{}: a background fault or a worker was recorded during the exit flush; "
+                             "fail-closed\n".format(_FAULT_MARKER)).encode("utf-8"))
+            except OSError:
+                pass
+    os._exit(code)
+
+
+def _fail_closed_main(run):
+    """The canonical process entry: install the fault recorders, run the gate's own work, settle, end."""
+    _install_fault_hooks()
+    try:
+        code = run()
+    except SystemExit as exc:
+        code = exc.code
+    _gate_exit(code)
+
+
+# The background fault channels, each driven through the gate's REAL _fail_closed_main in a child that
+# loads one fixture the way this gate loads code in process: a clean load passes; an atexit callback
+# registered by loaded code never runs (unreachable behind os._exit); a worker-thread fault and a
+# destructor fault are recorded and force exit 2.
+_FAULT_CHANNEL_PROBE = """import importlib.util, sys
+tool, fixture = sys.argv[1:3]
+sys.path.insert(0, tool.rsplit("/", 1)[0])
+spec = importlib.util.spec_from_file_location("_fault_channel_probe_target", tool)
+gate = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(gate)
+gate._SETTLE_SECONDS = 2.0
+def load():
+    case = importlib.util.spec_from_file_location("_fault_channel_fixture", fixture)
+    module = importlib.util.module_from_spec(case)
+    case.loader.exec_module(module)
+    return 0
+gate._fail_closed_main(load)
+"""
+
+# (label, fixture source, expected exit, marker required, text that must NOT appear on stderr)
+_FAULT_CHANNEL_CASES = (
+    ("clean", "x = 1\n", 0, False, None),
+    ("atexit", "import atexit, sys\n"
+     "def callback():\n"
+     "    sys.stderr.write('FAULT-FIXTURE-ATEXIT-RAN\\n')\n"
+     "    raise RuntimeError('fault-fixture-atexit')\n"
+     "atexit.register(callback)\n", 0, False, "FAULT-FIXTURE-ATEXIT-RAN"),
+    ("joined-thread", "import threading\n"
+     "def fault():\n"
+     "    raise RuntimeError('fault-fixture-thread')\n"
+     "worker = threading.Thread(target=fault)\n"
+     "worker.start()\n"
+     "worker.join()\n", 2, True, None),
+    ("destructor", "import gc\n"
+     "class Fault:\n"
+     "    def __del__(self):\n"
+     "        raise RuntimeError('fault-fixture-destructor')\n"
+     "Fault()\n"
+     "gc.collect()\n", 2, True, None),
+    ("thread-systemexit", "import threading\n"
+     "def fault():\n"
+     "    raise SystemExit(7)\n"
+     "worker = threading.Thread(target=fault)\n"
+     "worker.start()\n"
+     "worker.join()\n", 2, True, None),
+    ("thread-systemexit-zero", "import sys\nimport threading\n"
+     "def done():\n"
+     "    sys.exit(0)\n"
+     "worker = threading.Thread(target=done)\n"
+     "worker.start()\n"
+     "worker.join()\n", 0, False, None),
+    ("finishing-thread", "import threading, time\n"
+     "threading.Thread(target=time.sleep, args=(0.3,)).start()\n", 0, False, None),
+    ("unjoined-thread", "import threading, time\n"
+     "def fault():\n"
+     "    time.sleep(0.5)\n"
+     "    raise RuntimeError('fault-fixture-unjoined-thread')\n"
+     "threading.Thread(target=fault).start()\n", 2, True, None),
+    ("unfinished-thread", "import threading\n"
+     "threading.Thread(target=threading.Event().wait, daemon=True).start()\n", 2, True, None),
+    # Low-level _thread workers: the interpreter drops a SystemExit ending one without calling any hook,
+    # so the wrapped start entry records a non-zero code as a fault (None or 0 stays the successful
+    # low-level exit), and the settle waits on the runtime's live count, so one still running at the
+    # bound fails the verdict closed while one that finishes is waited out.
+    ("lowlevel-systemexit", "import _thread, threading\n"
+     "done = threading.Event()\n"
+     "def worker():\n"
+     "    try:\n"
+     "        raise SystemExit(7)\n"
+     "    finally:\n"
+     "        done.set()\n"
+     "_thread.start_new_thread(worker, ())\n"
+     "done.wait()\n", 2, True, None),
+    ("lowlevel-systemexit-zero", "import _thread, threading\n"
+     "done = threading.Event()\n"
+     "def worker():\n"
+     "    try:\n"
+     "        raise SystemExit(0)\n"
+     "    finally:\n"
+     "        done.set()\n"
+     "_thread.start_new_thread(worker, ())\n"
+     "done.wait()\n", 0, False, None),
+    ("lowlevel-finishing", "import _thread, time\n"
+     "_thread.start_new_thread(time.sleep, (0.3,))\n", 0, False, None),
+    ("lowlevel-unfinished", "import _thread, threading\n"
+     "_thread.start_new_thread(threading.Event().wait, ())\n", 2, True, None),
+    # A handled failed low-level start leaves no pending worker: red when the start flag is recorded
+    # before the start call (the flag then stays set and the settle fails closed at the bound).
+    ("lowlevel-failed-start", "import _thread\n"
+     "try:\n"
+     "    _thread.start_new_thread(print)\n"
+     "except TypeError:\n"
+     "    pass\n", 0, False, None),
+    # Thread-state teardown: a worker's thread-local and context-variable values are destroyed while the
+    # runtime clears its thread state, after its live count and threading's census already dropped it;
+    # the OS thread list still shows the worker, so the settle waits and records the fault (red without
+    # that term: each ends 0).
+    ("lowlevel-local-destructor", "import _thread, threading, time\n"
+     "entered = threading.Event()\n"
+     "store = threading.local()\n"
+     "class Held:\n"
+     "    def __del__(self):\n"
+     "        entered.set()\n"
+     "        time.sleep(0.5)\n"
+     "        raise RuntimeError('fault-fixture-local-destructor')\n"
+     "def worker():\n"
+     "    store.value = Held()\n"
+     "_thread.start_new_thread(worker, ())\n"
+     "entered.wait()\n", 2, True, None),
+    ("thread-local-destructor", "import threading, time\n"
+     "entered = threading.Event()\n"
+     "store = threading.local()\n"
+     "class Held:\n"
+     "    def __del__(self):\n"
+     "        entered.set()\n"
+     "        time.sleep(0.5)\n"
+     "        raise RuntimeError('fault-fixture-thread-local-destructor')\n"
+     "def worker():\n"
+     "    store.value = Held()\n"
+     "threading.Thread(target=worker).start()\n"
+     "entered.wait()\n", 2, True, None),
+    ("contextvar-destructor", "import _thread, contextvars, threading, time\n"
+     "entered = threading.Event()\n"
+     "held = contextvars.ContextVar('held')\n"
+     "class Held:\n"
+     "    def __del__(self):\n"
+     "        entered.set()\n"
+     "        time.sleep(0.5)\n"
+     "        raise RuntimeError('fault-fixture-contextvar-destructor')\n"
+     "def worker():\n"
+     "    held.set(Held())\n"
+     "_thread.start_new_thread(worker, ())\n"
+     "entered.wait()\n", 2, True, None),
+    # The runtime's live count, the term that carries the settle where the platform has no thread list:
+    # the fixture switches the OS list off in the probe's gate, and a low-level worker whose return value's
+    # destructor still runs after its callback returned must still be waited out and recorded (red
+    # without the live count: it ends 0).
+    ("runtime-count-return-destructor", "import _thread, sys, threading, time\n"
+     "sys.modules['__main__'].gate._TASK_DIR = None\n"
+     "entered = threading.Event()\n"
+     "class Result:\n"
+     "    def __del__(self):\n"
+     "        entered.set()\n"
+     "        time.sleep(0.5)\n"
+     "        raise RuntimeError('fault-fixture-return-destructor')\n"
+     "def worker():\n"
+     "    return Result()\n"
+     "_thread.start_new_thread(worker, ())\n"
+     "entered.wait()\n", 2, True, None),
+    # The settle's own reads of those two terms: a teardown destructor or a return value's destructor
+    # that finishes without a fault is waited out and passes (red without the settle-position read: the
+    # re-read after the flushes then still sees the worker and fails the clean run closed).
+    ("lowlevel-local-finishing", "import _thread, threading, time\n"
+     "entered = threading.Event()\n"
+     "store = threading.local()\n"
+     "class Held:\n"
+     "    def __del__(self):\n"
+     "        entered.set()\n"
+     "        time.sleep(0.3)\n"
+     "def worker():\n"
+     "    store.value = Held()\n"
+     "_thread.start_new_thread(worker, ())\n"
+     "entered.wait()\n", 0, False, None),
+    ("runtime-count-return-finishing", "import _thread, sys, threading, time\n"
+     "sys.modules['__main__'].gate._TASK_DIR = None\n"
+     "entered = threading.Event()\n"
+     "class Result:\n"
+     "    def __del__(self):\n"
+     "        entered.set()\n"
+     "        time.sleep(0.3)\n"
+     "def worker():\n"
+     "    return Result()\n"
+     "_thread.start_new_thread(worker, ())\n"
+     "entered.wait()\n", 0, False, None),
+    # Capability removal: every subinterpreter module is unimportable (red when any one is left
+    # importable: the fixture then ends 3).
+    ("subinterpreter-modules", "import importlib\n"
+     "for name in ('_interpreters', 'concurrent.interpreters', '_testinternalcapi', '_testcapi'):\n"
+     "    try:\n"
+     "        importlib.import_module(name)\n"
+     "    except ImportError:\n"
+     "        continue\n"
+     "    raise SystemExit(3)\n", 0, False, None),
+    # An armed faulthandler watchdog is a C-level thread only the OS thread list shows; still armed at
+    # the bound it fails the verdict closed (red without that term: it ends 0).
+    ("watchdog-armed", "import faulthandler\n"
+     "faulthandler.dump_traceback_later(600)\n", 2, True, None),
+    # Exit-status range: os._exit truncates its status to the low 8 bits, so a non-zero SystemExit
+    # code that is a multiple of 256 would end the child with status 0, a silent pass; the gate maps
+    # it to 2. The neighbouring codes pass through (257 reaches the parent as its low byte, 1).
+    ("exit-status-255", "raise SystemExit(255)\n", 255, False, None),
+    ("exit-status-256", "raise SystemExit(256)\n", 2, True, None),
+    ("exit-status-257", "raise SystemExit(257)\n", 1, False, None),
+    ("exit-status-negative-256", "raise SystemExit(-256)\n", 2, True, None),
+    # Codes around the ends of the C int range: os._exit raises OverflowError on a code outside that
+    # range instead of exiting, which would let the loaded code's atexit callbacks run after the
+    # verdict; the gate takes the low byte first, so the exit always runs. The wide codes (beyond
+    # each end, with non-zero low bytes) reach the parent as their low bytes only through that
+    # ordering. The boundary codes (2**31, just past the positive end, and -(2**31), exactly the
+    # negative end) have a zero low byte and fail closed as exit 2; the multiple-of-256 rule alone
+    # already gives both that outcome, so those two cases are preservation controls over the range
+    # ends, not evidence that the ordering is required. The code at the positive end itself,
+    # 2**31 - 1, has low byte 255 and is inside os._exit's accepted range.
+    ("exit-status-wide-positive", "import atexit, sys\n"
+     "atexit.register(sys.stderr.write, 'FAULT-FIXTURE-ATEXIT-RAN\\n')\n"
+     "raise SystemExit(2**31 + 1)\n", 1, False, "FAULT-FIXTURE-ATEXIT-RAN"),
+    ("exit-status-wide-negative", "import atexit, sys\n"
+     "atexit.register(sys.stderr.write, 'FAULT-FIXTURE-ATEXIT-RAN\\n')\n"
+     "raise SystemExit(-(2**31) - 1)\n", 255, False, "FAULT-FIXTURE-ATEXIT-RAN"),
+    ("exit-status-boundary-positive", "raise SystemExit(2**31)\n", 2, True, None),
+    ("exit-status-boundary-negative", "raise SystemExit(-(2**31))\n", 2, True, None),
+)
+
+
+# The flush-window channel: _gate_exit's fault decision must hold across the exit flushes. The fixture
+# fills the child's stdout pipe to its exact capacity (F_GETPIPE_SZ) and leaves one byte in the stream's
+# buffer, then arms a timer (SIGALRM unblocked: a caller's blocked mask is inherited) whose signal handler
+# drops an object with a faulting destructor, so the fault is recorded while the exit flush is blocked on
+# the full pipe (after the settle's thread wait, which a worker-thread fault would not outlast); the
+# parent drains stdout only after stderr shows the fault marker. Exit 2 with the marker is required. Red
+# when the fault decision runs only before the flushes: the child then ends 0 with the marker on stderr.
+_FLUSH_WINDOW_FIXTURE = """import fcntl, os, signal, sys
+os.write(1, b"x" * fcntl.fcntl(1, fcntl.F_GETPIPE_SZ))
+sys.stdout.write("y")
+class Fault:
+    def __del__(self):
+        raise RuntimeError("fault-fixture-flush-window")
+def fault(signum, frame):
+    Fault()
+signal.signal(signal.SIGALRM, fault)
+signal.pthread_sigmask(signal.SIG_UNBLOCK, [signal.SIGALRM])
+signal.setitimer(signal.ITIMER_REAL, 1.0)
+"""
+
+# The same window with a start instead of a fault: the handler starts a low-level worker that never ends
+# while the exit flush is blocked, then reports on fd 2, and the parent drains stdout only after that
+# line. Exit 2 with the marker is required. Red when only the record is read after the flushes: the
+# child then ends 0 with the worker still running.
+_FLUSH_WINDOW_START_FIXTURE = """import _thread, fcntl, os, signal, sys, threading
+os.write(1, b"x" * fcntl.fcntl(1, fcntl.F_GETPIPE_SZ))
+sys.stdout.write("y")
+def start(signum, frame):
+    _thread.start_new_thread(threading.Event().wait, ())
+    os.write(2, b"FAULT-FIXTURE-FLUSH-START\\n")
+signal.signal(signal.SIGALRM, start)
+signal.pthread_sigmask(signal.SIG_UNBLOCK, [signal.SIGALRM])
+signal.setitimer(signal.ITIMER_REAL, 1.0)
+"""
+
+
+def _flush_window_failures():
+    """One failure string per flush-window requirement a child missed (see _FLUSH_WINDOW_FIXTURE and
+    _FLUSH_WINDOW_START_FIXTURE)."""
+    import subprocess
+    import tempfile
+    import threading
+    failures = []
+    tool = str(Path(__file__).resolve())
+    with tempfile.TemporaryDirectory(prefix="opf-homes-flush-window-") as tmp:
+        probe = Path(tmp) / "probe.py"
+        probe.write_text(_FAULT_CHANNEL_PROBE, encoding="utf-8")
+        for label, fixture, ready in (
+                ("flush-window", _FLUSH_WINDOW_FIXTURE, _FAULT_MARKER + ":"),
+                ("flush-window-start", _FLUSH_WINDOW_START_FIXTURE, "FAULT-FIXTURE-FLUSH-START")):
+            case = Path(tmp) / (label + ".py")
+            case.write_text(fixture, encoding="utf-8")
+            try:
+                child = subprocess.Popen([sys.executable, "-I", "-B", str(probe), tool, str(case)],
+                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            except (OSError, subprocess.SubprocessError) as exc:
+                failures.append("fault-channel/{}: probe did not run ({})".format(label, type(exc).__name__))
+                continue
+            with child:
+                killer = threading.Timer(120, child.kill)
+                killer.start()
+                try:
+                    header = b""
+                    while ready.encode("ascii") not in header:
+                        line = child.stderr.readline()
+                        if not line:
+                            break
+                        header += line
+                    child.stdout.read()
+                    trailer = child.stderr.read()
+                    code = child.wait()
+                finally:
+                    killer.cancel()
+            stderr_text = (header + trailer).decode("utf-8", "replace")
+            if code != 2:
+                failures.append("fault-channel/{}: expected exit 2, got {}".format(label, code))
+            elif (_FAULT_MARKER + ":") not in stderr_text:
+                failures.append("fault-channel/{}: fault marker absent".format(label))
+    return failures
+
+
+# The entry wiring, checked statically on this file's own source: the final __main__ block must be
+# exactly _ENTRY_WIRING by AST (spacing and comments aside), so a rewiring that keeps _fail_closed_main
+# defined but routes an entry branch around it (a plain sys.exit around the work, say) is red even though
+# the channel probes above drive _fail_closed_main directly.
+_ENTRY_WIRING = '''if __name__ == "__main__":
+    if sys.argv[1:] == ["--self-test"]:
+        sys.exit(self_test())
+    _fail_closed_main(main)
+'''
+
+
+# For the canonical --self-test entry (F-SELFTEST-NO-MAIN), self_test itself must be the entry-aware
+# wrapper, so sys.exit(self_test()) still settles fail-closed and ends with os._exit when this file is
+# the process entry.
+_SELF_TEST_WIRING = '''def self_test():
+    if _RUN_AS_ENTRY:
+        _fail_closed_main(_self_test)
+    return _self_test()
+'''
+
+# The one binding of _RUN_AS_ENTRY, checked by _entry_wiring_failures: a rebinding (a constant, a later
+# store) would route an entry run of self_test around _fail_closed_main.
+_ENTRY_FLAG_WIRING = '_RUN_AS_ENTRY = __name__ == "__main__"\n'
+
+
+def _entry_wiring_failures():
+    """One failure string per entry-wiring requirement this file's own source misses (see _ENTRY_WIRING)."""
+    import ast
+    failures = []
+    try:
+        tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+    except (OSError, SyntaxError, ValueError) as exc:
+        return ["fault-channel/entry-wiring: this file could not be parsed ({})".format(type(exc).__name__)]
+    last = tree.body[-1] if tree.body else None
+    expected = ast.parse(_ENTRY_WIRING).body[0]
+    if last is None or ast.dump(last) != ast.dump(expected):
+        failures.append("fault-channel/entry-wiring: the final __main__ block is not the expected "
+                        "fail-closed form")
+    wrappers = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "self_test"]
+    body = list(wrappers[0].body) if len(wrappers) == 1 else []
+    if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant) and type(body[0].value.value) is str:
+        body = body[1:]
+    expected_body = ast.parse(_SELF_TEST_WIRING).body[0].body
+    if len(wrappers) != 1 or [ast.dump(node) for node in body] != [ast.dump(node) for node in expected_body]:
+        failures.append("fault-channel/entry-wiring: self_test is not the entry-aware wrapper (the "
+                        "canonical sys.exit(self_test()) must settle through _fail_closed_main)")
+    stores = [node for node in ast.walk(tree)
+              if isinstance(node, ast.Name) and node.id == "_RUN_AS_ENTRY" and not isinstance(node.ctx, ast.Load)]
+    flag = ast.dump(ast.parse(_ENTRY_FLAG_WIRING).body[0])
+    if len(stores) != 1 or sum(ast.dump(node) == flag for node in tree.body) != 1:
+        failures.append("fault-channel/entry-wiring: _RUN_AS_ENTRY is not bound exactly once, at module "
+                        "scope, as the __main__ comparison")
+    return failures
+
+def _fault_channel_vectors():
+    """One failure string per fault-channel case whose child did not end as required: the expected exit
+    code, the fault marker exactly when a fault must be recorded, and for the atexit case no trace of the
+    callback (it must never run). Red without the entry wrapper (the probe then ends 1, AttributeError on
+    _fail_closed_main, where clean and atexit expect 0) and red with the wrapper reverted to a plain exit
+    (the thread and destructor children then end 0 with the default hooks' output alone, where exit 2 with
+    the marker is required, and the atexit child then runs the callback)."""
+    import subprocess
+    import tempfile
+    failures = []
+    tool = str(Path(__file__).resolve())
+    with tempfile.TemporaryDirectory(prefix="opf-homes-fault-channel-") as tmp:
+        probe = Path(tmp) / "probe.py"
+        probe.write_text(_FAULT_CHANNEL_PROBE, encoding="utf-8")
+        for index, (label, body, expected, marked, absent) in enumerate(_FAULT_CHANNEL_CASES):
+            case = Path(tmp) / "fault_channel_{}.py".format(index)
+            case.write_text(body, encoding="utf-8")
+            try:
+                child = subprocess.run([sys.executable, "-I", "-B", str(probe), tool, str(case)],
+                                       capture_output=True, text=True, timeout=120)
+            except (OSError, subprocess.SubprocessError) as exc:
+                failures.append("fault-channel/{}: probe did not run ({})".format(label, type(exc).__name__))
+                continue
+            if child.returncode != expected:
+                failures.append("fault-channel/{}: expected exit {}, got {}".format(
+                    label, expected, child.returncode))
+            elif marked != ((_FAULT_MARKER + ":") in child.stderr):
+                failures.append("fault-channel/{}: fault marker {}".format(
+                    label, "absent" if marked else "present"))
+            elif absent is not None and absent in child.stderr:
+                failures.append("fault-channel/{}: the atexit callback ran".format(label))
+    failures.extend(_flush_window_failures())
+    failures.extend(_entry_wiring_failures())
+    return failures
+
+
+if __name__ == "__main__":
+    if sys.argv[1:] == ["--self-test"]:
+        sys.exit(self_test())
+    _fail_closed_main(main)

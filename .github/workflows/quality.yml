@@ -1,0 +1,96 @@
+name: Quality
+
+# The D-1245 job: one small pull_request job that runs the fast gates of
+# tools/run_all_checks.sh (its --ci mode). It is not whole-suite acceptance:
+# the full local run also runs the two CI helper tests.
+# tools/check_quality_workflow.py pins its contract: one job, named exactly
+# "Quality gates", on pull_request to main only, with no push, schedule or
+# workflow_dispatch trigger and no job-level or step-level condition.
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    # The required check is the job named exactly "Quality gates"; renaming
+    # it would leave the branch rule waiting on a check that never reports.
+    name: Quality gates
+    runs-on: ubuntu-24.04
+    # A hard limit, not a measurement: the target of about three minutes has
+    # not been measured on a hosted runner.
+    timeout-minutes: 5
+    steps:
+      # The PR head itself (not the merge commit), with no token left in
+      # .git/config for the steps below. Every action is pinned to a full
+      # commit SHA, so a moved tag cannot change the code this job runs.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      # .github/ci-python-version is the one committed source of the CI
+      # Python version (tools/check_ci_python_pin.py).
+      - name: Set up CI Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version-file: .github/ci-python-version
+
+      - name: Verify CI Python
+        run: |
+          set -eu
+          python3 -I - <<'PYTHON'
+          from pathlib import Path
+          import platform
+          import re
+          expected = Path('.github/ci-python-version').read_text(encoding='utf-8')
+          if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+\n?', expected):
+              raise SystemExit('FAIL: missing or malformed CI Python pin')
+          if platform.python_version() != expected.rstrip('\n'):
+              raise SystemExit('FAIL: CI Python version mismatch')
+          print('PASS: CI Python setup and version verified')
+          PYTHON
+
+      # gitleaks is installed as the pinned release binary, verified by its
+      # checksum before extraction. The secrets gate (tools/check_secrets.sh)
+      # runs it and requires this version. Change GITLEAKS_VERSION,
+      # GITLEAKS_SHA256 and the gate's PINNED together.
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          set -euo pipefail
+          dest="$RUNNER_TEMP/gitleaks"
+          mkdir -p "$dest"
+          url="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          # Two attempts, a 5-second delay and a 30-second limit per attempt;
+          # an unverified download is never extracted.
+          for attempt in 1 2; do
+            if curl -fsSL --connect-timeout 10 --max-time 30 -o "$dest/gitleaks.tar.gz" "$url"; then
+              break
+            fi
+            if [ "$attempt" -eq 2 ]; then
+              echo "gitleaks download failed after 2 attempts" >&2
+              exit 1
+            fi
+            sleep 5
+          done
+          echo "${GITLEAKS_SHA256}  $dest/gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf "$dest/gitleaks.tar.gz" -C "$dest" gitleaks
+          echo "$dest" >> "$GITHUB_PATH"
+
+      # The fast gates only. The job's 5-minute limit leaves no room for the
+      # two CI helper tests, so --ci lists them as NOT RUN and the full local
+      # run (tools/run_all_checks.sh with no argument) runs them. In --ci mode
+      # the names gate runs only the checks that need no denylist, and says so.
+      # OPFILES_GATE_TIMEOUT bounds each gate to 90 s (KILL 10 s later). That
+      # keeps checkout, Python setup, a worst-case gitleaks download (two 30 s
+      # attempts and a 5 s delay) and the gates inside the 5-minute limit, so
+      # a hung gate is reported by the runner instead of cut off by the job.
+      - name: Fast gates
+        env:
+          OPFILES_GATE_TIMEOUT: "90"
+        run: bash tools/run_all_checks.sh --ci

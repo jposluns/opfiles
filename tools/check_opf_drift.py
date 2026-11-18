@@ -1,0 +1,1146 @@
+#!/usr/bin/env python3
+"""OPF render-drift gate: `opf render --check` over the adopter store at the repository root.
+
+A thin gate wrapper in the check_*.py family (deliberately NOT gen_*.py: an OPF render targets an adopter
+--root with no fixed repo-relative target, so it gates as a self-test plus a live leg, exactly the posture
+opf.py itself documents). The live leg runs `opf.py render --check --root <repo-root>` and CLASSIFIES the
+child's outcome by the render check's drift MARKER, not by the bare child exit code (the marker mapping is
+below); it preserves gate discipline throughout (no truncating sink, no `|| true`, no status-masking
+trailer).
+The repo root is DERIVED by CONFIRMING the repository IDENTITY of the gate's OWN source location through a
+local git probe (git -C <gate-dir> rev-parse --show-toplevel, with the ambient Git environment scrubbed and
+the git executable resolved via shutil.which then absolutized with os.path.abspath, anchoring a relative
+which() result to the cwd so the launched probe is pinned absolute against exec-time re-resolution), not by
+the mere PRESENCE of a `.git` entry: a stray or garbage `.git`
+marker beside the gate would satisfy a bare existence test yet is not a real repository root. Unlike
+_gen_common.repo_root() it never falls back to the current directory, so a run whose root cannot be
+confirmed (git missing, a launch failure, an invalid/garbage gitfile, or a toplevel that does not contain
+the gate) fails closed (exit 2) rather than silently checking the WRONG root and returning a false 0
+(guard-input-soundness).
+
+This repository is not an OPFiles adopter, so the live leg prints render's own NOT APPLICABLE and exits 0,
+spec-honest like the crosswalk/doctor legs in run_all_checks.sh; the day this repo adopts, the same leg
+gates real view drift with no change. The gate's verdict uses render's own 0/1/2 vocabulary (0 clean, 1
+drift, 2 cannot-evaluate) but is assigned from the drift MARKER, not the bare child exit code. The mapping is
+three-way: a clean child (exit 0) is a PASS (0), and its stdout is NOT inspected for exit 0 because a clean
+render prints nothing; a child that exits with the drift code (1) AND carries the render check's drift MARKER
+on stdout (a `drift:` sentinel line, which `opf render --check` prints per drifted target) is DRIFT (1); and
+EVERY OTHER outcome routes to cannot-evaluate (exit 2). This closes the exit-1=drift conflation at the
+INTERPRETATION layer rather than per failure mode: a child that exits 1 WITHOUT the drift marker (a
+module-import crash before opf.py's handler, an uncaught exception, or any abnormal exit-1 path) produced no
+render drift verdict and is a cannot-evaluate, never a false drift; a child-LAUNCH failure (an OS refusal
+such as BlockingIOError under RLIMIT_NPROC pressure) is caught and reported as a cannot-evaluate rather than
+escaping as the gate's own exit 1; and an unexpected or abnormal child status (a non 0/1/2 code, a signal
+death surfacing as a negative return code, or empty/garbled output) is a cannot-evaluate too. The child's
+stdout is surfaced to the console in the live leg; render's own internal failures fail closed to exit 2
+upstream of this leg.
+
+--self-test builds SYNTHETIC adopter stores in a tempdir and asserts that 0/1/2 contract END TO END through
+opf.py: 0 on a clean populated store, 1 after a view is edited, 2 on a broken store, and 0 (NOT APPLICABLE)
+on a non-adopter root. The clean store's views are populated through the U4 engine's own public planner
+(_opf_views.plan_views), never hand-built, so a clean render is clean by construction. Offline, stdlib only,
+fail-closed, launched isolated (-I -B). The tempdir is removed in a finally (test-hermeticity).
+"""
+import sys
+
+if tuple(sys.version_info[:2]) < (3, 14):
+    import os
+    try:
+        sys.stderr.write(
+            "error: check_opf_drift.py requires Python 3.14 or newer; this is Python %d.%d.%d (%s). "
+            "Nothing was run (cannot evaluate).\n"
+            % (tuple(sys.version_info[:3]) + (sys.executable or "unknown interpreter",)))
+        sys.stderr.flush()
+    except BaseException:
+        pass
+    os._exit(2)
+
+import os
+import subprocess
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # for the self-test's sibling imports below
+
+EXIT_OK = 0
+EXIT_DRIFT = 1
+EXIT_ERROR = 2
+
+# The render check's POSITIVE drift signal. `opf render --check` prints one `drift: <path>` line to STDOUT
+# per drifted target (see _opf_views.render / opf_render), then a regenerate hint, and exits 1. Errors go to
+# STDERR. The gate recognizes genuine DRIFT by this marker rather than by the bare exit code, so a child that
+# exits 1 for any OTHER reason (a module-import crash, an uncaught exception) cannot masquerade as drift. The
+# marker is matched at a line's START so an incidental mid-line occurrence cannot spoof it.
+DRIFT_MARKER = "drift:"
+
+
+def _has_drift_marker(text):
+    """True when `text` (the render child's captured stdout) carries the render check's drift sentinel: at
+    least one line BEGINNING with DRIFT_MARKER, the `drift: <path>` line _opf_views.render / opf_render emit
+    per drifted target. Matched at line start so an incidental mid-line occurrence cannot masquerade as it."""
+    return any(line.startswith(DRIFT_MARKER) for line in text.splitlines())
+
+
+def _run_render_check(root, capture):
+    """Run `opf.py render --check --root <root>` isolated (-I -B) and CLASSIFY its outcome by a POSITIVE
+    drift signal, never by the exit code alone. The gate reports DRIFT (exit 1) ONLY on a CONFIRMED drift:
+    the child exited with the drift code (1) AND its stdout carries the render check's drift MARKER (a
+    `drift:` sentinel line). EVERY other outcome routes to cannot-evaluate (EXIT_ERROR), never a false drift
+    1. This closes the exit-1=drift conflation at the INTERPRETATION layer rather than per failure mode: a
+    child that exits 1 WITHOUT the drift marker (a module-import crash before opf.py's handler, an uncaught
+    exception, or any abnormal exit-1 path) produced NO render drift verdict, so it is a cannot-evaluate, not
+    drift; a child-LAUNCH failure (an OS refusal such as BlockingIOError/OSError when a fork is refused under
+    RLIMIT_NPROC pressure) is caught HERE; and exit 2, an unexpected non-0/1/2 status, a signal death
+    (negative return), or empty/garbled output is a cannot-evaluate. Only a clean child (exit 0) is clean,
+    and its stdout is NOT inspected for exit 0 because a clean render prints nothing; the marker is examined
+    only to CONFIRM a drift (exit 1), never to qualify the clean pass.
+
+    stdout is CAPTURED so the marker can be recognized (decoded with errors='replace', so garbled bytes
+    route to cannot-evaluate rather than crashing the gate). In the live leg (capture False) it is re-emitted
+    to the console after the run so the operator still sees the child's `drift:`/regenerate output, and the
+    child's stderr is inherited (streamed) there; in the self-test leg (capture True) stdout is inspected but
+    not re-emitted and stderr is discarded, so a passing leg stays quiet."""
+    tools_dir = Path(__file__).resolve().parent
+    err_sink = subprocess.DEVNULL if capture else None
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-I", "-B", str(tools_dir / "opf.py"),
+             "render", "--check", "--root", str(root)],
+            stdout=subprocess.PIPE, stderr=err_sink)
+    except OSError as exc:
+        # An OS refusal AT LAUNCH (BlockingIOError et al., e.g. fork refused under RLIMIT_NPROC) escapes
+        # before any return code exists. Map it to a located cannot-evaluate (exit 2), never let it
+        # propagate and exit the gate 1, which would read as a false DRIFT verdict though no child ran.
+        print("check_opf_drift: cannot evaluate: could not launch the render child for root {} ({}); "
+              "no child ran, so no drift verdict exists".format(root, exc), file=sys.stderr)
+        return EXIT_ERROR
+    out = (proc.stdout or b"").decode("utf-8", "replace")
+    if not capture and out:
+        sys.stdout.write(out)   # surface the child's stdout to the console in the live gate leg
+    rc = proc.returncode
+    if rc == EXIT_OK:
+        return EXIT_OK
+    if rc == EXIT_DRIFT and _has_drift_marker(out):
+        return EXIT_DRIFT
+    # Every other outcome is a cannot-evaluate, NOT drift: exit 1 without the drift marker (an import crash,
+    # an uncaught exception, or a non-render child), exit 2, an unexpected non-0/1/2 status, or a signal
+    # death surfacing as a negative return code. This is the interpretation-layer close of the exit-1=drift
+    # conflation: DRIFT is recognized positively, never inferred from a bare exit code.
+    print("check_opf_drift: cannot evaluate: the render child for root {} did not produce a confirmed clean "
+          "(exit 0) or confirmed-drift (exit 1 with a '{}' marker line) result (child exit {}); a child that "
+          "exits 1 without the drift marker -- a module-import crash, an uncaught exception, or a launch "
+          "failure -- is not drift".format(root, DRIFT_MARKER, rc), file=sys.stderr)
+    return EXIT_ERROR
+
+
+def _self_test():
+    """The drift suite in its isolated fixture home, then the fault-channel vectors."""
+    code = _self_test_fixture_home()
+    failures = _fault_channel_vectors()
+    for failure in failures:
+        print("check_opf_drift self-test: FAIL: {}".format(failure), file=sys.stderr)
+    return code or (1 if failures else 0)
+
+
+def _self_test_fixture_home():
+    """Isolate fixture configuration and restore the caller even on failure. The suite's status is
+    returned from inside the isolation: the git-fixture-env lifecycle roster derives this wrapper's
+    edge to _self_test_isolated from that return, so a status kept for later reads as no wrapper."""
+    import tempfile
+    from unittest.mock import patch
+    with tempfile.TemporaryDirectory(prefix="opf-selftest-home-") as home:
+        with patch.dict(os.environ, HOME=home, XDG_CONFIG_HOME=home,
+                        GIT_CONFIG_NOSYSTEM="1"):
+            return _self_test_isolated()
+
+
+def _self_test_isolated():
+    """Build synthetic stores and assert the 0/1/2 contract end to end through opf.py. Returns 0 clean,
+    1 on a failing drift ASSERTION, 2 on a HARNESS error (a fixture could not be built or read)."""
+    import contextlib
+    import io
+    import shutil
+    import tempfile
+
+    # Reuse the U4 engine's helpers to build a render-clean synthetic store (the U4 fixture idiom).
+    import _opf_store  # noqa: E402
+    import _opf_views  # noqa: E402
+    import _opf_init  # noqa: E402  the production [opf] base declaration
+
+    def _classify(body):
+        """Run a self-test `body` (a no-arg callable that returns its list of assertion failures and raises
+        OSError for a HARNESS error) and map it to the documented status: 0 clean, 1 on a failing drift
+        ASSERTION, 2 on a HARNESS error. This is the single place the assertion(1)-vs-harness(2) distinction
+        the docstring promises is implemented."""
+        try:
+            failures = body()
+        except OSError as exc:
+            print("check_opf_drift self-test: harness error: {}".format(exc), file=sys.stderr)
+            return EXIT_ERROR
+        if failures:
+            for f in failures:
+                print("check_opf_drift self-test: FAIL: {}".format(f), file=sys.stderr)
+            return EXIT_DRIFT
+        return EXIT_OK
+
+    def build_clean_store(root):
+        """Create a RENDER-CLEAN empty-state store at `root` (the U4 empty-store shape) and populate its
+        views through _opf_views.plan_views, so `opf render --check` is clean by construction. It is
+        render-clean, not fully store-valid: validate_store would report it missing module registrations,
+        indexes, counters, and CHANGELOG, which are out of scope for a render-drift fixture."""
+        machine = Path(root) / _opf_store.WORKING_DIRNAME / _opf_store.DEFAULT_MACHINE_SUBDIR
+        machine.mkdir(parents=True)
+        types_block = "".join(
+            '[types.{}]\nnamespace = "{}"\n'.format(name, ns)
+            for name, ns in _opf_store.BASELINE_TYPES.items())
+        views_block = "".join(
+            _opf_views._view(name, kind, list(sources))
+            for name, (kind, sources, _renderer) in _opf_views.NAMED_VIEWS.items())
+        # The [opf] base table comes from the production builder, so the fixture follows the tooling's
+        # constants rather than restating them.
+        manifest = (
+            _opf_init.base_table_text(_opf_init._manifest_model())
+            + "\n"
+            "[store]\n"
+            'sync_target = ""\n'
+            "\n"
+            "[modules]\n"
+            "governance = true\n"
+            "operational_policy = true\n"
+            "concurrent_operation = true\n"
+            "\n"
+            + types_block
+            + "\n[vendors]\nregistered = []\n\n"
+            + views_block)
+        (machine / _opf_store.MANIFEST_NAME).write_text(manifest, encoding="utf-8")
+        for name in _opf_store.BASELINE_TYPES:
+            if name != "worklog":
+                (machine / "{}.index.toml".format(name)).write_text("schema = 1\n", encoding="utf-8")
+        (machine / "worklog.toml").write_text("schema = 1\n", encoding="utf-8")
+        import _opf_release  # noqa: E402  coverage_digest for the one seeded release
+        (machine / "version.toml").write_text(
+            "schema = 1\n\n[[release]]\n"
+            'version = "0.1.0"\n'
+            'date = "2026-01-01T00:00:00Z"\n'
+            "worklog_span = []\n"
+            'coverage_digest = "{}"\n'.format(_opf_release.coverage_digest([])),
+            encoding="utf-8")
+        # Populate the views through the engine's own public planner (never hand-built): open the store
+        # root fd, plan every declared view, and write each planned target at its spec destination.
+        machine_rel = "{}/{}".format(_opf_store.WORKING_DIRNAME, _opf_store.DEFAULT_MACHINE_SUBDIR)
+        fd = os.open(str(root), os.O_RDONLY)
+        try:
+            for _name, _scope, dest_rel, text in _opf_views.plan_views(fd, machine_rel):
+                (Path(root) / dest_rel).write_text(text, encoding="utf-8")
+        finally:
+            os.close(fd)
+
+    def _drift_suite():
+        """Build synthetic stores and assert the 0/1/2 render contract end to end through opf.py. Returns
+        the list of assertion failures; raises OSError if a fixture cannot be built or read (a harness
+        error, which _classify maps to exit 2)."""
+        failures = []
+
+        def expect(label, got, want):
+            if got != want:
+                failures.append("{}: got {}, expected {}".format(label, got, want))
+
+        base = Path(tempfile.mkdtemp(prefix="opf-drift-selftest-")).resolve()
+        try:
+            # Clean populated store -> 0.
+            clean = base / "clean"
+            clean.mkdir()
+            build_clean_store(clean)
+            expect("clean-store", _run_render_check(clean, capture=True), EXIT_OK)
+
+            # Same store with one view edited -> 1 (drift).
+            drifted = base / "drifted"
+            drifted.mkdir()
+            build_clean_store(drifted)
+            todo = drifted / _opf_store.WORKING_DIRNAME / "TODO.md"
+            todo.write_text(todo.read_text(encoding="utf-8") + "drifted line\n", encoding="utf-8")
+            expect("drifted-store", _run_render_check(drifted, capture=True), EXIT_DRIFT)
+
+            # Broken store: a discovered but unparseable manifest -> 2 (cannot-evaluate).
+            broken = base / "broken"
+            (broken / _opf_store.WORKING_DIRNAME / _opf_store.DEFAULT_MACHINE_SUBDIR).mkdir(parents=True)
+            (broken / _opf_store.WORKING_DIRNAME / _opf_store.DEFAULT_MACHINE_SUBDIR
+             / _opf_store.MANIFEST_NAME).write_text("this is not valid toml {{{\n", encoding="utf-8")
+            with contextlib.redirect_stderr(io.StringIO()):   # cannot-evaluate leg emits a located
+                expect("broken-store", _run_render_check(broken, capture=True), EXIT_ERROR)  # diagnostic
+
+            # Non-adopter root (no .working/) -> 0 (NOT APPLICABLE).
+            empty = base / "empty"
+            empty.mkdir()
+            expect("not-adopted-root", _run_render_check(empty, capture=True), EXIT_OK)
+
+            # Child-LAUNCH failure -> exit 2 (cannot-evaluate), never a false drift 1 (FIX 1 regression,
+            # subsuming the NB-4 child-crash residual). Inject an OSError at the launch call: an OS refusal
+            # to fork (RLIMIT_NPROC pressure) surfaces as BlockingIOError/OSError from subprocess.run, which
+            # must be caught and mapped to EXIT_ERROR, never propagate and exit the gate 1. Its diagnostic
+            # goes to stderr, suppressed here so a passing leg stays quiet; subprocess.run is restored in a
+            # finally so no later leg runs under the injected failure.
+            real_run = subprocess.run
+            def _refuse_launch(*_a, **_k):
+                raise BlockingIOError("simulated fork refusal (RLIMIT_NPROC)")
+            subprocess.run = _refuse_launch
+            try:
+                with contextlib.redirect_stderr(io.StringIO()):
+                    expect("child-launch-failure", _run_render_check(clean, capture=True), EXIT_ERROR)
+            finally:
+                subprocess.run = real_run
+
+            # Child exit 1 WITHOUT the drift marker -> cannot-evaluate (exit 2), NEVER a false drift 1 (the
+            # r5 fix: the exit-1=drift conflation closed at the interpretation layer). A module-import crash
+            # or any uncaught exception in the render child exits 1 with a traceback on STDERR and NO `drift:`
+            # line on STDOUT; the exit-code-only reading would call that drift. Stub subprocess.run to return
+            # exit 1 with marker-free stdout and assert the gate returns EXIT_ERROR, not EXIT_DRIFT. Restored
+            # in a finally so no later leg runs under the stub; its diagnostic goes to stderr, suppressed.
+            real_run_nm = subprocess.run
+            def _exit1_no_marker(*_a, **_k):
+                return subprocess.CompletedProcess(
+                    args=[], returncode=EXIT_DRIFT,
+                    stdout=b"Traceback (most recent call last):\n"
+                           b"ImportError: simulated child module-import crash (no drift line)\n")
+            subprocess.run = _exit1_no_marker
+            try:
+                with contextlib.redirect_stderr(io.StringIO()):
+                    expect("child-exit1-no-marker", _run_render_check(clean, capture=True), EXIT_ERROR)
+            finally:
+                subprocess.run = real_run_nm
+
+            # No repository root discoverable from the gate's own anchor -> exit 2 (cannot-evaluate),
+            # never a silent fall-through to cwd that would return a false 0 (FIX 1 regression). Anchor a
+            # synthetic tools/ dir with no .git at or above it inside our own tempdir; _run_gate must refuse
+            # it. Its own diagnostic goes to stderr, which we suppress so a passing leg stays quiet.
+            norepo_anchor = base / "norepo" / "tools"
+            norepo_anchor.mkdir(parents=True)
+            with contextlib.redirect_stderr(io.StringIO()):
+                expect("no-repo-root", _run_gate(norepo_anchor), EXIT_ERROR)
+
+            # Invalid/garbage .git marker at the gate's own dir -> exit 2 (cannot-evaluate), never a false
+            # NOT-APPLICABLE 0 (FIX 1 regression). A bare existence test would accept this stray gitfile as
+            # a repository root, anchor the gate to a dir with no .working/, and pass 0 while the real root
+            # went unchecked; the git probe rejects it (git -C <dir> rev-parse --show-toplevel returns 128
+            # on an invalid gitfile format). Its diagnostic goes to stderr, suppressed so a passing leg
+            # stays quiet.
+            badmarker_anchor = base / "badmarker" / "tools"
+            badmarker_anchor.mkdir(parents=True)
+            (badmarker_anchor / ".git").write_text("not a git marker\n", encoding="utf-8")
+            with contextlib.redirect_stderr(io.StringIO()):
+                expect("invalid-git-marker", _run_gate(badmarker_anchor), EXIT_ERROR)
+
+            # git emits a RELATIVE toplevel (e.g. `.`) -> _git_toplevel returns None -> exit 2
+            # (cannot-evaluate), never a false NOT-APPLICABLE 0 (B1 regression). `git rev-parse
+            # --show-toplevel` emits an ABSOLUTE path in the normal case; a relative value is malformed and
+            # must fail closed. Without the isabs guard, Path(".").resolve() resolves against the CWD and can
+            # pass the caller's containment check, yielding a false 0. Stub subprocess.run to emit a relative
+            # toplevel and assert the probe returns None; restored in a finally so no later leg is affected.
+            real_run_rel = subprocess.run
+            def _relative_toplevel(*_a, **_k):
+                return subprocess.CompletedProcess(args=[], returncode=EXIT_OK, stdout=".\n")
+            subprocess.run = _relative_toplevel
+            try:
+                expect("relative-toplevel", _git_toplevel(norepo_anchor), None)
+            finally:
+                subprocess.run = real_run_rel
+
+            # The git EXECUTABLE is absolutized (os.path.abspath) so a relative which() result (a relative
+            # PATH entry) still launches an ABSOLUTE git, pinning the child against exec-time re-resolution
+            # (mirrors _opf_observe._git_path). Stub shutil.which to a RELATIVE "git" and capture the command
+            # _git_toplevel launches; assert its git argv[0] is absolute. Both stubs restored in a finally so
+            # no later leg is affected.
+            real_which_abs = shutil.which
+            real_run_abs = subprocess.run
+            launched = {}
+            def _relative_which(*_a, **_k):
+                return "git"
+            def _capture_run(cmd, *_a, **_k):
+                launched["cmd"] = cmd
+                return subprocess.CompletedProcess(args=cmd, returncode=EXIT_OK, stdout="/toplevel\n")
+            shutil.which = _relative_which
+            subprocess.run = _capture_run
+            try:
+                _git_toplevel(norepo_anchor)
+                expect("abspath-git-executable", os.path.isabs(launched.get("cmd", [""])[0]), True)
+            finally:
+                shutil.which = real_which_abs
+                subprocess.run = real_run_abs
+        finally:
+            shutil.rmtree(base, ignore_errors=True)
+        return failures
+
+    # Guard the gate's OWN status contract BOTH ways, so the documented assertion(1)-vs-harness(2)
+    # distinction is a check that reds if it regresses (change-carries-check), not merely prose. The probes
+    # deliberately emit diagnostics, so their stderr is suppressed here.
+    def _raise_harness_error():
+        raise OSError("simulated harness error")
+
+    contract = []
+    with contextlib.redirect_stderr(io.StringIO()):
+        if _classify(_raise_harness_error) != EXIT_ERROR:
+            contract.append("harness-error body did not map to exit 2")
+        if _classify(lambda: ["simulated failing assertion"]) != EXIT_DRIFT:
+            contract.append("failing-assertion body did not map to exit 1")
+        if _classify(lambda: []) != EXIT_OK:
+            contract.append("clean body did not map to exit 0")
+    if contract:
+        for c in contract:
+            print("check_opf_drift self-test: FAIL: status-contract: {}".format(c), file=sys.stderr)
+        return EXIT_DRIFT
+
+    rc = _classify(_drift_suite)
+    if rc == EXIT_OK:
+        print("check_opf_drift self-test: PASS (opf render --check returns 0 clean / 1 drift / 2 broken / "
+              "0 NOT APPLICABLE end to end; drift recognized by the 'drift:' marker, not the bare exit code; "
+              "child exit 1 without the drift marker -> 2 (cannot-evaluate); no-repo-root -> 2; "
+              "invalid-git-marker -> 2; relative-toplevel probe -> None (exit 2); "
+              "git executable absolutized (relative which() -> absolute argv[0]); "
+              "status contract 1=assertion 2=harness)")
+    return rc
+
+
+# A per-git-call runtime bound (SECA resource-bounds): a hung or pathological git probe fails SAFE to a
+# cannot-evaluate (exit 2) rather than blocking the gate indefinitely. Mirrors _opf_observe._GIT_TIMEOUT_S.
+_GIT_TIMEOUT_S = 30
+
+
+def _scrubbed_env():
+    """Build the minimal, allowlist environment every git call runs under. Every ambient `GIT_`-prefixed
+    variable is DROPPED (an inherited GIT_DIR/GIT_WORK_TREE/GIT_CONFIG/GIT_OBJECT_DIRECTORY could otherwise
+    rebind the call to a DIFFERENT repository, inject configuration, or redirect object lookup); only PATH
+    and HOME are carried over. The few variables git genuinely needs to run non-interactively and free of
+    ambient configuration are then RE-APPLIED: global and system config neutralized to os.devnull, the
+    system config search disabled, the terminal prompt disabled, optional locks turned off (read-only), and
+    the locale pinned so output is deterministic."""
+    env = {}
+    for name in ("PATH", "HOME"):
+        val = os.environ.get(name)
+        if val is not None:
+            env[name] = val
+    # Re-apply only what git needs, config injection neutralized (allowlist stance).
+    env["GIT_CONFIG_GLOBAL"] = os.devnull
+    env["GIT_CONFIG_SYSTEM"] = os.devnull
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    env["GIT_OPTIONAL_LOCKS"] = "0"
+    env["LC_ALL"] = "C"
+    return env
+
+
+def _git_toplevel(anchor):
+    """Confirm the repository IDENTITY of `anchor` (the gate's own tools dir) through a local git probe bound
+    to that location, returning the resolved repository toplevel Path, or None if it cannot be established.
+    The probe is `git --no-replace-objects -C <anchor> rev-parse --show-toplevel`, hardened to the same
+    standard as the sibling _opf_observe git boundary: `--no-replace-objects` so a replacement ref cannot
+    substitute the bytes a read returns, an ALLOWLIST-scrubbed environment (every GIT_-prefixed variable
+    dropped, so an inherited GIT_DIR/GIT_WORK_TREE/etc. cannot bind the probe to a DIFFERENT repository; only
+    PATH/HOME carried over, config-neutralizing vars re-applied), the git executable resolved via shutil.which
+    and absolutized with os.path.abspath (a relative which() result anchored to the cwd, pinning the launched
+    probe against exec-time re-resolution; the which()-time PATH-shadowing residual remains), and a bounded
+    timeout. A missing git, a launch failure, a timeout, a nonzero return (an invalid/
+    garbage `.git` gitfile yields git's own exit 128), or output that is empty or not an absolute path (git
+    emits an absolute toplevel, so a relative value is malformed) all return None -- the caller maps that to a
+    cannot-evaluate (exit 2), never a false pass."""
+    import shutil
+    git = shutil.which("git")
+    git = os.path.abspath(git) if git else None
+    if git is None:
+        return None
+    try:
+        proc = subprocess.run(
+            [git, "--no-replace-objects", "-C", str(anchor), "rev-parse", "--show-toplevel"],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=_scrubbed_env(),
+            text=True, timeout=_GIT_TIMEOUT_S)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    out = (proc.stdout or "").strip()
+    if not out:
+        return None
+    if not os.path.isabs(out):
+        return None
+    try:
+        return Path(out).resolve()
+    except OSError:
+        return None
+
+
+def _run_gate(anchor):
+    """Establish the repository root by CONFIRMING the repository IDENTITY of the gate's OWN location
+    `anchor` through a local git probe (git -C <anchor> rev-parse --show-toplevel, ambient Git env scrubbed,
+    the git executable resolved via shutil.which and absolutized with os.path.abspath), then run the live
+    render-drift check against it. A root established only by the
+    PRESENCE of a `.git` entry is not enough: a stray or garbage `.git` file beside the gate (an invalid
+    gitfile) satisfies a bare existence test yet is NOT a real repository root, so the gate would anchor to
+    the wrong directory, find no `.working/`, and return a FALSE NOT-APPLICABLE 0 while the real drift at the
+    true root went unchecked. So the root is CONFIRMED by the git probe; if the probe cannot establish it
+    (git missing, a launch failure, a nonzero/garbage-gitfile result, or malformed output) or the resolved
+    toplevel does not contain or parent the gate's own tools dir, that is a cannot-evaluate (exit 2), never a
+    fall-through to the current directory and never a false NOT-APPLICABLE 0."""
+    anchor = Path(anchor).resolve()
+    root = _git_toplevel(anchor)
+    if root is None or not (root == anchor or root in anchor.parents):
+        print("check_opf_drift: cannot evaluate: could not confirm a real repository root for the gate's "
+              "own location {} via a git probe (git -C ... rev-parse --show-toplevel); a stray or invalid "
+              ".git marker is not a repository root, and the gate refuses to fall back to the current "
+              "directory or return a false NOT-APPLICABLE".format(anchor), file=sys.stderr)
+        return EXIT_ERROR
+    return _run_render_check(root, capture=False)
+
+
+def main(argv=None):
+    # Final class-width backstop: any residual, unforeseen error path routes to a located cannot-evaluate
+    # (exit 2), so no checked input yields a false-0 or an uncaught exit-1 escape. KeyboardInterrupt and
+    # SystemExit are BaseException (not Exception) and stay uncaught, and the defined clean(0)/drift(1)/
+    # cannot-evaluate(2) forwarding for cases that DID resolve is preserved. The located message keeps the
+    # failure debuggable rather than silently masked.
+    try:
+        args = list(sys.argv[1:] if argv is None else argv)
+        if args == ["--self-test"]:
+            return _self_test()
+        if args:
+            print("check_opf_drift: unexpected argument(s): {}".format(" ".join(args)), file=sys.stderr)
+            return EXIT_ERROR
+        return _run_gate(Path(__file__).resolve().parent)
+    except Exception as exc:  # noqa: BLE001  fail-closed backstop, never a false-0 or uncaught exit-1
+        print("check_opf_drift: cannot evaluate: unexpected error in the render-drift gate ({!r}); failing "
+              "closed to exit 2".format(exc), file=sys.stderr)
+        return EXIT_ERROR
+
+# --- background fault channels of code loaded in process (atexit, worker thread, destructor) ----------
+# Fail-closed settlement for the background fault channels of the code this gate loads and runs in
+# process. _fail_closed_main installs the recorders BEFORE the gate's work (so before any in-process
+# load) and settles them AFTER it: a fault the interpreter reports only to stderr (a destructor, weakref
+# or similar callback through sys.unraisablehook; an unhandled exception ending a worker thread through
+# threading.excepthook) is recorded and forces exit 2 over a passing verdict, never a silent pass. Before
+# a passing verdict the settle waits (_SETTLE_SECONDS in all) for every other thread still running,
+# threading's census and the runtime's live count of low-level _thread workers together, so a worker's
+# later fault is recorded instead of killed silently by the exit, and a thread or low-level worker still
+# running at the bound fails the verdict closed (exit 2). On Linux the settle also waits on the OS's own
+# thread list for this process (_os_threads_pending), which still shows a worker while the runtime clears
+# its thread state (its thread-local and context values' destructors run there, after the runtime's live
+# count and threading's census already dropped it), a faulthandler watchdog and a thread a C extension
+# starts. The verdict then ends the process with os._exit, so an
+# atexit callback registered by loaded code can never run after it (that channel is unreachable, not
+# merely disclosed). Only a SystemExit with code None or 0 ending a worker thread is the interpreter's
+# normal SUCCESSFUL thread exit (default-hook parity) and is not recorded; any other code is an
+# unsuccessful exit a worker reported, so it is recorded.
+# A low-level _thread worker's SystemExit never reaches any hook (the interpreter drops it), so the
+# start entries and threading's saved module aliases of them are wrapped from before the gate's work and
+# a non-zero code ending such a worker is recorded as a fault there. The subinterpreter modules are made
+# unimportable before the gate's work, because a thread inside a subinterpreter reports its faults to
+# that interpreter's own hooks, never these recorders. Stated residuals, not closed: where the platform
+# has no per-process thread list (outside Linux) a thread outside the Python runtime stays invisible to
+# the census and the live count; and a process the loaded code starts is not followed, so one still
+# running after this gate ends is outside its verdict.
+# Each recorder chains to the hook it wrapped, so the usual traceback still reaches stderr after the
+# marker line. After the exit flushes the settle stops the collector, blocks every signal, runs any
+# handler already tripped, and re-reads the record and every liveness term, so a fault recorded or a
+# worker a signal handler started while a flush was blocked on a full pipe still fails the verdict, and
+# no loaded code can run between that last read and the exit.
+# Paths that end outside _gate_exit (a propagating KeyboardInterrupt, an escaping exception) already end
+# non-zero, and an ACCIDENTAL fault in an atexit callback cannot turn that non-zero end into exit 0, so
+# no background fault reads as a pass there. Residual: loaded code replacing these hooks, this record or
+# the exit itself is the reporting-machinery channel disclosed once in the _opf_views class disclosure
+# (deliberately hostile loaded code is accepted there and not closed).
+_LOADED_FAULTS = []
+# A started low-level worker's liveness flag, set synchronously at the start call: the runtime
+# live count misses the brief window before a just-started worker's OS thread registers, so the
+# settle also waits while any flag is set, never breaking on that transient zero.
+_LOADED_WORKERS = []
+_FAULT_MARKER = "LOADED-CODE-FAULT"
+
+
+def _install_fault_hooks():
+    # A local alias: opf.py's close-lifecycle census reads an attribute store through the bare module name
+    # as shadowing that module.
+    import threading as _threads
+
+    # The modules that create a subinterpreter are made unimportable (an import is an ImportError the
+    # gate's work fails on): a thread inside one reports its faults to that interpreter's own hooks.
+    for _name in ("_interpreters", "concurrent.interpreters", "_testinternalcapi", "_testcapi"):
+        sys.modules[_name] = None
+
+    previous_unraisable = sys.unraisablehook
+    previous_thread = _threads.excepthook
+
+    def _record(channel, chained, args):
+        _LOADED_FAULTS.append(channel)
+        try:
+            sys._loaded_code_fault = True
+            sys.stderr.write("{}: a {} fault was recorded; a passing verdict will fail closed\n".format(
+                _FAULT_MARKER, channel))
+        finally:
+            chained(args)
+
+    def _record_unraisable(args):
+        _record("destructor-or-callback", previous_unraisable, args)
+
+    def _benign_thread_exit(args):
+        # Only a worker thread ending by SystemExit(None) or SystemExit(0) is the interpreter's normal
+        # SUCCESSFUL thread exit (default-hook parity). Any other SystemExit code is an unsuccessful exit
+        # a worker reported, recorded like any other fault (never a silent pass); the code is read
+        # through exact built-in types alone and never formatted.
+        if args.exc_type is None or not issubclass(args.exc_type, SystemExit):
+            return False
+        code = getattr(args.exc_value, "code", None) if args.exc_value is not None else None
+        return code is None or (type(code) is int and code == 0)
+
+    def _record_thread(args):
+        if _benign_thread_exit(args):
+            previous_thread(args)
+        else:
+            _record("worker-thread", previous_thread, args)
+
+    sys.unraisablehook = _record_unraisable
+    _threads.excepthook = _record_thread
+
+    import _thread as _lowlevel
+
+    def _record_lowlevel_fault():
+        _LOADED_FAULTS.append("lowlevel-worker")
+        try:
+            sys._loaded_code_fault = True
+            sys.stderr.write("{}: a lowlevel-worker fault was recorded; a passing verdict will fail "
+                             "closed\n".format(_FAULT_MARKER))
+        except Exception:
+            pass
+
+    import types as _types
+    _bootstrap = _threads.Thread._bootstrap
+
+    def _genuine_bootstrap(target):
+        # A thread start is threading's own only when its target is exactly a bound method whose function
+        # is threading.Thread._bootstrap and whose instance is a threading.Thread (read through the exact
+        # method type, never an attribute the target supplies). Such a worker's fault already reaches
+        # threading.excepthook, so it is passed through untouched; wrapping it would also replace the
+        # target an audit-based observer reads, making threading's own start look like a raw one.
+        return (type(target) is _types.MethodType and target.__func__ is _bootstrap
+                and isinstance(target.__self__, _threads.Thread))
+
+    def _wrap_lowlevel(original):
+        # A raw low-level worker's SystemExit reaches no hook (the interpreter drops it), so the start
+        # entry wraps the worker's function and records a non-zero code as a fault (None or 0 is the
+        # successful low-level exit, default-interpreter parity; the code is read through exact built-in
+        # types alone and never formatted), and tracks the worker's liveness flag. A genuine threading
+        # start is passed through untouched.
+        def _start(function, *args, **kwargs):
+            if _genuine_bootstrap(function):
+                return original(function, *args, **kwargs)
+            state = [True]
+            def _run(*wargs, **wkwargs):
+                try:
+                    return function(*wargs, **wkwargs)
+                except SystemExit as exc:
+                    code = getattr(exc, "code", None)
+                    if not (code is None or (type(code) is int and code == 0)):
+                        _record_lowlevel_fault()
+                    raise
+                finally:
+                    state[0] = False
+            result = original(_run, *args, **kwargs)
+            _LOADED_WORKERS.append(state)
+            return result
+        return _start
+
+    _wrapped = []
+    for _entry in ("start_new_thread", "start_new", "start_joinable_thread"):
+        if hasattr(_lowlevel, _entry):
+            _original = getattr(_lowlevel, _entry)
+            _replacement = _wrap_lowlevel(_original)
+            setattr(_lowlevel, _entry, _replacement)
+            _wrapped.append((_original, _replacement))
+    for _alias in dir(_threads):
+        _value = getattr(_threads, _alias)
+        for _original, _replacement in _wrapped:
+            if _value is _original:
+                setattr(_threads, _alias, _replacement)
+
+
+# The OS's own list of this process's threads (Linux): it still shows a worker while the runtime clears
+# its thread state, a faulthandler watchdog and a thread a C extension starts. None where the platform has
+# no such list; the runtime's own counts then carry the settle alone (a stated residual).
+_TASK_DIR = "/proc/self/task" if sys.platform.startswith("linux") else None
+
+
+def _os_threads_pending():
+    """True while the OS lists a thread of this process besides the calling one, and when that list
+    exists but cannot be read (fail-closed); False where the platform has no such list."""
+    import os
+    if _TASK_DIR is None:
+        return False
+    try:
+        return len(os.listdir(_TASK_DIR)) != 1
+    except OSError:
+        return True
+
+
+def _drain_pending_signals():
+    """A Python-level call: the interpreter runs any signal handler already tripped on entry here."""
+    return None
+
+
+_SETTLE_SECONDS = 60.0
+
+
+def _gate_exit(code):
+    """Settle and END the process: before a passing verdict, wait (up to _SETTLE_SECONDS in all) for every
+    other thread still running, so a fault it raises later is recorded, never killed silently by the exit,
+    and fail closed (exit 2) if one still runs at the bound (the census covers threading's threads and,
+    through the runtime's live count, workers started through the low-level _thread entry points, so a
+    low-level worker still running at the bound also fails closed, and on Linux the OS's own thread list
+    covers a worker still clearing its thread state, a watchdog and a C extension's thread; elsewhere a
+    thread outside the Python runtime is invisible: a stated residual); force a recorded background fault
+    to exit 2 over a passing verdict, flush both streams, then stop the collector, block every signal, run
+    any handler already tripped and re-read the record and every liveness term AFTER the flushes (a fault
+    recorded or a worker started while a flush was blocked, on a full pipe say, must still fail the
+    verdict; its late marker is written straight to fd 2, past the buffers), then os._exit, so no atexit
+    callback registered by loaded code
+    runs after the verdict (the gate's own cleanup runs inside its work; this gate registers no atexit work
+    of its own)."""
+    import os
+    import threading as _threads
+    import time
+    import _thread as _lowlevel
+    if type(code) is bool:
+        code = 1 if code else 0
+    elif code is None:
+        code = 0
+    elif type(code) is not int:
+        # The code object is never formatted: a loaded object's __str__ must not run here.
+        sys.stderr.write("{}: a non-int SystemExit code at the gate entry; exit 1\n".format(_FAULT_MARKER))
+        code = 1
+    low = code & 0xFF
+    if code != 0 and low == 0:
+        # os._exit truncates its status to the low 8 bits, so this non-zero code would end the
+        # process with exit status 0, a silent pass; fail closed instead.
+        sys.stderr.write("{}: a SystemExit code outside the exit-status range at the gate entry; exit 2\n".format(
+            _FAULT_MARKER))
+        code = 2
+    else:
+        # os._exit refuses a code outside the C int range (OverflowError) instead of exiting, and
+        # that escape would let atexit callbacks registered by loaded code run after the verdict:
+        # take the low byte, the status any in-range code would report, so the exit below always runs.
+        code = low
+    if code == 0:
+        current = _threads.current_thread()
+        deadline = time.monotonic() + _SETTLE_SECONDS
+        while True:
+            running = [worker for worker in _threads.enumerate()
+                       if worker is not current and worker.is_alive()]
+            pending = (_lowlevel._count() or any(_state[0] for _state in _LOADED_WORKERS)
+                       or _os_threads_pending())
+            remaining = deadline - time.monotonic()
+            if (not running and not pending) or remaining <= 0:
+                break
+            if running:
+                running[0].join(min(remaining, 0.5))
+            else:
+                time.sleep(min(remaining, 0.05))
+        if running or pending:
+            sys.stderr.write("{}: a worker thread or low-level worker was still running at the verdict; "
+                             "fail-closed\n".format(_FAULT_MARKER))
+            code = 2
+    if code == 0 and (_LOADED_FAULTS or getattr(sys, "_loaded_code_fault", False)):
+        sys.stderr.write("{}: {} background fault(s) from loaded code over a passing verdict; "
+                         "fail-closed\n".format(_FAULT_MARKER, len(_LOADED_FAULTS) or 1))
+        code = 2
+    try:
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except Exception:
+        if code == 0:
+            code = 2
+    if code == 0:
+        # The verdict stands only once no loaded code can run before the exit: the collector is stopped,
+        # every signal is blocked (no other thread is left to take one), a handler already tripped runs
+        # now, and the record and every liveness term are read afresh, so a fault or a worker a handler
+        # started while a flush was blocked fails the verdict.
+        import gc as _gc
+        import signal as _signals
+        try:
+            _gc.disable()
+            _signals.pthread_sigmask(_signals.SIG_BLOCK, _signals.valid_signals())
+            _drain_pending_signals()
+        except BaseException:  # noqa: BLE001  a handler's own escape fails the verdict, never the exit
+            code = 2
+        if (_LOADED_FAULTS or getattr(sys, "_loaded_code_fault", False) or _lowlevel._count()
+                or any(_state[0] for _state in _LOADED_WORKERS) or _os_threads_pending()):
+            code = 2
+        if code != 0:
+            try:
+                os.write(2, ("{}: a background fault or a worker was recorded during the exit flush; "
+                             "fail-closed\n".format(_FAULT_MARKER)).encode("utf-8"))
+            except OSError:
+                pass
+    os._exit(code)
+
+
+def _fail_closed_main(run):
+    """The canonical process entry: install the fault recorders, run the gate's own work, settle, end."""
+    _install_fault_hooks()
+    try:
+        code = run()
+    except SystemExit as exc:
+        code = exc.code
+    _gate_exit(code)
+
+
+# The background fault channels, each driven through the gate's REAL _fail_closed_main in a child that
+# loads one fixture the way this gate loads code in process: a clean load passes; an atexit callback
+# registered by loaded code never runs (unreachable behind os._exit); a worker-thread fault and a
+# destructor fault are recorded and force exit 2.
+_FAULT_CHANNEL_PROBE = """import importlib.util, sys
+tool, fixture = sys.argv[1:3]
+sys.path.insert(0, tool.rsplit("/", 1)[0])
+spec = importlib.util.spec_from_file_location("_fault_channel_probe_target", tool)
+gate = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(gate)
+gate._SETTLE_SECONDS = 2.0
+def load():
+    case = importlib.util.spec_from_file_location("_fault_channel_fixture", fixture)
+    module = importlib.util.module_from_spec(case)
+    case.loader.exec_module(module)
+    return 0
+gate._fail_closed_main(load)
+"""
+
+# (label, fixture source, expected exit, marker required, text that must NOT appear on stderr)
+_FAULT_CHANNEL_CASES = (
+    ("clean", "x = 1\n", 0, False, None),
+    ("atexit", "import atexit, sys\n"
+     "def callback():\n"
+     "    sys.stderr.write('FAULT-FIXTURE-ATEXIT-RAN\\n')\n"
+     "    raise RuntimeError('fault-fixture-atexit')\n"
+     "atexit.register(callback)\n", 0, False, "FAULT-FIXTURE-ATEXIT-RAN"),
+    ("joined-thread", "import threading\n"
+     "def fault():\n"
+     "    raise RuntimeError('fault-fixture-thread')\n"
+     "worker = threading.Thread(target=fault)\n"
+     "worker.start()\n"
+     "worker.join()\n", 2, True, None),
+    ("destructor", "import gc\n"
+     "class Fault:\n"
+     "    def __del__(self):\n"
+     "        raise RuntimeError('fault-fixture-destructor')\n"
+     "Fault()\n"
+     "gc.collect()\n", 2, True, None),
+    ("thread-systemexit", "import threading\n"
+     "def fault():\n"
+     "    raise SystemExit(7)\n"
+     "worker = threading.Thread(target=fault)\n"
+     "worker.start()\n"
+     "worker.join()\n", 2, True, None),
+    ("thread-systemexit-zero", "import sys\nimport threading\n"
+     "def done():\n"
+     "    sys.exit(0)\n"
+     "worker = threading.Thread(target=done)\n"
+     "worker.start()\n"
+     "worker.join()\n", 0, False, None),
+    ("finishing-thread", "import threading, time\n"
+     "threading.Thread(target=time.sleep, args=(0.3,)).start()\n", 0, False, None),
+    ("unjoined-thread", "import threading, time\n"
+     "def fault():\n"
+     "    time.sleep(0.5)\n"
+     "    raise RuntimeError('fault-fixture-unjoined-thread')\n"
+     "threading.Thread(target=fault).start()\n", 2, True, None),
+    ("unfinished-thread", "import threading\n"
+     "threading.Thread(target=threading.Event().wait, daemon=True).start()\n", 2, True, None),
+    # Low-level _thread workers: the interpreter drops a SystemExit ending one without calling any hook,
+    # so the wrapped start entry records a non-zero code as a fault (None or 0 stays the successful
+    # low-level exit), and the settle waits on the runtime's live count, so one still running at the
+    # bound fails the verdict closed while one that finishes is waited out.
+    ("lowlevel-systemexit", "import _thread, threading\n"
+     "done = threading.Event()\n"
+     "def worker():\n"
+     "    try:\n"
+     "        raise SystemExit(7)\n"
+     "    finally:\n"
+     "        done.set()\n"
+     "_thread.start_new_thread(worker, ())\n"
+     "done.wait()\n", 2, True, None),
+    ("lowlevel-systemexit-zero", "import _thread, threading\n"
+     "done = threading.Event()\n"
+     "def worker():\n"
+     "    try:\n"
+     "        raise SystemExit(0)\n"
+     "    finally:\n"
+     "        done.set()\n"
+     "_thread.start_new_thread(worker, ())\n"
+     "done.wait()\n", 0, False, None),
+    ("lowlevel-finishing", "import _thread, time\n"
+     "_thread.start_new_thread(time.sleep, (0.3,))\n", 0, False, None),
+    ("lowlevel-unfinished", "import _thread, threading\n"
+     "_thread.start_new_thread(threading.Event().wait, ())\n", 2, True, None),
+    # A handled failed low-level start leaves no pending worker: red when the start flag is recorded
+    # before the start call (the flag then stays set and the settle fails closed at the bound).
+    ("lowlevel-failed-start", "import _thread\n"
+     "try:\n"
+     "    _thread.start_new_thread(print)\n"
+     "except TypeError:\n"
+     "    pass\n", 0, False, None),
+    # Thread-state teardown: a worker's thread-local and context-variable values are destroyed while the
+    # runtime clears its thread state, after its live count and threading's census already dropped it;
+    # the OS thread list still shows the worker, so the settle waits and records the fault (red without
+    # that term: each ends 0).
+    ("lowlevel-local-destructor", "import _thread, threading, time\n"
+     "entered = threading.Event()\n"
+     "store = threading.local()\n"
+     "class Held:\n"
+     "    def __del__(self):\n"
+     "        entered.set()\n"
+     "        time.sleep(0.5)\n"
+     "        raise RuntimeError('fault-fixture-local-destructor')\n"
+     "def worker():\n"
+     "    store.value = Held()\n"
+     "_thread.start_new_thread(worker, ())\n"
+     "entered.wait()\n", 2, True, None),
+    ("thread-local-destructor", "import threading, time\n"
+     "entered = threading.Event()\n"
+     "store = threading.local()\n"
+     "class Held:\n"
+     "    def __del__(self):\n"
+     "        entered.set()\n"
+     "        time.sleep(0.5)\n"
+     "        raise RuntimeError('fault-fixture-thread-local-destructor')\n"
+     "def worker():\n"
+     "    store.value = Held()\n"
+     "threading.Thread(target=worker).start()\n"
+     "entered.wait()\n", 2, True, None),
+    ("contextvar-destructor", "import _thread, contextvars, threading, time\n"
+     "entered = threading.Event()\n"
+     "held = contextvars.ContextVar('held')\n"
+     "class Held:\n"
+     "    def __del__(self):\n"
+     "        entered.set()\n"
+     "        time.sleep(0.5)\n"
+     "        raise RuntimeError('fault-fixture-contextvar-destructor')\n"
+     "def worker():\n"
+     "    held.set(Held())\n"
+     "_thread.start_new_thread(worker, ())\n"
+     "entered.wait()\n", 2, True, None),
+    # The runtime's live count, the term that carries the settle where the platform has no thread list:
+    # the fixture switches the OS list off in the probe's gate, and a low-level worker whose return value's
+    # destructor still runs after its callback returned must still be waited out and recorded (red
+    # without the live count: it ends 0).
+    ("runtime-count-return-destructor", "import _thread, sys, threading, time\n"
+     "sys.modules['__main__'].gate._TASK_DIR = None\n"
+     "entered = threading.Event()\n"
+     "class Result:\n"
+     "    def __del__(self):\n"
+     "        entered.set()\n"
+     "        time.sleep(0.5)\n"
+     "        raise RuntimeError('fault-fixture-return-destructor')\n"
+     "def worker():\n"
+     "    return Result()\n"
+     "_thread.start_new_thread(worker, ())\n"
+     "entered.wait()\n", 2, True, None),
+    # The settle's own reads of those two terms: a teardown destructor or a return value's destructor
+    # that finishes without a fault is waited out and passes (red without the settle-position read: the
+    # re-read after the flushes then still sees the worker and fails the clean run closed).
+    ("lowlevel-local-finishing", "import _thread, threading, time\n"
+     "entered = threading.Event()\n"
+     "store = threading.local()\n"
+     "class Held:\n"
+     "    def __del__(self):\n"
+     "        entered.set()\n"
+     "        time.sleep(0.3)\n"
+     "def worker():\n"
+     "    store.value = Held()\n"
+     "_thread.start_new_thread(worker, ())\n"
+     "entered.wait()\n", 0, False, None),
+    ("runtime-count-return-finishing", "import _thread, sys, threading, time\n"
+     "sys.modules['__main__'].gate._TASK_DIR = None\n"
+     "entered = threading.Event()\n"
+     "class Result:\n"
+     "    def __del__(self):\n"
+     "        entered.set()\n"
+     "        time.sleep(0.3)\n"
+     "def worker():\n"
+     "    return Result()\n"
+     "_thread.start_new_thread(worker, ())\n"
+     "entered.wait()\n", 0, False, None),
+    # Capability removal: every subinterpreter module is unimportable (red when any one is left
+    # importable: the fixture then ends 3).
+    ("subinterpreter-modules", "import importlib\n"
+     "for name in ('_interpreters', 'concurrent.interpreters', '_testinternalcapi', '_testcapi'):\n"
+     "    try:\n"
+     "        importlib.import_module(name)\n"
+     "    except ImportError:\n"
+     "        continue\n"
+     "    raise SystemExit(3)\n", 0, False, None),
+    # An armed faulthandler watchdog is a C-level thread only the OS thread list shows; still armed at
+    # the bound it fails the verdict closed (red without that term: it ends 0).
+    ("watchdog-armed", "import faulthandler\n"
+     "faulthandler.dump_traceback_later(600)\n", 2, True, None),
+    # Exit-status range: os._exit truncates its status to the low 8 bits, so a non-zero SystemExit
+    # code that is a multiple of 256 would end the child with status 0, a silent pass; the gate maps
+    # it to 2. The neighbouring codes pass through (257 reaches the parent as its low byte, 1).
+    ("exit-status-255", "raise SystemExit(255)\n", 255, False, None),
+    ("exit-status-256", "raise SystemExit(256)\n", 2, True, None),
+    ("exit-status-257", "raise SystemExit(257)\n", 1, False, None),
+    ("exit-status-negative-256", "raise SystemExit(-256)\n", 2, True, None),
+    # Codes around the ends of the C int range: os._exit raises OverflowError on a code outside that
+    # range instead of exiting, which would let the loaded code's atexit callbacks run after the
+    # verdict; the gate takes the low byte first, so the exit always runs. The wide codes (beyond
+    # each end, with non-zero low bytes) reach the parent as their low bytes only through that
+    # ordering. The boundary codes (2**31, just past the positive end, and -(2**31), exactly the
+    # negative end) have a zero low byte and fail closed as exit 2; the multiple-of-256 rule alone
+    # already gives both that outcome, so those two cases are preservation controls over the range
+    # ends, not evidence that the ordering is required. The code at the positive end itself,
+    # 2**31 - 1, has low byte 255 and is inside os._exit's accepted range.
+    ("exit-status-wide-positive", "import atexit, sys\n"
+     "atexit.register(sys.stderr.write, 'FAULT-FIXTURE-ATEXIT-RAN\\n')\n"
+     "raise SystemExit(2**31 + 1)\n", 1, False, "FAULT-FIXTURE-ATEXIT-RAN"),
+    ("exit-status-wide-negative", "import atexit, sys\n"
+     "atexit.register(sys.stderr.write, 'FAULT-FIXTURE-ATEXIT-RAN\\n')\n"
+     "raise SystemExit(-(2**31) - 1)\n", 255, False, "FAULT-FIXTURE-ATEXIT-RAN"),
+    ("exit-status-boundary-positive", "raise SystemExit(2**31)\n", 2, True, None),
+    ("exit-status-boundary-negative", "raise SystemExit(-(2**31))\n", 2, True, None),
+)
+
+
+# The flush-window channel: _gate_exit's fault decision must hold across the exit flushes. The fixture
+# fills the child's stdout pipe to its exact capacity (F_GETPIPE_SZ) and leaves one byte in the stream's
+# buffer, then arms a timer (SIGALRM unblocked: a caller's blocked mask is inherited) whose signal handler
+# drops an object with a faulting destructor, so the fault is recorded while the exit flush is blocked on
+# the full pipe (after the settle's thread wait, which a worker-thread fault would not outlast); the
+# parent drains stdout only after stderr shows the fault marker. Exit 2 with the marker is required. Red
+# when the fault decision runs only before the flushes: the child then ends 0 with the marker on stderr.
+_FLUSH_WINDOW_FIXTURE = """import fcntl, os, signal, sys
+os.write(1, b"x" * fcntl.fcntl(1, fcntl.F_GETPIPE_SZ))
+sys.stdout.write("y")
+class Fault:
+    def __del__(self):
+        raise RuntimeError("fault-fixture-flush-window")
+def fault(signum, frame):
+    Fault()
+signal.signal(signal.SIGALRM, fault)
+signal.pthread_sigmask(signal.SIG_UNBLOCK, [signal.SIGALRM])
+signal.setitimer(signal.ITIMER_REAL, 1.0)
+"""
+
+# The same window with a start instead of a fault: the handler starts a low-level worker that never ends
+# while the exit flush is blocked, then reports on fd 2, and the parent drains stdout only after that
+# line. Exit 2 with the marker is required. Red when only the record is read after the flushes: the
+# child then ends 0 with the worker still running.
+_FLUSH_WINDOW_START_FIXTURE = """import _thread, fcntl, os, signal, sys, threading
+os.write(1, b"x" * fcntl.fcntl(1, fcntl.F_GETPIPE_SZ))
+sys.stdout.write("y")
+def start(signum, frame):
+    _thread.start_new_thread(threading.Event().wait, ())
+    os.write(2, b"FAULT-FIXTURE-FLUSH-START\\n")
+signal.signal(signal.SIGALRM, start)
+signal.pthread_sigmask(signal.SIG_UNBLOCK, [signal.SIGALRM])
+signal.setitimer(signal.ITIMER_REAL, 1.0)
+"""
+
+
+def _flush_window_failures():
+    """One failure string per flush-window requirement a child missed (see _FLUSH_WINDOW_FIXTURE and
+    _FLUSH_WINDOW_START_FIXTURE)."""
+    import subprocess
+    import tempfile
+    import threading
+    failures = []
+    tool = str(Path(__file__).resolve())
+    with tempfile.TemporaryDirectory(prefix="opf-drift-flush-window-") as tmp:
+        probe = Path(tmp) / "probe.py"
+        probe.write_text(_FAULT_CHANNEL_PROBE, encoding="utf-8")
+        for label, fixture, ready in (
+                ("flush-window", _FLUSH_WINDOW_FIXTURE, _FAULT_MARKER + ":"),
+                ("flush-window-start", _FLUSH_WINDOW_START_FIXTURE, "FAULT-FIXTURE-FLUSH-START")):
+            case = Path(tmp) / (label + ".py")
+            case.write_text(fixture, encoding="utf-8")
+            try:
+                child = subprocess.Popen([sys.executable, "-I", "-B", str(probe), tool, str(case)],
+                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            except (OSError, subprocess.SubprocessError) as exc:
+                failures.append("fault-channel/{}: probe did not run ({})".format(label, type(exc).__name__))
+                continue
+            with child:
+                killer = threading.Timer(120, child.kill)
+                killer.start()
+                try:
+                    header = b""
+                    while ready.encode("ascii") not in header:
+                        line = child.stderr.readline()
+                        if not line:
+                            break
+                        header += line
+                    child.stdout.read()
+                    trailer = child.stderr.read()
+                    code = child.wait()
+                finally:
+                    killer.cancel()
+            stderr_text = (header + trailer).decode("utf-8", "replace")
+            if code != 2:
+                failures.append("fault-channel/{}: expected exit 2, got {}".format(label, code))
+            elif (_FAULT_MARKER + ":") not in stderr_text:
+                failures.append("fault-channel/{}: fault marker absent".format(label))
+    return failures
+
+
+# The entry wiring, checked statically on this file's own source: the final __main__ block must be
+# exactly _ENTRY_WIRING by AST (spacing and comments aside), so a rewiring that keeps _fail_closed_main
+# defined but routes an entry branch around it (a plain sys.exit around the work, say) is red even though
+# the channel probes above drive _fail_closed_main directly.
+_ENTRY_WIRING = '''if __name__ == "__main__":
+    _fail_closed_main(main)
+'''
+
+
+def _entry_wiring_failures():
+    """One failure string per entry-wiring requirement this file's own source misses (see _ENTRY_WIRING)."""
+    import ast
+    failures = []
+    try:
+        tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+    except (OSError, SyntaxError, ValueError) as exc:
+        return ["fault-channel/entry-wiring: this file could not be parsed ({})".format(type(exc).__name__)]
+    last = tree.body[-1] if tree.body else None
+    expected = ast.parse(_ENTRY_WIRING).body[0]
+    if last is None or ast.dump(last) != ast.dump(expected):
+        failures.append("fault-channel/entry-wiring: the final __main__ block is not the expected "
+                        "fail-closed form")
+    return failures
+
+def _fault_channel_vectors():
+    """One failure string per fault-channel case whose child did not end as required: the expected exit
+    code, the fault marker exactly when a fault must be recorded, and for the atexit case no trace of the
+    callback (it must never run). Red without the entry wrapper (the probe then ends 1, AttributeError on
+    _fail_closed_main, where clean and atexit expect 0) and red with the wrapper reverted to a plain exit
+    (the thread and destructor children then end 0 with the default hooks' output alone, where exit 2 with
+    the marker is required, and the atexit child then runs the callback)."""
+    import subprocess
+    import tempfile
+    failures = []
+    tool = str(Path(__file__).resolve())
+    with tempfile.TemporaryDirectory(prefix="opf-drift-fault-channel-") as tmp:
+        probe = Path(tmp) / "probe.py"
+        probe.write_text(_FAULT_CHANNEL_PROBE, encoding="utf-8")
+        for index, (label, body, expected, marked, absent) in enumerate(_FAULT_CHANNEL_CASES):
+            case = Path(tmp) / "fault_channel_{}.py".format(index)
+            case.write_text(body, encoding="utf-8")
+            try:
+                child = subprocess.run([sys.executable, "-I", "-B", str(probe), tool, str(case)],
+                                       capture_output=True, text=True, timeout=120)
+            except (OSError, subprocess.SubprocessError) as exc:
+                failures.append("fault-channel/{}: probe did not run ({})".format(label, type(exc).__name__))
+                continue
+            if child.returncode != expected:
+                failures.append("fault-channel/{}: expected exit {}, got {}".format(
+                    label, expected, child.returncode))
+            elif marked != ((_FAULT_MARKER + ":") in child.stderr):
+                failures.append("fault-channel/{}: fault marker {}".format(
+                    label, "absent" if marked else "present"))
+            elif absent is not None and absent in child.stderr:
+                failures.append("fault-channel/{}: the atexit callback ran".format(label))
+    failures.extend(_flush_window_failures())
+    failures.extend(_entry_wiring_failures())
+    return failures
+
+
+if __name__ == "__main__":
+    _fail_closed_main(main)

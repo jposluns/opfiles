@@ -1,0 +1,75 @@
+# Provenance record for the vendored Marko CommonMark parser (OPF U5 changelog gate).
+# Vendored UNCHANGED from the pinned wheel into opf/tools/_vendor/marko/ and used parse-only through
+# opf/tools/_commonmark_headings.py. This record is authored as a template; every field marked
+# <orchestrator-fills-at-extraction> is produced by the orchestrator from the checksum-verified wheel,
+# because an estimate must never be presented as a measurement (measured-and-estimated-figures-stay-separate).
+
+[package]
+name = "marko"
+purl = "pkg:pypi/marko@2.2.4"
+version = "2.2.4"
+upstream_tag = "v2.2.4"
+tag_commit = "fb4c770528a0c21a82dbc17178be1017cf4547b2"
+commonmark_version = "0.31.2"
+
+[license]
+spdx = "MIT"
+# The exact upstream v2.2.4 LICENSE, vendored unchanged. Marko stays identified as MIT (NOT CC BY-SA);
+# this is a compatible aggregation of separately licensed material.
+vendored_path = "opf/tools/_vendor/licenses/marko-MIT.txt"
+pinned_license_url = "https://github.com/frostming/marko/blob/v2.2.4/LICENSE"
+
+[artifacts.wheel]
+filename = "marko-2.2.4-py3-none-any.whl"
+url = "https://files.pythonhosted.org/packages/d3/78/751d49c8bdfa0b30147c99235516433af6b63eca367ff28593c7346a0494/marko-2.2.4-py3-none-any.whl"
+sha256 = "d80510506edba096ec49d4720a09645fa0bb78e7b7b88697f20032fc19730aa9"
+size = 46753
+# manifest_sha256 is the manifest digest recorded beside the wheel pin above: the SHA-256 of the committed
+# manifest (tools/_vendor/marko-2.2.4.manifest.sha256) of the files extracted from THIS wheel.
+# verify_manifest_binding in tools/_commonmark_headings.py refuses a manifest whose bytes differ from it, so
+# a manifest row cannot change while version and sha256 stay the same unless this line changes too, and it
+# requires sha256 above to equal MARKO_WHEEL_SHA256 in that file. verify_manifest_import there also
+# requires the manifest, with the opf/ path prefix put back on each row, to be the blob that
+# PROVENANCE-inventory.json records for it at the import. Measured 2026-11-16 from the committed manifest,
+# whose per-file digests the import recorded as unchanged from the source (the import dropped the opf/
+# path prefix); not re-derived from the wheel (no network).
+manifest_sha256 = "1aad575303d1b431b65b646a0a5fc8146eb2a2eeb9f9e62823d9be4b62ce0a0d"
+
+[artifacts.sdist]
+filename = "marko-2.2.4.tar.gz"
+url = "https://files.pythonhosted.org/packages/82/6d/671a18bb386adca6311bca6c2fe6bec873947ee501cc5f8f509ec06bdde0/marko-2.2.4.tar.gz"
+sha256 = "c042c66f835425673123d7536b39b4660de3b68e30078c70fd26245b31170683"
+size = 151013
+
+[dependencies]
+# Marko's core has zero mandatory transitive dependencies; the toc / codehilite / repr extras are NOT
+# installed or vendored, and no extension is loaded on the parse path.
+required = []
+extras_included = []
+no_extras_confirmed = true
+no_deps_confirmed = true
+
+[vendored_tree]
+# Filled by the orchestrator from the checksum-verified wheel. The per-file inventory and digests are the
+# authoritative source the manifest (marko-2.2.4.manifest.sha256) is generated from; a different inventory
+# is a refusing mismatch, not a silent acceptance.
+root = "opf/tools/_vendor/marko/"
+file_count = 25  # 24 .py modules under marko/ (incl. marko/ext/ and marko/ext/gfm/) plus marko/py.typed
+physical_loc = 4212  # measured 2026-09-10 on the host: total physical lines across the 24 vendored .py modules
+included_paths = "The authoritative per-file inventory is opf/tools/_vendor/marko-2.2.4.manifest.sha256 (26 rows). It covers the 25 vendored package files (marko/__init__.py, marko/__main__.py, marko/ast_renderer.py, marko/block.py, marko/cli.py, marko/element.py, marko/ext/__init__.py, marko/ext/codehilite.py, marko/ext/footnote.py, marko/ext/gfm/__init__.py, marko/ext/gfm/elements.py, marko/ext/gfm/renderer.py, marko/ext/latex_renderer.py, marko/ext/pangu.py, marko/ext/toc.py, marko/helpers.py, marko/html_renderer.py, marko/inline.py, marko/inline_parser.py, marko/md_renderer.py, marko/parser.py, marko/patterns.py, marko/py.typed, marko/renderer.py, marko/source.py) plus the vendored licence opf/tools/_vendor/licenses/marko-MIT.txt."
+per_file_sha256 = "opf/tools/_vendor/marko-2.2.4.manifest.sha256: 26 sha256sum-format rows (hash then two spaces then a repo-root-relative path), one per vendored file plus the licence. Verified against the committed bytes with sha256sum -c on 2026-09-10 (26 of 26 OK)."
+
+[acquisition]
+# Read from the clock at acquisition; the advisory check keyed to the exact PyPI PURL and version.
+acquired_utc = "2026-09-09"
+advisory_check_utc = "2026-09-09"
+advisory_result = "no advisory found for pkg:pypi/marko@2.2.4 (PyPI exact-version record and OSV; absence of a found advisory, not a guarantee of none)"
+
+[conformance]
+# The CommonMark 0.31.2 example-suite replay against the vendored Marko, filled after the replay runs. The
+# replay pins the fixture's bytes (SPEC_FIXTURE_SHA256 in tools/selftest_commonmark_conformance.py) and
+# requires them to be the bytes the import recorded; the manifest check (verify_vendor_manifest), not the
+# replay, pins Marko's bytes.
+python_versions_exercised = ["3.14.4 (host and CI, measured; single-interpreter)"]
+spec_examples_fixture = "opf/tools/_vendor/commonmark-spec-0.31.2/spec-0.31.2-examples.json"
+result = "CPython 3.14.4 (measured 2026-09-10): 652 examples evaluated, 636 rendered byte-for-byte identical to the CommonMark 0.31.2 expected HTML, 16 known render divergences (enumerated and justified in opf/tools/selftest_commonmark_conformance.py KNOWN_DIVERGENT_EXAMPLES; all render-only, none heading-related, and the changelog adapter uses the parser only). Verified on CPython 3.14 ONLY (single-interpreter): the host and the quality CI workflow that gates U5 both run it on 3.14, and a cross-version 3.12+3.14 matrix was declined by the maintainer (2026-09-10) as backward for a 3.14-standardized host. If a concrete older-interpreter divergence is later found to matter, it will be re-raised with evidence and the matrix re-measured."

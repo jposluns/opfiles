@@ -1,0 +1,1396 @@
+{
+ "deviations": [
+  {
+   "blob": "2bdadbb9940c43c3a1a7bafceba64d89e85734aa",
+   "path": ".github/workflows/quality.yml",
+   "reason": "Replaced by the decided D-1245 Quality workflow (one job, named Quality gates, on pull_request to main only); the imported OPF workflow job is folded into the merged runner, whose --ci subset the kept workflow runs.",
+   "sha256": "b8932d8017902f0d2ca62bc6dd9e4551cfebf559f5a97b172a64a02beb1ddde9",
+   "sha256_imported": "18f495fecd7fe68f04c6084ca2fdcbbd2a08315fb1a8764a56a2c0703e2c29cb"
+  },
+  {
+   "blob": "1313668d85e9541d83fee235337b35d544459391",
+   "path": "site/draft-src/home.toml",
+   "reason": "Home page text revised at the maintainer's request: the value block no longer says OPFiles and AIQT Guardrails live in 1 repository, and now says AIQT Guardrails includes OPFiles so that AI assistants have structured records to reference when they make decisions, instead of chat logs and hand-edited notes; an AIQT adoption still sets OPFiles up by default, and OPFiles can still be adopted on its own. The value's html is now a multi-line basic string whose lines end in a line-ending backslash, so it is wrapped within the line width and still parses to one line of text. No other entry changed.",
+   "sha256": "c741a1a5f95187c2af201cf7c94ff83c132f904dda875e7fb050df91b7338ea9",
+   "sha256_imported": "450bd45de1be2170f78c25d2baf687cc8078e0fafb62959c9fee13ba4b84565d"
+  },
+  {
+   "blob": "a41d2038250d41b54200b3caf4a8736c2bd98c71",
+   "path": "site/index.html",
+   "reason": "Regenerated from the revised site/draft-src/home.toml by tools/gen_draft_site.py: the home page's value paragraph no longer says OPFiles and AIQT Guardrails live in 1 repository, and now says AIQT Guardrails includes OPFiles so that AI assistants have structured records to reference when they make decisions, instead of chat logs and hand-edited notes. No other line changed.",
+   "sha256": "4434168956791b0f9b4d4952660c08950a593d9f951f68d9d55998031c4781c0",
+   "sha256_imported": "b45e169eb8ad2c1b6c7a07bbd41ad521f11b113f5214dd402b186a78d6556ed8"
+  },
+  {
+   "blob": "6eea819f6333965c5f009f65d03d271b8a4a9f1f",
+   "path": "spec/OPF-SPEC.md",
+   "reason": "Post-import specification revision; base spec_version stays 2.0.0, which the text leaves for the maintainer to confirm. It adds section 2.1 (planning vocabulary), section 9.3 (the reference profile's carried-finding rules, with [profiles.aiqt] at version 1.1.0), transform vocabulary version 2, section 10.6 (the pipeline control ledger pipeline.toml and PIPELINE.md), section 10.7 (the roadmap ledger roadmap.toml and ROADMAP.md with its optional curated preamble), section 10.8 (the opf report verb and the CARRIED.md area view) and the opf record carried subcommand, with the matching layout, naming, manifest, enforcement, conformance, residual and Appendix A text; release pipeline becomes release flow (section 14.3 and Appendix D) and a views-ready milestone becomes a marker (section 14).",
+   "sha256": "a2937d5632bd684981b1049babab85df853b1a3fc73e24d9f366116e1bd05fff",
+   "sha256_imported": "c7ecbf9cc61529a604e627a0f0142dd2001656a7f3520fd4b1bb87db650c5942"
+  },
+  {
+   "blob": "2d0307161af6e87c8150342d00a9f4b6d6221528",
+   "path": "tools/_child_status.py",
+   "reason": "Source docstring update handed over after the import (guardrails main 504f422d, the addendum of 2026-11-16): the docstring's count of host-patch jobs in the source project's quality.yml reads 45, not five. Docstring only; no code change. Landed byte for byte as the source ships it.",
+   "sha256": "3e7a5a19787859b036f33232b9a5163ab642907e616c87d13f2945dd7beb3955",
+   "sha256_imported": "c18de47d4f37e1fd507656b834f3e61b2bf8117a4ec559b55f9bcaaf1cd1558c"
+  },
+  {
+   "blob": "b0941feeef246616cbd41ddb23b111569e25e166",
+   "path": "tools/_commonmark_headings.py",
+   "reason": "Import layout change: the vendored-tree manifest root is derived from the tools directory (OPF at the repository root), never from an enclosing repository layout. TODO 313: verify_vendor_manifest first checks the whole manifest against the manifest digest recorded beside the wheel pin, through the new verify_manifest_binding, which reads [package].version, [artifacts.wheel].sha256 and the new [artifacts.wheel].manifest_sha256 from marko-2.2.4.provenance.toml, requires the wheel sha256 to equal the new MARKO_WHEEL_SHA256 constant and refuses a manifest whose bytes differ from the recorded digest (reason manifest-unbound). It then anchors the manifest to the import record through the new verify_manifest_import: the manifest with the opf/ prefix put back on each row must have the git blob id of its entry in PROVENANCE-inventory.json (reason manifest-not-imported), so a vendored file, its row and manifest_sha256 edited together are refused. The module docstring states the residual: a change that also forges the import record (the manifest's entry, source_opf_tree, the PROVENANCE.md tree line and the inventory pin) passes, and so does a manifest whose as-imported form (opf/ put back on each row) is built to collide with the imported SHA-1 blob id, which needs no change to the manifest's entry, source_opf_tree or the PROVENANCE.md tree line, because only the blob is compared; the deviations gate discloses the forgery and the SHA-1 collision residual of its own blob check, and never computes the as-imported form. TODO 315: the module docstring line that began \"deviations gate discloses the forgery\", 161 characters long after a sentence join, is rewrapped with the rest of its paragraph to the file's width (no line of the paragraph is over 110 characters); no word changed.",
+   "sha256": "c9355602c058d8affcbc2dd8ace9de098bbd72538bca31536ed2fc91b3952a86",
+   "sha256_imported": "72026d6e7d77dbd23b091a569a7791ab183025f06b9b7ae60362f7b8e16b0df9"
+  },
+  {
+   "blob": "93a2809dbb52e56f952f6fb49ca45556d76d581f",
+   "path": "tools/_opf_adopt_apply.py",
+   "reason": "Writing style: fourteen em dashes in comments and docstrings replaced with the double hyphen the tooling uses elsewhere; no code change.",
+   "sha256": "f98d2ee4e4151a2689dd3270448cd8e1567af95fa0044a2f4f6b03a48d5cf8bc",
+   "sha256_imported": "6f2b4c8a2e1c1ff20e2c7ac633e31380a3b4c01cbcbfc8629b0fff94657a16e0"
+  },
+  {
+   "blob": "624c44e854e78658185c069e9f104e9a5b2c82c0",
+   "path": "tools/_opf_init_operation.py",
+   "reason": "Writing style: one em dash in a docstring replaced with a double hyphen; no code change.",
+   "sha256": "c24610d6c63b716ecaf68273cb4b0f4d2568b731579495cb6a799c9ae6ed8d12",
+   "sha256_imported": "5ee95c590db376906c321e0d9e2cdf2bd1ea9f83832a50ef274e3c84b818dfe8"
+  },
+  {
+   "blob": "3e0c3a8f3c54be20fa24e2d3f23567adb284bbe4",
+   "path": "tools/_opf_pack_manifest.py",
+   "reason": "The roster-name-variable RED of the runner/pack-manifest-registration self-test now mutates the quoted gate name \"opf-homes-selftest\" on the first run_gate line holding it (the opf-homes-selftest registration), not the first occurrence of the bare name in the runner, which the gate_settings case for the 1800 s bound now holds; the two $here/ REDs likewise mutate the first run_gate line holding $here/ (the same line as before). The red-fixture guard now fails when no run_gate line holds the text; the expected refusal before launch is unchanged. The REDs that find a whole runner line by its text and then edit or delete it (dropped-own-flag, dropped-sibling, scrubbed-environment and own-dispatch) now also fail with red-fixture unless that text occurs exactly once in the runner; every expected outcome is unchanged.",
+   "sha256": "a9faca04a71889d0e73a5ec09f60c3d3b09ca72f2f62c623ee6bbb212af6158e",
+   "sha256_imported": "d66efeaf82960d79aa34fd1dd1b7fbc0de13ab2527aee4c87d34313bb3d2fd57"
+  },
+  {
+   "blob": "025709acf44fd84679de949f0163646a55e1facc",
+   "path": "tools/_vendor/marko-2.2.4.manifest.sha256",
+   "reason": "Import layout change: manifest paths are OPF-root-relative (tools/_vendor/...), no longer opf/ prefixed; the per-file digests are unchanged.",
+   "sha256": "1aad575303d1b431b65b646a0a5fc8146eb2a2eeb9f9e62823d9be4b62ce0a0d",
+   "sha256_imported": "227b3471ed5944745db11fa1572240b0540c255d2b7eff675a28732f6807a666"
+  },
+  {
+   "blob": "736cd0136bd376a5f592b9aeaa503f7bfa33e09f",
+   "path": "tools/_vendor/marko-2.2.4.provenance.toml",
+   "reason": "TODO 313: [artifacts.wheel] gains manifest_sha256, the manifest digest recorded beside the wheel pin, checked by verify_manifest_binding, with a comment saying where the value came from (the committed manifest, whose per-file digests the import recorded as unchanged from the source; the import dropped the opf/ path prefix) and that verify_manifest_import also anchors the manifest to the import record; the [conformance] comment now says the replay pins the fixture bytes and requires them to be the imported bytes, and the manifest check, not the replay, pins Marko's bytes. No pin value changed.",
+   "sha256": "d415a2e9eb209463bd42d93c10f2677032fb6ba3b4c1bf3ce24fed67e38d823a",
+   "sha256_imported": "4347ba32d0e555fdae9978d4e61aa4baaaa9f5eb371eb5f8578b453ca2ddc6cc"
+  },
+  {
+   "blob": "d7a38aae33c9b3c6b3135c75c1dda9c766cac807",
+   "path": "tools/check_opf_doctor.py",
+   "reason": "Import layout change: fixture paths and the product root are derived from the OPF root at the repository root, no longer through an opf/ prefix.",
+   "sha256": "9e392e354de1e17d8c02273955682733e1f32e6901b692b2af3fcfb09a4a593d",
+   "sha256_imported": "207a220396bbcee94423f1e2c8a5543e6979dd51d3597993c18d190ead6c7b95"
+  },
+  {
+   "blob": "169b9613b94d389e9445ec7f9a2ae957b256e3b2",
+   "path": "tools/check_opf_homes.py",
+   "reason": "Kept in step with the revised spec/OPF-SPEC.md: the registry pins and tiles the new and changed text, sections 2.1, 9.3, 10.6, 10.7 and 10.8 included. The section splitter no longer splits at a heading-like line inside a fenced code block, reading the fence as CommonMark reads a top-level one, and the default entry cross-checks the splitter's section bounds against the block reading (_heading_bounds), failing closed at each line that may open a raw HTML block and each line the block reading does not read; the block reading also closes a fence on trailing spaces or tabs. The module docstring states the new residuals, and new self-test rows cover the splitter and the cross-check.",
+   "sha256": "df5305dd1d46a339ff2f391c95e2f84465b87bd8836ad6abe780e19b485c5a28",
+   "sha256_imported": "b0fb31bb7eb31e616abd93e7cd531a1a77ab6e135d226caa6f18808df46b9faa"
+  },
+  {
+   "blob": "60a7ae56be49ac319f3f9773e6a396c86a7cab97",
+   "path": "tools/check_opf_init_contract.py",
+   "reason": "The workflow roster check now accepts the runner with its --ci subset argument as the only argument, matching the kept D-1245 workflow step; a self-test vector covers the accepted and the refused form.",
+   "sha256": "dd2f03ebbfa4c04128c6ea898a12d2bbd463168a5d4f17032ec73a7c9963136b",
+   "sha256_imported": "8d8622368110ebcf33945abfa494160e13fc4d6774413e56fdc2783112f9d0c8"
+  },
+  {
+   "blob": "6e58fd272dfa3943afd801dccf69eab5e6a931f5",
+   "path": "tools/check_opf_init_p0.py",
+   "reason": "The roster-name-variable RED of the runner/declared-test-executes self-test now mutates the quoted gate name \"opf-homes-selftest\" on the first run_gate line holding it (the opf-homes-selftest registration), not the first occurrence of the bare name in the runner, which the gate_settings case for the 1800 s bound now holds; the two $here/ REDs likewise mutate the first run_gate line holding $here/ (the same line as before). The red-fixture guard now fails when no run_gate line holds the text; the expected refusal before launch is unchanged. The REDs that find a whole runner line by its text and then edit or delete it (dropped-own-flag, dropped-sibling, scrubbed-environment and own-dispatch, whose deletion is now limited to one replacement) now also fail with red-fixture unless that text occurs exactly once in the runner; every expected outcome is unchanged.",
+   "sha256": "6a5719e30f6cca8cf1d2935f16b75613f907abf8eb15f1a48101446e24ac7ab3",
+   "sha256_imported": "746b2c45a7c36500e2962ecc5db5eaa59e2e1ef3b1a867f161237f0407b4032d"
+  },
+  {
+   "blob": "0ed793bd1b59ec435d636513856ef63edd95c6be",
+   "path": "tools/run_all_checks.sh",
+   "reason": "Merged with the pre-import repository runner: one runner carries the pre-import gates and every imported OPF gate, with the --ci fast subset and NOT RUN reporting (each gate that subset does not run is listed with its reason). It keeps what the imported OPF registration self-tests read: every gate of a local run a first-column run_gate python3 -I -B line (bash gates through tools/run_bash_gate.py; names-ci-subset, the one gate only --ci runs, is registered by run_ci_gate instead), local-run dispatch one gate at a time in registration order by default, the imported dispatch and failure-naming text and the OPF STANDALONE SUBSET: FAILED verdict of a failing local run. Each gate has a wall-clock bound enforced by a watchdog (default 900 s, 6000 s for opf-tooling-selftest and opf-adopt-apply-selftest, 9000 s for public-export-self-test, 1800 s for opf-init-selftest and opf-homes-selftest); a gate stopped at its bound is TIMED OUT and fails. It also registers the gates handed over after the import (guardrails main 504f422d; PROVENANCE.md): opf-declaration, opf-declaration-selftest and opf-declaration-selftest-execution (the registry-driven execution of that suite), and opf-enforce-residuals and its self-test; --ci runs the two checks and lists every opf-...-selftest-execution gate as NOT RUN. It also registers the gates of the pinned site template copy handed over with the same addendum: baseline-pin, baseline-pin-selftest and baseline-pin-selftest-execution (tools/check_baseline_pin.py and the registry-driven execution of its self-test), and baseline-palette (.baseline/check_palette.py over the opfiles palette of the pinned palettes.css); all four are fast and --ci runs them. It also registers provenance-addendum and provenance-addendum-self-test (tools/check_provenance_addendum.py, which checks each record of PROVENANCE-addendum.json against PROVENANCE-addendum.SHA256SUMS and its landed file); both are fast and --ci runs them. TODO 316: it also registers line-width and line-width-self-test (tools/check_line_width.py, which refuses, in three passes over HEAD's committed content, the index and the work tree, a line changed or added since the base that is wider than its file's width at the base, or than 120 in a file new since the base; a file's width at the base is the widest line it had there, the maximum and not a percentile, so one wide line there lets every changed line of that file be as wide, but never less than 100; a file its suffix names as checked that was not text at the base and now holds a NUL byte also fails it, whatever its widths). line-width needs the history back to the merge base of HEAD with origin/main, which the hosted job's depth-1 checkout lacks, so it is local only and --ci lists it as NOT RUN. In a copy with no git history, or with no origin/main, it exits 2 (CANNOT EVALUATE, naming the reason), and the full local run lists it as CANNOT-EVALUATE (exit 2) among the FAILED GATES and fails, so the full local run needs a git clone that has origin/main. line-width-self-test builds its own repositories and runs in both modes. It also registers public-export, public-export-ci-subset and public-export-self-test (tools/check_public_export.py, which rebuilds the public export of tools/public_export/export_public.py into a temporary directory and fails unless the built tree is exactly the whole tracked tree of HEAD (the maintainer ruled that every tracked file ships), byte-identical, with modes kept, no symlink, a matching manifest and no tracked path the names scan would skip, then runs the names scan over the built tree with the denylist machinery of tools/check_names.py and the carve-out record tools/public_export/carve-out.toml, read from HEAD, which pins each covered line's content by the SHA-256 of its bytes and per-denylist-entry finding counts). public-export and public-export-ci-subset have a 3000 s bound (the exporter and the names scan each have an 840 s budget, plus git); public-export needs the local denylist, so --ci lists it as NOT RUN and public-export-ci-subset, registered by run_ci_gate, runs the structural checks and the names checks that need none; public-export-self-test builds its own repositories, runs in both modes and has a 9000 s bound (it bounds its 33 fixture gate invocations at 120 s and its 77 fixture git runs at 60 s, a worst case of 8580 s).",
+   "sha256": "06638585d803b3587bec4630182ec9aa31ca2dece4b324748a52f062a6ce24a3",
+   "sha256_imported": "8d4f60ef0352e26310621e1fe166d9caffa7e0c3f03a19a15033270d7a8bf9bd"
+  },
+  {
+   "blob": "4ba39c6c2b6696a687d705750cd3b54978e1df6b",
+   "path": "tools/selftest_checks.toml",
+   "reason": "Two suite rows handed over after the import (guardrails main 504f422d; PROVENANCE.md) are appended: the opf-declaration-selftest row for tools/check_opf_declaration.py, from that project's tools/selftest_checks.toml, without the three check ids of the separate root (pack) VERSION vectors the adapted gate leaves out; and the baseline-pin-selftest row for tools/check_baseline_pin.py, whose 116 check ids are the adapted gate's (one live pin, a fixture-only second pair, and the licence page source site/draft-src/license.toml bound live as the record of the template version, with 22 check ids for that binding). The opf-declaration-selftest row also adds two check ids for the adapted gate's hand-off of a plain --self-test to its entry point (289 in that row). The existing row is unchanged.",
+   "sha256": "396cfc14fe243bea5bbcef70b02c912c532366624a874748155fecad7c21a7b7",
+   "sha256_imported": "7abf9830b5cb1a27f915abcb412bec755e251a4be08cec2d71f4e117b42fb017"
+  },
+  {
+   "blob": "e595f92ea7d807acab63cc437d9d1aabfc03c7f6",
+   "path": "tools/selftest_commonmark_conformance.py",
+   "reason": "TODO 312: the spec example fixture is pinned by SPEC_FIXTURE_SHA256 and SPEC_FIXTURE_SIZE, checked on the raw bytes before parsing, and the pin is anchored to the import record: the fixture's git blob id must equal the blob of its PROVENANCE-inventory.json entry, that entry's sha256 must equal the pin, and no deviation record may name the fixture. So the harness fails closed when the fixture is absent, unreadable, not a regular file, changed, or rewritten together with its pin. Self-check rows cover a one-byte edit of a field the replay never reads, an appended newline, an absent path, a directory and a FIFO with no writer (each refused as not a regular file, the FIFO read in a child process with a timeout), the read cap on an oversized file, the fixture rewritten with its pin, and a changed import entry, a deviation record, a missing entry, two entries for the fixture, and an absent import record or one that is not JSON, not UTF-8 or not an object, or has a duplicate key, NaN, no entries or deviations list, or an entries or deviations value that is a number (each refused; each malformed record holds a usable entry for the fixture where it can, so only the rule it is named for refuses it, and a raw-bytes control row loads); a --self-test option runs only the self-check; the docstring states where the pin came from and its residual (a fixture built to collide with the imported SHA-1 blob id passes once SPEC_FIXTURE_SHA256, SPEC_FIXTURE_SIZE when the length differs, the entry's sha256, the blob and sha256 of this file's deviation record and the inventory pin are rewritten), says the replay sees only drift that changes which examples diverge, and no longer says the replay runs against the exact vendored Marko bytes.",
+   "sha256": "5fef5fb5cd7a147675c8dd33ff4350e4a4b2a1194a904828a90c8f6cee58e5cf",
+   "sha256_imported": "b39ae34ae32e381c30034a4a40223618866f67e402886aaa9ca9791e5a8649aa"
+  },
+  {
+   "blob": "9c97813d54eade25429a1c5d164afc701e643c75",
+   "path": "tools/selftest_commonmark_headings.py",
+   "reason": "TODO 313: the synthetic manifest fixture carries a provenance record bound to its manifest and an import record anchoring it. New rows cover a vendored file and its row edited under an unchanged record (refused); the same edit with manifest_sha256 rewritten, which the binding alone accepts (a disclosed residual) and the import anchor refuses, and which passes with a forged import record (the anchor's disclosed residual); a changed import entry (refused); the as-imported rebuild of the manifest; an absent, malformed (an entries value that is a number included) or ambiguous import record (each refused; each record named for a guard holds a usable entry for the manifest where it can, so only that guard refuses it, and a raw-bytes control row verifies); a one-byte change of the real manifest against the real provenance and import records (refused by each); the real binding and anchor (pass); a missing digest, a wrong version, a malformed or other wheel sha256, a non-TOML or absent record, and a record without [package] or [artifacts.wheel] or whose artifacts is not a table (each refused); and a non-UTF-8 manifest that is bound and anchored (refused). The module docstring is rewrapped at the file's width.",
+   "sha256": "8e519accfb73c85e7c6e33fc3b3323f4a6af3edea52ceda6a822779689d3caa4",
+   "sha256_imported": "88d0fceff3e109e1718c93e4a15d94b63cf0b654b527283dec038f155cf3ccb2"
+  }
+ ],
+ "entries": [
+  {
+   "blob": "ae0aa96b5f404fdfaa0b7928b6139a21b1dc20ab",
+   "mode": "100644",
+   "path": ".github/workflows/quality.yml",
+   "sha256": "18f495fecd7fe68f04c6084ca2fdcbbd2a08315fb1a8764a56a2c0703e2c29cb"
+  },
+  {
+   "blob": "bcf9a6f4b4c263d97b919e828d437864530aa5f1",
+   "mode": "100644",
+   "path": "README.md",
+   "sha256": "5969b64a898bef1b3cfcc9b4e46cb060d61ce575fa4623e063cd86539b981d90"
+  },
+  {
+   "blob": "90a27f9cea6e8f02e05a8bbab5d14650e3e932af",
+   "mode": "100644",
+   "path": "VERSION",
+   "sha256": "8c54bfab7f1ae9bd1a7148eae41e7b0a8f4ad3726e0cac70f823a2d45db9e60c"
+  },
+  {
+   "blob": "d1b362eae2c38b9d4b986656d010ff0cf60d9a40",
+   "mode": "100644",
+   "path": "enforcement/ci/github-actions.yml",
+   "sha256": "06e3aee534c802b45779b151fc0a04ca862c45fdffb6f298e8be04a80cfd35b6"
+  },
+  {
+   "blob": "46bc793210cab3d699361ffcf9b8250f4ca7b286",
+   "mode": "100644",
+   "path": "enforcement/ci/opf-ci.sh",
+   "sha256": "307786750bfaa8d6fa8c770923570a6c1616482669c826d46d3885e7d6728ea2"
+  },
+  {
+   "blob": "60da0eee35310a961517e920d60471ea2b4d6334",
+   "mode": "100755",
+   "path": "enforcement/claude/pretooluse_deny.py",
+   "sha256": "3b1fd111ae16c26e5ee8d562ad916a5af66369acb93354814b2cd52ca11c7b53"
+  },
+  {
+   "blob": "7e9e30a59babe2cdcb858487db3c2f68f6f371a6",
+   "mode": "100644",
+   "path": "enforcement/claude/settings.opf.json",
+   "sha256": "60e2c968446b7aa01aca118247ba8c8e8923240b218461e78f1b1ee39873248d"
+  },
+  {
+   "blob": "34c5cee7251a08b5bc5eaffa930d0436e8191669",
+   "mode": "100644",
+   "path": "enforcement/codex/AGENTS.opf.md",
+   "sha256": "c9393c22a06427a53882a59ab71339ff9761a24e82fe8b82adb7aad2604b26a0"
+  },
+  {
+   "blob": "4d144e9fefc246707981625928f05ac9709dc52f",
+   "mode": "100644",
+   "path": "enforcement/cursor/opf.mdc",
+   "sha256": "4c873c4d57818fcbf66087cecb30556652e523a20472d9702214528074452959"
+  },
+  {
+   "blob": "cab39b0f1572ee8c16ca706d541d4dba698abe7e",
+   "mode": "100644",
+   "path": "enforcement/gemini-cli/GEMINI.opf.md",
+   "sha256": "fc2cf56a4c48dfae4d6ba7d04e1de03040ed9fccf09bc54838d707d8b1340d4c"
+  },
+  {
+   "blob": "679d6ad08f0e7b59b20ddb5256c6477fea641001",
+   "mode": "100644",
+   "path": "enforcement/platforms.toml",
+   "sha256": "2e1e7f661126706abe81e3d72d8d6f531d3b1e133d5b6f75f25bdadf7de17341"
+  },
+  {
+   "blob": "2eb859a66a1f77951c8807881e809a4f7dd1d037",
+   "mode": "100644",
+   "path": "enforcement/precommit/install.sh",
+   "sha256": "cd48ca45fc01a32cf5c134e8b3e12a2509f0195ab6a299d5a1bda1fe984eec2a"
+  },
+  {
+   "blob": "5acc8676ae2ad07a184f7fa0d7d362e8f1634866",
+   "mode": "100755",
+   "path": "enforcement/precommit/pre-commit",
+   "sha256": "a51f15d0dee8423a5a785d6e914cdd400d11a13d227990a76e9a8f933448d6e2"
+  },
+  {
+   "blob": "71e7b6b011375ec9ea281bb17c52bd4f42342ae4",
+   "mode": "100644",
+   "path": "enforcement/residuals.toml",
+   "sha256": "88bb1cc76c27a5941955d929489f8dada16b17b88bc7c4ac69b6d08cfec0c27b"
+  },
+  {
+   "blob": "cb089d9c766ffc733eed973a2b95d91cb4b6c2f4",
+   "mode": "100644",
+   "path": "prompt-pack/adopt/SKILL.md",
+   "sha256": "33eabbe5ae23345b184c92e804678783b5f33203ea72d6f76c483cde3abeeb95"
+  },
+  {
+   "blob": "70f0716d2ee9b8165bf8606bfba0f7cdf3c1c7a6",
+   "mode": "100644",
+   "path": "prompt-pack/adopt/clean-start.md",
+   "sha256": "25ac6a39c6c32a429af5f14baae41d877392f40e2fadcb5d26c33a96f34a7068"
+  },
+  {
+   "blob": "fd48ee226dd63143da2da0b43306930af4c7b946",
+   "mode": "100644",
+   "path": "prompt-pack/flow/SKILL.md",
+   "sha256": "22faed6581670ad03070d3e48eb88666632fefe6322bd7de1b72da103f26060d"
+  },
+  {
+   "blob": "91567a41f5b0e6c33b04324792de7384cb736fac",
+   "mode": "100644",
+   "path": "prompt-pack/import/SKILL.md",
+   "sha256": "2557ac6f3307e3b520647b540a2108f2a8079c7dab8e4c40393b28bd154c62b6"
+  },
+  {
+   "blob": "c3db3b2a4e57ac9f65ef67adc12ddb424c6d5a70",
+   "mode": "100644",
+   "path": "prompt-pack/import/examples/autonomous_decision.batch.toml",
+   "sha256": "f9b4090b5ce365f354bef4d1b4ce8d24ee720076a88b8760b72e750f5a6919a8"
+  },
+  {
+   "blob": "271be842c09d27a01594b045992c400479b7bab8",
+   "mode": "100644",
+   "path": "prompt-pack/import/examples/backlog_item.batch.toml",
+   "sha256": "59ef7819c063b08a08954e9e66f02f37262e7f36c13143ecdff552e87c82dc10"
+  },
+  {
+   "blob": "756609fc5ce9be3ad35c0083d50cbc999e8d4b03",
+   "mode": "100644",
+   "path": "prompt-pack/import/examples/block.batch.toml",
+   "sha256": "3a1e1c540e60dee903ce90b95e29a3e9affc0e9dd8b578c002b586753ef63bda"
+  },
+  {
+   "blob": "f2b15bb9396ddb6d4f90c8609312c06207cedfa0",
+   "mode": "100644",
+   "path": "prompt-pack/import/examples/contribution.batch.toml",
+   "sha256": "5b31bbdbc4ea1e903a0181cb1142d30a836dc462eca5023b25ca7da649bd9837"
+  },
+  {
+   "blob": "238051fff20cb71e22603619ae70eb5b028d6ea9",
+   "mode": "100644",
+   "path": "prompt-pack/import/examples/done.batch.toml",
+   "sha256": "71f92138c13640264878449e588d83ef2ebf795497ed0558df7cdb2e11724427"
+  },
+  {
+   "blob": "04580815ff788d7b1b2c2b50ffa65e25896d54b3",
+   "mode": "100644",
+   "path": "prompt-pack/import/examples/finding.batch.toml",
+   "sha256": "487e50731714b452662903ec8c18171773c7a04cb78b66455613db3a2efb5365"
+  },
+  {
+   "blob": "3818cf93cf0df14aff2c85dc1471ba386aa34782",
+   "mode": "100644",
+   "path": "prompt-pack/import/examples/handoff.batch.toml",
+   "sha256": "78ccdfd80576a3410614b975d152a8dfee9227e2bca3f44fc3e748b04b5f725d"
+  },
+  {
+   "blob": "ea87ffcf18d26380ff45e98e0a81105833c94c46",
+   "mode": "100644",
+   "path": "prompt-pack/import/examples/maintainer_decision.batch.toml",
+   "sha256": "401dcefafb92d38c7cd5f481bd382792a14cae7a04f1eb74393162b50b5a3876"
+  },
+  {
+   "blob": "e6ca82470e1f5143c0911ca3360e50b32864f9e3",
+   "mode": "100644",
+   "path": "prompt-pack/import/examples/pending_decision.batch.toml",
+   "sha256": "73ed4d85a1283303c6f7f424ed1241c39fb93f2841d58cf892b54fc01a4967a7"
+  },
+  {
+   "blob": "5b1d21a565b2c0082ad9b10a8d13eb290238ba8f",
+   "mode": "100644",
+   "path": "prompt-pack/import/examples/preference_pattern.batch.toml",
+   "sha256": "797c81474312618183e5ffbeecfad868ec8de58da5f040930bd06361ceb4a049"
+  },
+  {
+   "blob": "e3df902f504020f68ee320884fff44941739a0e6",
+   "mode": "100644",
+   "path": "prompt-pack/import/examples/reference.batch.toml",
+   "sha256": "dc015fc0e3f2521a33ff3eaff74319da04b78aa077ce4e6709234a26baa6c0ce"
+  },
+  {
+   "blob": "3c678522ed188e7263956b0545cce8254cc121f9",
+   "mode": "100644",
+   "path": "prompt-pack/import/examples/worklog.batch.toml",
+   "sha256": "d73988b74fb317acf23ca8f017086faacead2946d8f4b42e20e082256d7f2401"
+  },
+  {
+   "blob": "7b819a3fa674781e4390f11918a4e5f4d0a81a89",
+   "mode": "100644",
+   "path": "prompt-pack/pack.toml",
+   "sha256": "02349a2c87819bf4a76e984f86263eba9c8db986ebd6288069297506289333ed"
+  },
+  {
+   "blob": "00968821a8992598bd4b37cf067b0dce0f9c3137",
+   "mode": "100644",
+   "path": "site/.well-known/security.txt",
+   "sha256": "3a50b56c27e838cd2af9bd215543a51c6e369d38cc50e3f34d9f89bf2e379807"
+  },
+  {
+   "blob": "2c2e3e422a9230253bbaada194a5bd5b6ee591c2",
+   "mode": "100644",
+   "path": "site/404.html",
+   "sha256": "e47c974adc1c31d4485b0a9bd821fbb424d0d90a2851dc2289629f307a45d926"
+  },
+  {
+   "blob": "a56c344076ed954a28138299abee75fc00c2fb4d",
+   "mode": "100644",
+   "path": "site/_headers",
+   "sha256": "d3cad7bde216afb88008c28bb4ba02c3e33b824fbb1aefd1d549d859e558885e"
+  },
+  {
+   "blob": "40e711fd455676986cbffaf85f3203757ebde262",
+   "mode": "100644",
+   "path": "site/_redirects",
+   "sha256": "d3fdf33ff292a4665b42e306a2734a9ade48c24e27d6d1873252ee6498cb3dff"
+  },
+  {
+   "blob": "5d73975c4e5fbee15c01c7b5c83280b7d7e6f35d",
+   "mode": "100644",
+   "path": "site/adopt.md",
+   "sha256": "04b4df956c8b5463528795ff40fdac552aaba05a138cc61baea000c7743bc189"
+  },
+  {
+   "blob": "415917874587c9b5e0ace8dbd973f5d398bed3d4",
+   "mode": "100644",
+   "path": "site/adopt/index.html",
+   "sha256": "dc0e0ab7d694557119d94e5c92129f613cf3f14b2b98bd8df853ca4860a227ae"
+  },
+  {
+   "blob": "d25965edd964a7aaa6b7fc9f81b53ef1891a03cb",
+   "mode": "100644",
+   "path": "site/assets/baseline/logos/opfiles-touch.png",
+   "sha256": "f55098b6da69f606b347f53553f59fdc8d3275ade45793a562a6bff767b1b2f3"
+  },
+  {
+   "blob": "f6fdbd7e7b6d42a22d20a18c8332c955c71f5dfa",
+   "mode": "100644",
+   "path": "site/assets/opfiles-og.png",
+   "sha256": "2c831447dc1a2ec7fb7e69cb6025ff00dd27a7710e74076270153da0f75cb32e"
+  },
+  {
+   "blob": "f070ab34c1f49162b009ba8a3e59a9d1550e49e9",
+   "mode": "100644",
+   "path": "site/core-files/index.html",
+   "sha256": "23d379c268ebbdce7be12580d86606ac8f7775c1188ddf9a3402b5aa20d00513"
+  },
+  {
+   "blob": "5a3e8803285f79a4142bd24b52e7f73d639f58fb",
+   "mode": "100644",
+   "path": "site/disclosure/index.html",
+   "sha256": "ab14d22511b31ebe509e81789a7bb39f76a94b96d62e31f0f9928fab39ed120e"
+  },
+  {
+   "blob": "af5dd13bb393f8420d31db6f65c07e306d19b48e",
+   "mode": "100644",
+   "path": "site/draft-src/404.toml",
+   "sha256": "83300f415d883b1132d54d2ef2d21aa375094650e6fdc93fc7bb6f1354028865"
+  },
+  {
+   "blob": "6bfab507da988ed928c0f806811c710e58f616fd",
+   "mode": "100644",
+   "path": "site/draft-src/adopt.toml",
+   "sha256": "8573626b1d9699e81f6ca1fd2d1340ed2c3ba602a87bfff2f5cbf14140d3e35f"
+  },
+  {
+   "blob": "2f773b3ee0e30367f49d9f99c3b5785f6f97602b",
+   "mode": "100644",
+   "path": "site/draft-src/core-files.toml",
+   "sha256": "d4a392b0b99e2994688b2b1e175360e0e02764795de2e74387b829178be9a7bc"
+  },
+  {
+   "blob": "1c62b2feca7a6d9f0015f27e8afce0e8e68b7655",
+   "mode": "100644",
+   "path": "site/draft-src/disclosure.toml",
+   "sha256": "648385e6a14a3596e65fc035ed924f226f95a57039888aaa57ffb69b0ff5d739"
+  },
+  {
+   "blob": "54620b9c5b15629dd736127ec695d59af191c88e",
+   "mode": "100644",
+   "path": "site/draft-src/draft.toml",
+   "sha256": "88a07c6cee4af960ba877aff2a9b35529ef154ed98c20707bc7ef49d221665a5"
+  },
+  {
+   "blob": "691e599fb6753ab64d6dcbc00fcbbb322267ed23",
+   "mode": "100644",
+   "path": "site/draft-src/home.toml",
+   "sha256": "450bd45de1be2170f78c25d2baf687cc8078e0fafb62959c9fee13ba4b84565d"
+  },
+  {
+   "blob": "ffb4c26891c0c14ff9b5e169459aac1074199509",
+   "mode": "100644",
+   "path": "site/draft-src/license.toml",
+   "sha256": "c376a98ba7e6151bfb185a9cd0f9c9f6d631b15a9d454bbf83d19564618bc6e3"
+  },
+  {
+   "blob": "d4ae287a5ffc953e0f91659b5f8ffce7e57b95e9",
+   "mode": "100644",
+   "path": "site/draft-src/model.toml",
+   "sha256": "869143d917ef63085c0a7ca1aa950396a30da31016fe4990c1d1bfb23ae87e33"
+  },
+  {
+   "blob": "cc226d2e8da82d8497cfaf4b84283bd98456a627",
+   "mode": "100644",
+   "path": "site/draft-src/standard.toml",
+   "sha256": "a2f161ac3b6bdf0fc7f4707974b4ce545d1befe33e58e857002788a95f3c0949"
+  },
+  {
+   "blob": "0e259d42c996742e9e3cba14c677129b2c1b6311",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/LICENSE",
+   "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499"
+  },
+  {
+   "blob": "9640edf8d8f1e3099acb28c2a237418919f8f111",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/NOTICE.md",
+   "sha256": "deeffb1a277a0b1f591feea15ecc10fbf4fc916cf0db07885625a288cc6e3b1e"
+  },
+  {
+   "blob": "ce64f24a98b6666a5fedb89ace6a2f1af3de92b7",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/baseline.css",
+   "sha256": "8a902e09bc770744e4f1a15066a0c5ef33095d829a5dc59486a502c567dac777"
+  },
+  {
+   "blob": "325a5a09d95ef94ed37a83a71563f999042aacbe",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/copy.js",
+   "sha256": "9bf99b50471889b768c795af5a4f84f526cecf7622a1f1265ca3d088b31339a4"
+  },
+  {
+   "blob": "253fc43003bcbbe50cd95fba7fe6a7dd4891a19d",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/fonts.css",
+   "sha256": "a309a8ff4026a67fb5d10dea2c02e5b9ea2c1b32d4b18d7892015e038397396a"
+  },
+  {
+   "blob": "e04bb679e289109333038db70a2b2622bf9dbbc5",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/fonts/dancing-script-LICENSE.txt",
+   "sha256": "c02c0002d3bbd41a16933c162888c400469c7029f1362ca9d60d5ed20ea7d157"
+  },
+  {
+   "blob": "5353684edd50058cb7e2a92ccfe43aba99ef01b4",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/fonts/dancing-script-latin-wght-normal.woff2",
+   "sha256": "51acdc0e009e1d84cca6b654c4218275d8ee33dd243f3df25f7412a824a78d99"
+  },
+  {
+   "blob": "8f7ed671137e7a27c646ead86f45d5cb4875f459",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/fonts/jetbrains-mono-LICENSE.txt",
+   "sha256": "403581b69dac5cff4079205e01c6b467e56af449ecbd7247693ddb1baafa005b"
+  },
+  {
+   "blob": "ef16b7d050b146ef5323d01d111eac19022a0d4e",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/fonts/jetbrains-mono-latin-wght-italic.woff2",
+   "sha256": "a8afa085e9ca5e53434e2ee918ba6b65c7dd4dda56509976b36591478c99d62e"
+  },
+  {
+   "blob": "cd5102a44c763f1cfe9f2b199fd5d7257491c0dd",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/fonts/jetbrains-mono-latin-wght-normal.woff2",
+   "sha256": "18be452724bfdc236c074ca94a249a7f41a86752c7d04ab258ce9ed5651f6a7e"
+  },
+  {
+   "blob": "03ad13c32004b5c7c097e404810b0fdf7410d283",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/fonts/newsreader-LICENSE.txt",
+   "sha256": "26028ec4e13b650065fa525a09532176f8a668b76ff849ea01c564a7480f91e7"
+  },
+  {
+   "blob": "11a48eca5b7e9a0b8ba60a67c4613f900057cdda",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/fonts/newsreader-latin-wght-italic.woff2",
+   "sha256": "48bc8861b9b2ca9300747cad4fd6a3b4ac3028d364df00bd1b72097baa75e509"
+  },
+  {
+   "blob": "816261a528d70e5ad56ecb380ddd398152075e98",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/fonts/newsreader-latin-wght-normal.woff2",
+   "sha256": "62981321d9a3cc7a61a73792729043703fd6112da86e8ec848bb57f088578757"
+  },
+  {
+   "blob": "a6cb63a6170c26ddcfe547038d388976db77d17f",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/fonts/public-sans-LICENSE.txt",
+   "sha256": "705a497c781f6463ff819abb513bb495f3fb05256f1d20321e3275813c0bafa5"
+  },
+  {
+   "blob": "068db262b80d1d54faf45f9f274a3093d83369ea",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/fonts/public-sans-latin-wght-italic.woff2",
+   "sha256": "16dc93252adb78785ae56a6465494f73b604b39817760ea92bd4046521bb5a35"
+  },
+  {
+   "blob": "15b5f3da4dd35d8716a3fdb2dd46e64a332d0bfa",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/fonts/public-sans-latin-wght-normal.woff2",
+   "sha256": "5ed4d31c988e73b258894244f209069ebe77dc7e564861954b21198b6de90d68"
+  },
+  {
+   "blob": "de680dd99edf74c62c27d397157b3744768d8b18",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/aiqt-card.svg",
+   "sha256": "9192924345aeb6c086bc096c5e59f3bc1dbe74df06f44406be7a90520b9565aa"
+  },
+  {
+   "blob": "b2b780c9f1d54d25576a005797c8b4a627c469da",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/aiqt-favicon.svg",
+   "sha256": "8a082befc210b86f795cecce1141ff813940652a5ecabb900214f27976352965"
+  },
+  {
+   "blob": "ea49e2c82cca1fbb1e88106428dfd8042a1bbbfd",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/aiqt-mono.svg",
+   "sha256": "dc2718f4cf579ffe9b3e02bd4edce71c51e1c4954e915d59660964cceadc4118"
+  },
+  {
+   "blob": "a1bc77c77cae291a10f331cffde8124da5dd9fc2",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/aiqt-touch.png",
+   "sha256": "600f0ca0d03b23eccb36670313a573644a5642277a684df5bfb5c3a684f44ec5"
+  },
+  {
+   "blob": "14cb59ebd90b640c4d1bd54a7d6b4dbd69927ef4",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/aiqt.svg",
+   "sha256": "66ab34a8a0c03ef260e73cec128f53a714183cd8ba3c675969e9a04feb222781"
+  },
+  {
+   "blob": "247a66d98f92060f17b04e488a232462fb7def9c",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/auditthis-card.svg",
+   "sha256": "187d433274a30812c978b492895245ac728f6b9e3d73e17ca07504e1a9f57fb6"
+  },
+  {
+   "blob": "31aaa15e8bfb7a85d1ad29b6905726bb5732a85e",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/auditthis-favicon.svg",
+   "sha256": "41ea619415ab55ff13aea87ddd9d1ed5cdeae6300e54501d30a70ae55560f504"
+  },
+  {
+   "blob": "a69376425489bcd3bb5163c826721ec8b7410904",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/auditthis-mono.svg",
+   "sha256": "198aa04cb150ddcee4c2130218c81e61bd52f23983903e2e16f7ec03dd7797d4"
+  },
+  {
+   "blob": "08617d650c08383c2248ab24e2040d5925c61c1c",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/auditthis-touch.png",
+   "sha256": "2730c58989818670116a40a199741cb17e9635020cc6e2cca43ffec0da47d0e2"
+  },
+  {
+   "blob": "1b7d9f8a26cae9e1f19892411c3de15175d107fa",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/auditthis.svg",
+   "sha256": "0f2fb19cd2917e8d39e57c08172987bbc72ca0597a096d892aaed44ff5374572"
+  },
+  {
+   "blob": "e5700bb6c579132598b555cd489cf03a61673ee6",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/cleanlanguage-card.svg",
+   "sha256": "ace7ce40a3bd16f66e136739853dd81fe0f8058412580cacf8af5948da773751"
+  },
+  {
+   "blob": "741b176790e32c2c3302eff0fac62e7e6d15c539",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/cleanlanguage-favicon.svg",
+   "sha256": "3ebe565b9e5d7ec0eef1ae7092f92cafa56985fcca31a3499abc6fda23b1fa1d"
+  },
+  {
+   "blob": "9ddc8293f789143643bd5039f05f61c5ccf9ba86",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/cleanlanguage-mono.svg",
+   "sha256": "3d9c927bbe57ed53c724da4c24eae84682878d06b693188059c4a6a8d70bad1d"
+  },
+  {
+   "blob": "181cd9eee8255f796a7e2342d227e290e35b38d6",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/cleanlanguage-touch.png",
+   "sha256": "b75fdf0780b168595b01dda57185bce0778e09d1093739be4b8c8239c722957e"
+  },
+  {
+   "blob": "cf71ef822889cfc367dda691b7677059e209cf6c",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/cleanlanguage.svg",
+   "sha256": "285c37c1d77bc24206e31c3eb99837a79ba79f6c16b4ccbd7470f1fbfc58f985"
+  },
+  {
+   "blob": "c9c2f032fe99352c48eabe163fc4e9cac416c5fc",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/grclibrary-card.svg",
+   "sha256": "6c8add330f2a99263df464055fdd6635c0163ba850f2c2572152d1aa41a5884b"
+  },
+  {
+   "blob": "e1cab35da5af60bcb4d8a74242e54fc2f5447274",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/grclibrary-favicon.svg",
+   "sha256": "f1fe54a61a9c75d5e588bea38c7378cd397eaf7466d32642bf2f283df1d39588"
+  },
+  {
+   "blob": "9b93284ec5cf0b552a840afc5fed80943e12d284",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/grclibrary-mono.svg",
+   "sha256": "3a5495b7d810fc95ddffef3dcc9a03c1e7751bf370c93940b9118e79a2c0db90"
+  },
+  {
+   "blob": "282f0c2bbe5b1760e4ce94c23f06cf6e49739f35",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/grclibrary-touch.png",
+   "sha256": "4b191cd0f40bd836d8e0e6c254ccfd7460fa5c1f33853853e4f61de50ce0d9ca"
+  },
+  {
+   "blob": "1b23174efd82139b8ea9bffc9740dde8b5e6ec1e",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/grclibrary.svg",
+   "sha256": "8ad4d338a68ce7afc781c02be91ee7e87ce464d44d0ed56eb10d5cddf80b45f8"
+  },
+  {
+   "blob": "b0e42131f8f4612447db7be37a0b3e34f4c17c28",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/opfiles-card.svg",
+   "sha256": "1b605de22dc5b2f8a86fe82c58a0e22092ea3c5fc2c566e9b88f2f2617ab61ef"
+  },
+  {
+   "blob": "66171b173b12dc5907273579ee06fa494f87efc3",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/opfiles-favicon.svg",
+   "sha256": "e48c0de54ea7f31ffe5af118a803791fc5e4b469143bdcf80261944b77e3c17a"
+  },
+  {
+   "blob": "69100e678af29dab5d5104454abe22c303294bec",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/opfiles-mono.svg",
+   "sha256": "3886f2eec2739e0dcaf4e6e9c02b67be142d63ab7ccd3f5626e1d15d7ea995eb"
+  },
+  {
+   "blob": "d25965edd964a7aaa6b7fc9f81b53ef1891a03cb",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/opfiles-touch.png",
+   "sha256": "f55098b6da69f606b347f53553f59fdc8d3275ade45793a562a6bff767b1b2f3"
+  },
+  {
+   "blob": "6827d893d23ddb4b9105943c0bfecb0025f0073b",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/opfiles.svg",
+   "sha256": "f294e493b3ad949b72e8f25500a507fa8f47e41f58247904f44b0434637d4f0c"
+  },
+  {
+   "blob": "5ba1b343c644d7aec8717ea7157daced3a9319c6",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/secureconfig-card.svg",
+   "sha256": "21f74d06b216d72d1e8d483a444d3e439847ede8e523427c147ba2ba59cd553e"
+  },
+  {
+   "blob": "81895e21c3c3d44d6a0866bbaba169afa5ab516e",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/secureconfig-favicon.svg",
+   "sha256": "526ca1f3606625306c4876bf8fe6ba5af86e87f622729cf003ef60949e26ccbd"
+  },
+  {
+   "blob": "dc5a2e25230b3176a4fa20c74869d0d8884de132",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/secureconfig-mono.svg",
+   "sha256": "5fd490079642b41ab12863bc1692e5481a737cc4f8f764319dd31f13a2037b86"
+  },
+  {
+   "blob": "5c047ea5afd8de13bde03f9276bd5a42f305d3be",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/secureconfig-touch.png",
+   "sha256": "5897da9f6f9a556358584faee1d33b210a96de56b7ef6177d32a5bd940f0c0c7"
+  },
+  {
+   "blob": "8f827a7e4703218e9ab21aef1098d59748b234a2",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/logos/secureconfig.svg",
+   "sha256": "a74c1604acb4032e763afe0cf0a9ed9b4e5f4bdb76790d24a3de16a48eda5c1b"
+  },
+  {
+   "blob": "4c9a2c3b233e72f08ccbcd47cfc9a27e095c2797",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/marks/NOTICE.md",
+   "sha256": "b39a747fb9f73ec9373bd2329060af372e14185fcdc7f91fa67ea2cda3b6dd20"
+  },
+  {
+   "blob": "4f46bf35718f15eed373514acb531d195f6cfe15",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/marks/github-invertocat-black.svg",
+   "sha256": "693d7abe6f899646cc2e96856723b45e95f71885a54910b2749f6decdf7e1ee1"
+  },
+  {
+   "blob": "527ba11c505b1b20b1a7b0b73630b042eda16c93",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/marks/github-invertocat-white.svg",
+   "sha256": "ccd84c89b1056345608fc3489357f8acc7397e49a3cdc2d418b6c8016911d47b"
+  },
+  {
+   "blob": "8bc2d53ce28288d1004a2ea9670fa4571b0343dc",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/marks/linkedin-in-bug.png",
+   "sha256": "3c0149f26168b5fe0f43e68664abe40341a6443b3cd435d18a73e12f64f8b600"
+  },
+  {
+   "blob": "8aec5959e5a713db6aef4c4ed7a74783cc7a56a0",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/marks/orcid-id.svg",
+   "sha256": "195be086656233fc1a0089086d9190d28dc6abce39c2290612d1893233e1f166"
+  },
+  {
+   "blob": "9abe8215cc25aa340f0c6413f03ad49c45675561",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/palettes.css",
+   "sha256": "cf4bed49e0c3c16fcc8272acbf8263753e2f392db6dcdac96313540b0da220f2"
+  },
+  {
+   "blob": "7f7d09994ff6fbab3bc2b50cab182386accb3867",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/rail.js",
+   "sha256": "36535faf2df8637e694ff2a57af982b9c67c9f410f80d4dfceb193c4f2d601ca"
+  },
+  {
+   "blob": "2c9890c13ec8782862e34bf8df61b1cc2ad4f3ab",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/scheme.js",
+   "sha256": "39d035d986f53c987cbe92516b9a5fd499af5c7fcdda701ea896c63c45ef1634"
+  },
+  {
+   "blob": "983681de0fe90996cbf6fe3a015ecc3f178e8d40",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/search.js",
+   "sha256": "ff39a504d988c51510be466b2ad7e5eb2edf8299eead35b4070a20ac768359bb"
+  },
+  {
+   "blob": "f33df80c6c6f82df7352fc953bbeaed5da12916d",
+   "mode": "100644",
+   "path": "site/draft/assets/baseline/select.js",
+   "sha256": "2c4e1f1a2cc00c49dc013fd421b16c14cdc89eb873fc57f7768be90604d4bf90"
+  },
+  {
+   "blob": "e8ff16522c12f7f238d3d29ad8785d1e4b444236",
+   "mode": "100644",
+   "path": "site/draft/index.html",
+   "sha256": "cf4c9991c31707fa7bb3fd48c28518aca06cacd1d5d34c9cc52b97b6ebac38af"
+  },
+  {
+   "blob": "4e8306c3f8dc0a93a9ef8df9bf4bc603512a64b0",
+   "mode": "100644",
+   "path": "site/index.html",
+   "sha256": "b45e169eb8ad2c1b6c7a07bbd41ad521f11b113f5214dd402b186a78d6556ed8"
+  },
+  {
+   "blob": "6bd0fad0b65159dca45951d12420412ab26bf883",
+   "mode": "100644",
+   "path": "site/license/index.html",
+   "sha256": "0dbcb82f7a0de5e6fac8e457494a890ae6fc8be45ecef04d0acf611265d9ee7a"
+  },
+  {
+   "blob": "dfb62f08917348deef895afe877292e0aa12e1ad",
+   "mode": "100644",
+   "path": "site/llms.txt",
+   "sha256": "2fdd9f70c027520f441e1eea322f222b30cb722ff910f3461dc9c73c0b102cac"
+  },
+  {
+   "blob": "6a340bb6d0f1d45716698d20d6d70d4188941ca0",
+   "mode": "100644",
+   "path": "site/model/index.html",
+   "sha256": "c93d9cce5fd47c5a6d7e2d258734ecda3b5a76fe93836c37424cb50be90fc6b6"
+  },
+  {
+   "blob": "96dd52d6f7013f6ca2ea93c024d52bc2fec9c4bc",
+   "mode": "100644",
+   "path": "site/robots.txt",
+   "sha256": "eba10c258c8ce46ab3a85417f3d6968ca17b6cfb283afc8ccf357de667428dbc"
+  },
+  {
+   "blob": "8b0e3b5897157486c571fe560284242f2a44dcb9",
+   "mode": "100644",
+   "path": "site/sitemap.xml",
+   "sha256": "d9e7588c10dba7885012449dabf84651d0bb4569b69f44d040699e037b698e57"
+  },
+  {
+   "blob": "679a9b47a1e0778525aa52a58140ff21c265bf5b",
+   "mode": "100644",
+   "path": "site/standard/index.html",
+   "sha256": "a9a0875231ec264ebc2c9ad04d3ebb91fe63197b1a0f04fbca155ca225c43527"
+  },
+  {
+   "blob": "a8e95da77d334a17a9fffbccbae2085330eb09c2",
+   "mode": "100644",
+   "path": "spec/OPF-IMPLEMENTATION-PROMPT.md",
+   "sha256": "a223b1b47e786e58d74bf7ab4f72d1cef0822e774a32ef53f609ea3a5af1e105"
+  },
+  {
+   "blob": "509b106597ed2935480caf7a1e54fb784ccd6cda",
+   "mode": "100644",
+   "path": "spec/OPF-INIT-D2B-REVIEW.md",
+   "sha256": "5b29499173ed8ad47607d3d604bb77e59cd47a639f35046fb4815e241a794ffa"
+  },
+  {
+   "blob": "2f9a8b462c3b67e1523d57fcd0aea3da8150845d",
+   "mode": "100644",
+   "path": "spec/OPF-INIT-D2B.md",
+   "sha256": "dc856ac19c1f38e695163c165622c168dcf36bb6286ff17c80b12f730124a2d5"
+  },
+  {
+   "blob": "093a9fe8b10f3facd05169cfeb41942dd7631747",
+   "mode": "100644",
+   "path": "spec/OPF-QUICKSTART.md",
+   "sha256": "3323a9af51993fdf7080091dad5510bd6df26acb82c109c0624b05714a680dcd"
+  },
+  {
+   "blob": "6ce2f5e2fe8965dcc9b846554995439d3d469efd",
+   "mode": "100644",
+   "path": "spec/OPF-SPEC.md",
+   "sha256": "c7ecbf9cc61529a604e627a0f0142dd2001656a7f3520fd4b1bb87db650c5942"
+  },
+  {
+   "blob": "a78a2deeac55c5deda3146476eb7cdc14cbebbfd",
+   "mode": "100644",
+   "path": "tools/_byte_canon.py",
+   "sha256": "7e2a33aeb02898da84fbb3e9aa956f9618a676f21c10982e73475e400cb8fd37"
+  },
+  {
+   "blob": "24bd6a3f9f40682728b3ee29ae10e1990fc01fed",
+   "mode": "100644",
+   "path": "tools/_child_status.py",
+   "sha256": "c18de47d4f37e1fd507656b834f3e61b2bf8117a4ec559b55f9bcaaf1cd1558c"
+  },
+  {
+   "blob": "eeec9c3a5682fe7220299a4418f668b762c61fd9",
+   "mode": "100644",
+   "path": "tools/_commonmark_headings.py",
+   "sha256": "72026d6e7d77dbd23b091a569a7791ab183025f06b9b7ae60362f7b8e16b0df9"
+  },
+  {
+   "blob": "86fdb01e1433beed00f97f52884bd54405acd19e",
+   "mode": "100644",
+   "path": "tools/_containment.py",
+   "sha256": "6594419bc15c14e7e4844e2a34bc5ef24618b7fccf79e9a0787f4e88d0f976ab"
+  },
+  {
+   "blob": "1868eb5eb67e78e2ed516ba87b894a92f68209db",
+   "mode": "100644",
+   "path": "tools/_journal.py",
+   "sha256": "95664acbddd168f67176d928ba9d67b5a5731c14e7a01a761db1dcc49ff2ab0f"
+  },
+  {
+   "blob": "989226ee7eff52c8401ee305a66cdb18429282df",
+   "mode": "100644",
+   "path": "tools/_opf_absorb.py",
+   "sha256": "652f6d15ec58b5b6211434d3b676e00babaf49c126405c061d4d1570a2e6f462"
+  },
+  {
+   "blob": "72e621348873ebf3bca8aa26eb775f59083d9f97",
+   "mode": "100644",
+   "path": "tools/_opf_adopt.py",
+   "sha256": "2efb26e11dcc25049792ce7f0a2adaf4dccef94caa888390b69875f32983068a"
+  },
+  {
+   "blob": "a7d96f13aa3033a3f301f96c98a94b41e39225e6",
+   "mode": "100644",
+   "path": "tools/_opf_adopt_apply.py",
+   "sha256": "6f2b4c8a2e1c1ff20e2c7ac633e31380a3b4c01cbcbfc8629b0fff94657a16e0"
+  },
+  {
+   "blob": "5e7c003c42c60539235664c2cc3ee49b800f445c",
+   "mode": "100644",
+   "path": "tools/_opf_adopt_complete.py",
+   "sha256": "d743e28ab2e848648893b52b86e4e290e846c3d540c5dbbcc82cd3be54726871"
+  },
+  {
+   "blob": "6da1ed851963ca17ff2466608b920db6771a0700",
+   "mode": "100644",
+   "path": "tools/_opf_adopt_discover.py",
+   "sha256": "3a00ebb73d93881202356bc769894035a2902f3936079a7775b15dac573aa8f7"
+  },
+  {
+   "blob": "cb93e7337806d9b13488030bee3129db2051e4ff",
+   "mode": "100644",
+   "path": "tools/_opf_adopt_hook.py",
+   "sha256": "a4d01049e190cb66db90ca6aba1a4300cc96f4259e5c29d55e349ca8a693d356"
+  },
+  {
+   "blob": "42ae7a473efd77b0cab0c808de481b3985bc5abb",
+   "mode": "100644",
+   "path": "tools/_opf_adopt_observe.py",
+   "sha256": "64a4cc90579ee63f042e1139ab3998dfecf313badef6b331dacc92bf8eab4766"
+  },
+  {
+   "blob": "8c6f59a00b6c4ba9c1b2b74530467b84a8a8ac6d",
+   "mode": "100644",
+   "path": "tools/_opf_adopt_plan.py",
+   "sha256": "38628927450207fe2ba5908f44f580182cbb6e0b1c56b43594237005a1f1de3e"
+  },
+  {
+   "blob": "bdade6a34815a0314b8eade9280558bdb36efd88",
+   "mode": "100644",
+   "path": "tools/_opf_adopt_state.py",
+   "sha256": "a6f8f7c88c434b88a126b6983a7a8668a7133cfbdd7ed5401f285f5aa55e6722"
+  },
+  {
+   "blob": "348a60fbc8027a8e2f184df074ad3a79cd0da7db",
+   "mode": "100644",
+   "path": "tools/_opf_changelog.py",
+   "sha256": "46fc281172a82ade8fe5915f6b3a4db47e3929f05efef1ea4964bb97553b0e7d"
+  },
+  {
+   "blob": "b6700be2687880aebb7e06166897f862b801198c",
+   "mode": "100644",
+   "path": "tools/_opf_check.py",
+   "sha256": "c9348f32bce46de23199dbc2bdc65154a2156a71a8b0c54573e9a04f5c5baaaa"
+  },
+  {
+   "blob": "db8a61d5b5adc9603f2f1343bdbbd38a3bdd20f3",
+   "mode": "100644",
+   "path": "tools/_opf_declaration.py",
+   "sha256": "164be3d565e77824f69d310ca1feeebd4711d4ea5fe215668ff8db8f91582eb1"
+  },
+  {
+   "blob": "bd57d7604c1d8fe06d914b9892a3aaa7db7a5931",
+   "mode": "100644",
+   "path": "tools/_opf_emit.py",
+   "sha256": "1dd23ac7d372c50b6fc96f8b4c8260cc8c5550225827e26d0fc88568e7e2595a"
+  },
+  {
+   "blob": "370f4064b789c8ca1f906a0c15e00daa00679b48",
+   "mode": "100644",
+   "path": "tools/_opf_fuzz.py",
+   "sha256": "225d9d5f7c15f5794a3772cd1333665829c1d34849a9708d994915fdeadc4349"
+  },
+  {
+   "blob": "4fd35225675fd1ff22ba53f531da90450a9a94a2",
+   "mode": "100644",
+   "path": "tools/_opf_import_batch.py",
+   "sha256": "e58bb5cb64f12be7ff8ef34762f9775e74aa612211c1aa68e6149f519c3037a4"
+  },
+  {
+   "blob": "04177896e79ce1b1e9e1c4614ebb215a1af8f512",
+   "mode": "100644",
+   "path": "tools/_opf_import_complete.py",
+   "sha256": "5015594d7e0952949606566a50ddfd0ee3e447b41519a24bdb249cabbbd76243"
+  },
+  {
+   "blob": "aec889603d41dab95d1f173ca64ba9d4754070ad",
+   "mode": "100644",
+   "path": "tools/_opf_init.py",
+   "sha256": "7506f6acb9390e238045f88d9d3a97fd070fa7bd239f97531cb44bf65bd68cfa"
+  },
+  {
+   "blob": "8e3ea47f789a4dba89832cacd394e2863f8bcc58",
+   "mode": "100644",
+   "path": "tools/_opf_init_contract.py",
+   "sha256": "ff68b232100070ad28b1683ebbb7f1d7b223f4129b80872246f86a193a764231"
+  },
+  {
+   "blob": "c7d398fb618b3d7ce73337e35c5848fdc15241db",
+   "mode": "100644",
+   "path": "tools/_opf_init_observe.py",
+   "sha256": "04db95a8471c0792ee73a3731eed9a28e4516155fe74b3290b262145a2a5a8db"
+  },
+  {
+   "blob": "33a95be9f22c83d4ffbcf021b79c829d692ce1a6",
+   "mode": "100644",
+   "path": "tools/_opf_init_operation.py",
+   "sha256": "5ee95c590db376906c321e0d9e2cdf2bd1ea9f83832a50ef274e3c84b818dfe8"
+  },
+  {
+   "blob": "69a4b5a8b7062f6e5bc709cdd9cb6bd5f0af5226",
+   "mode": "100644",
+   "path": "tools/_opf_init_p0.py",
+   "sha256": "5bb3db84406ee2c44909da4b8a48a421b4eac0bfbf804a2a3a782505e071ab6f"
+  },
+  {
+   "blob": "0b79c5f90eed1925982b8281004ccf58c06822fa",
+   "mode": "100644",
+   "path": "tools/_opf_init_substrate.py",
+   "sha256": "b896ca1a5fa5d425a10830290effc5733a2fe46a7522c33ffdd9ef4a869b3823"
+  },
+  {
+   "blob": "3ccbe67ae1c6f128fc570e29e1131be347259f26",
+   "mode": "100644",
+   "path": "tools/_opf_journal.py",
+   "sha256": "6f690258a51ffdce2b4180e89c8f014a6e288ede2249e3147e96a2cecb435895"
+  },
+  {
+   "blob": "93f8169c5aad230b99bacc13e7290b57f54c9f0d",
+   "mode": "100644",
+   "path": "tools/_opf_manifest_regressions.py",
+   "sha256": "6521884bddc8c14356e55877868f60351e9c7a1b5f7a099ab497bfc588acbec8"
+  },
+  {
+   "blob": "7f55c018c14c5c346a398fcb412f465f8ed436cc",
+   "mode": "100644",
+   "path": "tools/_opf_observe.py",
+   "sha256": "626f44cc1335a70c9dfd9f81da3e9d05430389abbc5a5c68a61b04d2b74994a3"
+  },
+  {
+   "blob": "f8bbdb762018dafe0051aa17c6d1c9f08217cf25",
+   "mode": "100644",
+   "path": "tools/_opf_oplock.py",
+   "sha256": "6e4b5a6d4e031fe9974bfee1cae4931d622eb261a61007d3d07283003d7deb4a"
+  },
+  {
+   "blob": "b765e5ddc27fedfbfe68e062ee5c38c9a330d429",
+   "mode": "100644",
+   "path": "tools/_opf_pack_manifest.py",
+   "sha256": "d66efeaf82960d79aa34fd1dd1b7fbc0de13ab2527aee4c87d34313bb3d2fd57"
+  },
+  {
+   "blob": "01fcc6eaa851d73764097a6da49457e17a2d091f",
+   "mode": "100644",
+   "path": "tools/_opf_record.py",
+   "sha256": "fa88978ab5640cb65dce971e293b39cb571cd81a845415aee4afba36ef3fceb9"
+  },
+  {
+   "blob": "d5f1f3baf9efcb1eec838a1cac581332966e7712",
+   "mode": "100644",
+   "path": "tools/_opf_release.py",
+   "sha256": "b4f8b9954d6a1f5a08bc19d65fc9257031db28075579ec47719b065affcfe2c8"
+  },
+  {
+   "blob": "653601032c0b452ceb625353454d1d9c69ce3531",
+   "mode": "100644",
+   "path": "tools/_opf_release_history.py",
+   "sha256": "8efa8c5e92d436a16b42bc9518805df5b754d23536adbffa35eb0857675fac25"
+  },
+  {
+   "blob": "b5e9d7a9be07e5db01b0a50407fcf634482200da",
+   "mode": "100644",
+   "path": "tools/_opf_schema.py",
+   "sha256": "113ed928e250633c67edbd6d919a64ace0ce1608e1752267f572a7d6eacf060e"
+  },
+  {
+   "blob": "ba51142736282cd541892d67eedf79b0f2259c62",
+   "mode": "100644",
+   "path": "tools/_opf_store.py",
+   "sha256": "029da13a6a0bdddf590bc19d4b09e5a6a358ac9e196a3e9a16aa65729ac65c6c"
+  },
+  {
+   "blob": "998a9ff4e7f8caa80c5a3dfce6eb62ce5f70b7a3",
+   "mode": "100644",
+   "path": "tools/_opf_views.py",
+   "sha256": "a5dba5358d4f323ea692e5f6e30bb345a359e242ac2d971fbac5761817724a52"
+  },
+  {
+   "blob": "0bae03e97d77ef35a2e26eafeb7d1634e33fdb54",
+   "mode": "100644",
+   "path": "tools/_opf_worklog.py",
+   "sha256": "f2bf9443251836d9e4341461fa8b829d6b7bc5f56caf7f53509eec4d694ce27b"
+  },
+  {
+   "blob": "027c63616394453e69c701a64612e08e2a3d7742",
+   "mode": "100644",
+   "path": "tools/_opf_worklog_regressions.py",
+   "sha256": "a41cc0cf3702543d34f493d9657c582eb28fd0e69a15aa8e626094f3cb70ab3a"
+  },
+  {
+   "blob": "4dedd65874c69d1c06dcf4cfe4b4d32b8253bd0c",
+   "mode": "100644",
+   "path": "tools/_opf_write_guard.py",
+   "sha256": "01a6bc3eb1fb84abd9b36fe6bfb06aebcf9c2f61ffa21914030ed8333cafcb40"
+  },
+  {
+   "blob": "612c2dd81fecab300e195a83dc18f679a7c50c0f",
+   "mode": "100644",
+   "path": "tools/_optlevel.py",
+   "sha256": "4e27dc19980d9056a1154576c94ebb97a2541219cc868276bcd56e934eb95da3"
+  },
+  {
+   "blob": "179b645a6b4f09a571a98ae35a0e4d30094738d0",
+   "mode": "100644",
+   "path": "tools/_selftest_exit_report.py",
+   "sha256": "7abce74077b68f9509982f7f111db120faf6048ceb806909e0c3e62fd476655e"
+  },
+  {
+   "blob": "95d2d5256345935d51ca7ed4d01344c3f5e06a8e",
+   "mode": "100644",
+   "path": "tools/_semver.py",
+   "sha256": "eeaf84ff6f52265afaada78685614553c864d42cfb1ec5331fa0a89fbe159a8c"
+  },
+  {
+   "blob": "1f89e66f2ada1fb77c32ced2376f04afcab88b92",
+   "mode": "100644",
+   "path": "tools/_vendor/commonmark-spec-0.31.2/spec-0.31.2-examples.json",
+   "sha256": "d431b29d97b6f73e69d547109cf5081578fac931e72afe95639ebe766c1b2a20"
+  },
+  {
+   "blob": "2f83f8729cb22406c5f12a9dbd02556643a5879e",
+   "mode": "100644",
+   "path": "tools/_vendor/licenses/marko-MIT.txt",
+   "sha256": "1da058ed0440fea5df1765b19a1418800439b18fd6f1c13c7d429cb81e9c6d47"
+  },
+  {
+   "blob": "586813d51684fd95c3d4bcbe54543e7d8ef89f85",
+   "mode": "100644",
+   "path": "tools/_vendor/marko-2.2.4.manifest.sha256",
+   "sha256": "227b3471ed5944745db11fa1572240b0540c255d2b7eff675a28732f6807a666"
+  },
+  {
+   "blob": "cab7feec12a788e29ac9f278c53733c9d307ef66",
+   "mode": "100644",
+   "path": "tools/_vendor/marko-2.2.4.provenance.toml",
+   "sha256": "4347ba32d0e555fdae9978d4e61aa4baaaa9f5eb371eb5f8578b453ca2ddc6cc"
+  },
+  {
+   "blob": "3b28eacc719e556b2c1a916400e92b989d5de2cc",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/__init__.py",
+   "sha256": "49c0a229d20406ff13e3b2f5fab0d2ce7d4b3d0e0f92ab7cc754c040c181d15d"
+  },
+  {
+   "blob": "c9c6534dfd74673c03a20bbc2b27258ec2128582",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/__main__.py",
+   "sha256": "735d875bce76d2b756ddc754ac2c46854f09ce85647ba05a666bbe3039f4a29b"
+  },
+  {
+   "blob": "07dc457f36db377e223ca0c469b9f11caaaf11a9",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/ast_renderer.py",
+   "sha256": "d4619934348f4fac0031c29e6a01cd8015d32949128919a7821b93f019774751"
+  },
+  {
+   "blob": "72fe721b6bef07123a9ade44bd3a8a54d6904049",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/block.py",
+   "sha256": "8fe2ce5820353b12b4e6c231fa9b670de65695470d90cdd9bb92f759ff18a5bc"
+  },
+  {
+   "blob": "73882fe772af1eb6311f7ea955570a2e8b865377",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/cli.py",
+   "sha256": "08ea0718a1a561f8f3c88cfe7709103c48ff8488fdded58665b9275f6dd3efa5"
+  },
+  {
+   "blob": "fb7a65bc931a943ba67f45fcffa81a8a7d9003eb",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/element.py",
+   "sha256": "31b35ee787a882dad79d3cdbd6e08d62ce481763027113e4327a82d4bf33ca04"
+  },
+  {
+   "blob": "1929e5701b34d2593592db0ddce919c97bbcc0f1",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/ext/__init__.py",
+   "sha256": "da47585e9382233bbc7505bb55033485bde8c2e42930ed93c6a9cf476764850f"
+  },
+  {
+   "blob": "f05cf4b2c678d3d838d63b62060601bd79e58fbd",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/ext/codehilite.py",
+   "sha256": "ded37165d97a5522b1bb9bf234e89ec703fc99e2fd7c6012c44759064bf5aa0f"
+  },
+  {
+   "blob": "fdeed4ba645e5541f7289bd969623df952d7d957",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/ext/footnote.py",
+   "sha256": "0cbd5cc8f82bca0bc3c9283e5bf420e5389bb265c68635719212602e57e0ab2f"
+  },
+  {
+   "blob": "c3f3882c1b50b7c6fa703ed3714970c7d521d6d2",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/ext/gfm/__init__.py",
+   "sha256": "5fe0faab137d01b548368b3c9d61cc1dae9f184c889a9a531d4b691d3ab614ee"
+  },
+  {
+   "blob": "cad999cf5ee26e4feac2fd69a4d914b5d95d893c",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/ext/gfm/elements.py",
+   "sha256": "15fcb792feab1be80768363773065a3f50f971484bd047126336c99081c736a8"
+  },
+  {
+   "blob": "d05143cf680ebd084e9e3122f65ffeebdf738c6c",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/ext/gfm/renderer.py",
+   "sha256": "e9de6628f1a0cbc345325e7e6f0daa1763d9f0fa6acbb3266f4cf3685dea63f7"
+  },
+  {
+   "blob": "2f08f62a6ff27cb8a3fea80c70c02267dd39d1b3",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/ext/latex_renderer.py",
+   "sha256": "24f1a4dbf363e2ef1c8282d2e0815f2a45471e881a2cbba5a3fd6276107b91cb"
+  },
+  {
+   "blob": "4b173b8a7ea52bacdf9b9096bd8d6f12ebc212b4",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/ext/pangu.py",
+   "sha256": "67f924144560a473b5364c604aaeb3b50274c2cd2b36711dc9fed4604746a2ba"
+  },
+  {
+   "blob": "96a90b79dc21ae74b854740f491b014bfb10a2e5",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/ext/toc.py",
+   "sha256": "e9d61d1480d26ed745ad158ec72a6305aef4ee4b595112b72827623c0d70527c"
+  },
+  {
+   "blob": "45174ff7753798bbee6b77bf73bc7422e4ed954b",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/helpers.py",
+   "sha256": "2639fb84d6549acca696e5c7daa222a8cc754add82ff4e539d024a925bf84f2f"
+  },
+  {
+   "blob": "5a905b6d7b15e80097ce48fa1684f228dfcb90a0",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/html_renderer.py",
+   "sha256": "2ec1d195c75ed996a4eb4ca7d6f4c10c16209d2412fd248eb4d9b06169131a78"
+  },
+  {
+   "blob": "51496bfe23a62c0d5ae7bc9a4f2fae9216c64cca",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/inline.py",
+   "sha256": "488e23c67a095ad075c0b0f658c48af4b3101101dcf7ab6838ebf78ac880e853"
+  },
+  {
+   "blob": "b23eb99e6319137f33ba66e88dd587639603d158",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/inline_parser.py",
+   "sha256": "f4d765a593411eb308fdccc3e77e2cf350906c45d11b9535698b31b67af3a498"
+  },
+  {
+   "blob": "855c873764d2b8e41948cc1cb13928e6088795bb",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/md_renderer.py",
+   "sha256": "9b146a8ae0010d935097db5aebf0c1bd30664828d8fae4b6da74332a50bc5589"
+  },
+  {
+   "blob": "4aa7417bcf5056f976981acde33869ed82d09db7",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/parser.py",
+   "sha256": "3f9d0afd82b8afa3fc396e780bc9adc3be4d15ae1c533c853a08222077dbbd03"
+  },
+  {
+   "blob": "6631dc85a2756a1df8c049f8e768a9bdf5d3c209",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/patterns.py",
+   "sha256": "d7db00bd63fa1b8f84690fd589f67b412b10d25348055281127ca1d533a2178f"
+  },
+  {
+   "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/py.typed",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "blob": "cb744f6dd830ff14603859b3096f39383169defd",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/renderer.py",
+   "sha256": "2c3253b86b12967bf69b9d3c6c5bd6f999431b2da4c3f82a4baa1c0426f2db7c"
+  },
+  {
+   "blob": "e5aa4cd70e1e36bea4f577d9a7746bdb7a1165e9",
+   "mode": "100644",
+   "path": "tools/_vendor/marko/source.py",
+   "sha256": "363663005882dabe4f01b43e28926f4093bce4d718a4e67bfa13b7318a9a3247"
+  },
+  {
+   "blob": "9a1a34d645b90a6fff94c711343ed3e12bd7a047",
+   "mode": "100644",
+   "path": "tools/check_opf_doctor.py",
+   "sha256": "207a220396bbcee94423f1e2c8a5543e6979dd51d3597993c18d190ead6c7b95"
+  },
+  {
+   "blob": "1ba65614198550095f17dd565fd963a676c91298",
+   "mode": "100644",
+   "path": "tools/check_opf_drift.py",
+   "sha256": "6ad4c80a38549a287e6f2f0fb913566c07a5f239c093995daed7f0a1fb8baaa1"
+  },
+  {
+   "blob": "b7cae57b9ef9250700fbdf7f57396ab9ab28d766",
+   "mode": "100644",
+   "path": "tools/check_opf_homes.py",
+   "sha256": "b0fb31bb7eb31e616abd93e7cd531a1a77ab6e135d226caa6f18808df46b9faa"
+  },
+  {
+   "blob": "aeb4855e45c8f6a8fc8df541ddcd801f11f20973",
+   "mode": "100644",
+   "path": "tools/check_opf_init.py",
+   "sha256": "2be7bd6f3d7861c5e9a89a3b0853afc7433e78aa39e940a45db0b782c05cac69"
+  },
+  {
+   "blob": "aaba1d2ff0d1dae0e78d135bfd18378d4053bf06",
+   "mode": "100644",
+   "path": "tools/check_opf_init_contract.py",
+   "sha256": "8d8622368110ebcf33945abfa494160e13fc4d6774413e56fdc2783112f9d0c8"
+  },
+  {
+   "blob": "63fc26e218d78efdc755b4beab86d831b5eac99d",
+   "mode": "100644",
+   "path": "tools/check_opf_init_observe.py",
+   "sha256": "f01caceb00ff3457b4658a312c1be6de76a22176a5af9afbd701fe89de6ea1e7"
+  },
+  {
+   "blob": "3226fb0342f81b115742149ed1ec9ad975ba1296",
+   "mode": "100644",
+   "path": "tools/check_opf_init_p0.py",
+   "sha256": "746b2c45a7c36500e2962ecc5db5eaa59e2e1ef3b1a867f161237f0407b4032d"
+  },
+  {
+   "blob": "b630e41f8410f96e06579fc9a7861a923e389c1d",
+   "mode": "100644",
+   "path": "tools/check_opf_init_qa.py",
+   "sha256": "abb63c72d7f706ebf20ebaa8cd497c81279a28a3a6e8b232d2f2bc9acff96536"
+  },
+  {
+   "blob": "651e9e1ae10aef9328147581d1f5b41a754c3282",
+   "mode": "100644",
+   "path": "tools/check_opf_prompt_pack.py",
+   "sha256": "511af4986dccfa2d425c144b1a7c72a0d539548f43ca16e26e80683fb8c27ecd"
+  },
+  {
+   "blob": "cfc98e95419bb4beedf08c308249991157a10b5e",
+   "mode": "100644",
+   "path": "tools/check_opf_record.py",
+   "sha256": "dd031f0f75629c4eeca26d53edb56be8b660a70c2d313b2973632d5483c9c74d"
+  },
+  {
+   "blob": "1d5e84658e86fc92cfb0b328da8e849b892b783e",
+   "mode": "100755",
+   "path": "tools/check_opf_selftest_execution.py",
+   "sha256": "a44f372fad4d953c52bf577aacec2823eea90df73d7eb7041cc642ad1b78edb0"
+  },
+  {
+   "blob": "1e53bed09dac3bf9ff86437341c73e09c5529350",
+   "mode": "100644",
+   "path": "tools/opf-declaration.toml",
+   "sha256": "5f13d71937d37efa09894c7176e98c1a94dbb2271143f155a56e051562b121bc"
+  },
+  {
+   "blob": "680fee09b14f697433bac7e2a0f9db8e8701bfe0",
+   "mode": "100644",
+   "path": "tools/opf.py",
+   "sha256": "55526c18bda5a9036ad9c5f9580405d1f1a349b004ccc79da7856fc33ce299a2"
+  },
+  {
+   "blob": "4d6584e0e5fcfd078888de267653ddc1886d679a",
+   "mode": "100755",
+   "path": "tools/run_all_checks.sh",
+   "sha256": "8d4f60ef0352e26310621e1fe166d9caffa7e0c3f03a19a15033270d7a8bf9bd"
+  },
+  {
+   "blob": "ed947058cfa0d12852967569f6fa3aefd431d5be",
+   "mode": "100644",
+   "path": "tools/selftest_checks.toml",
+   "sha256": "7abf9830b5cb1a27f915abcb412bec755e251a4be08cec2d71f4e117b42fb017"
+  },
+  {
+   "blob": "7a92f7ea73dca210fb95a64ba252598c70827d6e",
+   "mode": "100644",
+   "path": "tools/selftest_commonmark_conformance.py",
+   "sha256": "b39ae34ae32e381c30034a4a40223618866f67e402886aaa9ca9791e5a8649aa"
+  },
+  {
+   "blob": "608114eee8e86bddbc4e2c6db87b12485ec9a56e",
+   "mode": "100644",
+   "path": "tools/selftest_commonmark_headings.py",
+   "sha256": "88d0fceff3e109e1718c93e4a15d94b63cf0b654b527283dec038f155cf3ccb2"
+  }
+ ],
+ "files": 209,
+ "source_commit": "5a68ed609c60c5b536135ed542c88b5b8a6c922b",
+ "source_opf_tree": "a5f039eb3710ae85360bb3b4ead66eef9fcbc779"
+}
