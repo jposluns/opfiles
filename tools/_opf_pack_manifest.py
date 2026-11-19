@@ -377,6 +377,98 @@ def _case_passes(case):
 _RUNNER_PATH_PIN = "readonly PATH\n"
 
 
+def _public_roster(profile_path, source, names, roster, own_argv):
+    """Return the roster a local run dispatches under the tree profile file at profile_path.
+
+    The runner (tools/run_all_checks.sh, Profiles) accepts the public profile only from a regular
+    file, never a symlink, holding exactly the bytes "public" and a newline, and then lists each
+    gate of its private_only_gates assignment as NOT RUN. This reader accepts exactly that: the
+    file is opened without following a symlink and read as bytes, and only then is the roster
+    pruned (each argv whose gate name, at the same index of names, the set holds is dropped). Any
+    other profile leaves the roster whole; the runner's own fail-closed read surfaces it. The set
+    is read from source, the on-disk runner: one double-quoted assignment with backslash-newline
+    continuations. Raise ValueError when that assignment is missing, duplicated, unterminated or
+    empty, or names the gate whose argv is own_argv.
+    """
+    import os
+    import stat
+
+    try:
+        fd = os.open(profile_path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except OSError:
+        return roster
+    try:
+        public = stat.S_ISREG(os.fstat(fd).st_mode) and os.read(fd, 8) == b"public\n"
+    except OSError:
+        public = False
+    finally:
+        os.close(fd)
+    if not public:
+        return roster
+    list_prefix = '\nprivate_only_gates="'
+    start = source.find(list_prefix)
+    if start < 0 or source.find(list_prefix, start + 1) >= 0:
+        raise ValueError("private_only_gates is not assigned exactly once")
+    start += len(list_prefix)
+    end = source.find('"', start)
+    if end < 0:
+        raise ValueError("private_only_gates is unterminated")
+    private_only = frozenset(source[start:end].replace("\\\n", " ").split())
+    if not private_only or any(name in private_only and argv == own_argv
+                               for name, argv in zip(names, roster)):
+        raise ValueError("private_only_gates is empty or names this suite")
+    return [argv for name, argv in zip(names, roster) if name not in private_only]
+
+
+def _public_roster_checks(identity):
+    """In-process vectors of _public_roster, each named by the mutant it kills: the public profile
+    prunes the private-only gates; a profile the runner refuses (public without its newline,
+    with a carriage return, through a symlink) or the private profile leaves the roster whole; a
+    missing, duplicated, unterminated or empty assignment, or one naming this suite, refuses."""
+    import os
+    import tempfile
+
+    own = (b"-I", b"-B", b"own.py")
+    names = ["own", "kept", "private-a", "private-b"]
+    roster = [own, (b"kept.py",), (b"a.py",), (b"b.py",)]
+    pruned = [own, (b"kept.py",)]
+    assignment = 'private_only_gates="private-a \\\nprivate-b"\n'
+    source = "# runner\n" + assignment + "run_gate own\n"
+    vectors = (
+        # (label, profile bytes, or "symlink" to public bytes, or None for no file, source, result)
+        ("public-prunes", b"public\n", source, pruned),
+        ("private-whole", b"private\n", source, roster),
+        ("missing-whole", None, source, roster),
+        ("public-without-newline-whole", b"public", source, roster),
+        ("public-crlf-whole", b"public\r\n", source, roster),
+        ("public-symlink-whole", "symlink", source, roster),
+        ("no-assignment-refuses", b"public\n", "# runner\nrun_gate own\n", ValueError),
+        ("two-assignments-refuse", b"public\n", source + assignment, ValueError),
+        ("unterminated-refuses", b"public\n", '# runner\nprivate_only_gates="private-a\n',
+         ValueError),
+        ("empty-refuses", b"public\n", '# runner\nprivate_only_gates=""\n', ValueError),
+        ("own-suite-refuses", b"public\n", '# runner\nprivate_only_gates="own private-a"\n',
+         ValueError),
+    )
+    for label, profile, text, wanted in vectors:
+        with tempfile.TemporaryDirectory(prefix="opf-public-roster-") as tmp:
+            path = os.path.join(tmp, ".opf-tree-profile")
+            if profile == "symlink":
+                with open(os.path.join(tmp, "target"), "wb") as handle:
+                    handle.write(b"public\n")
+                os.symlink("target", path)
+            elif profile is not None:
+                with open(path, "wb") as handle:
+                    handle.write(profile)
+            try:
+                got = _public_roster(path, text, names, list(roster), own)
+            except ValueError:
+                got = ValueError
+        if got != wanted:
+            raise AssertionError(identity + "/public-roster/" + label)
+        print("PASS {}/public-roster/{}".format(identity, label))
+
+
 def _runner_check(expected, text=None, *, fail_own=0):
     """Prove exact dispatch using the real shell text, as the P0 suite does.
 
@@ -443,18 +535,29 @@ def _runner_check(expected, text=None, *, fail_own=0):
     own_argv = tuple(os.fsencode(arg) for arg in (
         "-I", "-B", str(here / "_opf_pack_manifest.py"), "--self-test"))
     roster = []
+    roster_names = []
     try:
-        for line in runner.read_text(encoding="utf-8").splitlines():
+        disk_source = runner.read_text(encoding="utf-8")
+        for line in disk_source.splitlines():
             if line.lstrip().startswith("run_gate "):
                 words = [word.replace("$here", str(here)) for word in shlex.split(line)]
                 if (any("$" in word for word in words)
                         or len(words) < 6 or words[2:5] != ["python3", "-I", "-B"]):
                     raise ValueError(line)
                 roster.append(tuple(os.fsencode(word) for word in words[3:]))
+                roster_names.append(words[1])
     except (OSError, ValueError) as exc:
         raise RuntimeError(identity + "/cannot-evaluate/roster") from exc
     if roster.count(own_argv) != 1:
         raise RuntimeError(identity + "/cannot-evaluate/roster")
+    # The tree profile: a public-profile local run dispatches the roster minus the runner's
+    # private_only_gates set (_public_roster; a missing or malformed assignment, or one that
+    # names this suite, refuses).
+    try:
+        roster = _public_roster(here.parent / ".opf-tree-profile", disk_source, roster_names,
+                                roster, own_argv)
+    except ValueError as exc:
+        raise RuntimeError(identity + "/cannot-evaluate/roster") from exc
 
     # This self-test asserts that the runner dispatches THIS suite exactly
     # once with its exact argv (RED duplicate-own-call and wrong-own-argv,
@@ -774,6 +877,7 @@ def _runner_red_checks(expected):
         if not launch.called:
             raise AssertionError(identity + "/environment-not-exercised")
     print("PASS " + identity + "/credential-environment")
+    _public_roster_checks(identity)
 
     # Unsupported expansion in any registration word refuses before launch.
     # Mutate the first run_gate registration line holding the text, never the

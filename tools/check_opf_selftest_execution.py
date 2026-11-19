@@ -264,19 +264,34 @@ def _runner_group(root, suites, row):
     """The rows whose runner resolves to the same path as row's (row included, in manifest order), or
     None after printing (the caller exits 2 and NEVER launches). Membership is by resolved path, so
     two spellings of one runner form one group. Every row's runner is resolved STRICTLY
-    (os.path.realpath(strict=True)): a missing path, a non-directory component, a symlink loop or a
-    permission error leaves that row's membership undecidable, so it is cannot-evaluate, never an
-    assumed non-member (a non-strict resolution swallows each of them and returns a lexical guess)."""
+    (os.path.realpath(strict=True)): a symlink loop or a permission error leaves that row's
+    membership undecidable, so it is cannot-evaluate, never an assumed non-member (a non-strict
+    resolution swallows each of them and returns a lexical guess). One absence IS decidable: a
+    runner whose strict resolution raises FileNotFoundError or NotADirectoryError provably names no
+    file, so it cannot be row's runner (which _runner_path confirmed present) and its row is a
+    non-member. The public export keeps registry rows whose runners stay in the development
+    repository, and a per-suite run of a shipped row must not be blocked by them; the absence stays
+    a refusal where it is the subject, so it is never hidden in the private tree: the row's own
+    runner is never excused here, and _runner_path refuses each absent runner in a --registry run
+    and in the absent row's own --suite run."""
     resolved = {}
+    absent = set()
     for other in suites:
         try:
             resolved[other["id"]] = os.path.realpath(Path(root) / other["runner"], strict=True)
+        except (FileNotFoundError, NotADirectoryError) as exc:
+            if other["id"] == row["id"]:
+                _cannot("suite {}: its runner {} does not resolve: {}".format(
+                    row["id"], other["runner"], exc))
+                return None
+            absent.add(other["id"])
         except (OSError, ValueError, RuntimeError) as exc:
             _cannot("suite {}: cannot decide which rows share its runner, because the runner {} of "
                     "suite {} does not resolve: {}".format(
                         row["id"], other["runner"], other["id"], exc))
             return None
-    return [other for other in suites if resolved[other["id"]] == resolved[row["id"]]]
+    return [other for other in suites
+            if other["id"] not in absent and resolved[other["id"]] == resolved[row["id"]]]
 
 
 def _unlaunched_rows(root, suites):
@@ -814,6 +829,13 @@ _DEMO_REPORTING = ("import sys\nfrom pathlib import Path\n"
                    "report = sys.argv[sys.argv.index('--execution-report') + 1]\n"
                    "_selftest_exit_report.arm(report, 'demo', EXECUTED)\n")
 _DEMO_ALL = 'check("a/one")\ncheck("a/two")\ncheck("a/three")\n'
+# A second registered row whose runner is absent, as the public export leaves a private-only
+# runner behind: its row stays in the registry and its launch line stays in the roster, and only
+# a run of the ghost suite itself, or of --registry, may refuse on the absence.
+_GHOST_ROW = ('\n[[suite]]\nid = "ghost"\nrunner = "tools/ghost_runner.py"\n'
+              'expected-check-ids = ["g/one"]\n')
+_GHOST_LAUNCH = _DEMO_LAUNCH.replace("demo-exec", "ghost-exec").replace("--suite demo",
+                                                                        "--suite ghost")
 
 
 def _demo_root(base, manifest=_DEMO_MANIFEST, runner=None, roster=None):
@@ -888,6 +910,15 @@ def self_test():
          _DEMO_PROBE + _DEMO_LAUNCH.replace("$here/check_opf_selftest_execution.py",
                                             "$here/../../tools/check_selftest_execution.py"), 2,
          "has no launch line"),
+        ("an absent runner of another registered suite does not block a shipped suite", "suite",
+         _DEMO_MANIFEST + _GHOST_ROW, None, _DEMO_PROBE + _DEMO_LAUNCH + _GHOST_LAUNCH, 0,
+         "PASS: suite demo executed 3"),
+        ("an absent runner of the requested suite still refuses", "suite-ghost",
+         _DEMO_MANIFEST + _GHOST_ROW, None, _DEMO_PROBE + _DEMO_LAUNCH + _GHOST_LAUNCH, 2,
+         "unreadable"),
+        ("an absent registered runner still refuses the whole registry", "registry",
+         _DEMO_MANIFEST + _GHOST_ROW, None, _DEMO_PROBE + _DEMO_LAUNCH + _GHOST_LAUNCH, 2,
+         "unreadable"),
     )
     for label, mode, manifest, runner, roster, expected, needle in vectors:
         count += 1
@@ -896,10 +927,30 @@ def self_test():
             if mode == "registry":
                 code, out, err = _quiet(validate_registry, root)
             else:
-                code, out, err = _quiet(run_suite, root, "demo" if mode == "suite" else "other")
+                code, out, err = _quiet(run_suite, root,
+                                        "demo" if mode == "suite" else mode[len("suite-"):])
         if code != expected or needle not in out + err:
             failures.append("{}: expected exit {} carrying {!r}, got {}: {}".format(
                 label, expected, needle, code, (out + err)[-400:]))
+    # The two ghost refusal vectors above stop at _runner_path ("unreadable"), which refuses the
+    # requested row's absent runner before _runner_group runs. The own-row branch of
+    # _runner_group (the requested row's own absent runner is a refusal, never a non-member) is
+    # pinned here directly: without it the ghost row is set aside as absent and the group lookup
+    # of the ghost row itself fails with a KeyError instead of the named refusal.
+    count += 1
+    with tempfile.TemporaryDirectory(prefix="opf-selftest-exec-st-") as tmp:
+        root = _demo_root(Path(tmp) / "opf", _DEMO_MANIFEST + _GHOST_ROW)
+        suites = _manifest_suites(root / MANIFEST_REL)
+        ghost = next((row for row in suites or () if row["id"] == "ghost"), None)
+        try:
+            group, out, err = (_quiet(_runner_group, root, suites, ghost) if ghost is not None
+                               else ([], "", "the fixture registry holds no ghost row"))
+        except Exception as exc:
+            group, out, err = [], "", "raised {}: {}".format(type(exc).__name__, exc)
+        if group is not None or "suite ghost: its runner tools/ghost_runner.py does not resolve" \
+                not in err:
+            failures.append("own absent runner in _runner_group: expected a refusal, got {!r}: "
+                            "{}".format(group, (out + err)[-400:]))
     count += 1
     with tempfile.TemporaryDirectory(prefix="opf-selftest-exec-st-") as tmp:
         root = _demo_root(Path(tmp) / "opf")

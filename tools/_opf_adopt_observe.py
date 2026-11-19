@@ -1303,8 +1303,8 @@ def _cancellation_self_test():
     body = gzip.compress(header.tobuf(format=tarfile.USTAR_FORMAT)
                          + b"data" + b"\0" * 508 + b"\0" * 1024, mtime=0)
     policy = {"format": POLICY_FORMAT,
-              "repository": "https://github.com/jposluns/guardrails",
-              "release_url": "https://codeload.github.com/jposluns/guardrails/tar.gz/" + "a" * 40,
+              "repository": "https://github.com/jposluns/opfiles",
+              "release_url": "https://codeload.github.com/jposluns/opfiles/tar.gz/" + "a" * 40,
               "anchors": [ANCHOR_URL]}
     original_import = builtins.__import__
     original_trace = sys.gettrace()
@@ -3430,7 +3430,7 @@ def self_test(vectors_only=False, steady_only=False):
     original_remove = _QuarantineOwner.remove
     public_ip = "93.184.216.34"
     commit = "a" * 40
-    release_url = "https://codeload.github.com/jposluns/guardrails/tar.gz/" + commit
+    release_url = "https://codeload.github.com/jposluns/opfiles/tar.gz/" + commit
     baseline_anchor = b"synthetic uninterpreted anchor\n"
 
     def archive(rows):
@@ -4737,7 +4737,7 @@ def self_test(vectors_only=False, steady_only=False):
         request = {"product_root": str(product), "version": "1.0.0", "commit": case_commit}
         policy = {
             "format": POLICY_FORMAT,
-            "repository": "https://github.com/jposluns/guardrails",
+            "repository": "https://github.com/jposluns/opfiles",
             "release_url": config.get("release_url",
                                       release_url.rsplit("/", 1)[0] + "/" + case_commit),
             "anchors": [config.get("anchor_url", ANCHOR_URL)],

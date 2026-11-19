@@ -119,7 +119,8 @@ own tooling instead, or adopt by hand.
 - [`tools/`](tools/): the `opf` reference CLI (`opf.py`) and its checks.
 - [`prompt-pack/`](prompt-pack/): the prompts an assistant follows to adopt, import and work the flow.
 - [`enforcement/`](enforcement/): the enforcement material for the drift gate and checks.
-- [`site/`](site/): the opfiles.ai website.
+- The [opfiles.ai](https://opfiles.ai) website: published from sources maintained in the private
+  development repository.
 
 ## Required tools
 

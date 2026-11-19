@@ -38,12 +38,26 @@
 #   gate_settings below holds the reason for every gate --ci does not run; a gate it does not name
 #   runs in both modes.
 #
+# Profiles. Besides the two modes, the runner reads the tree profile file .opf-tree-profile at the
+# repository root: the private development repository tracks it with the single line "private",
+# and the public export (tools/public_export/export_public.py) writes it with the single line
+# "public". The file must be a regular file (never a symlink or any other kind) holding exactly
+# one of those lines with its final newline; a missing, unreadable or unexpected profile is CANNOT
+# EVALUATE (exit 2) before any gate. The private profile runs every gate as before. The public
+# profile is accepted only while every path of the export's exclusion set is absent from the tree
+# (a private tree mislabelled public would silently skip the private-only gates, so it is refused,
+# exit 2, before any gate); it lists every gate of private_only_gates (the accounting block above
+# gate_settings) as NOT RUN with the reason
+# "private-only: its inputs stay in the development repository", the same way --ci lists skipped
+# gates, in both modes: each such gate's script or inputs are excluded from the public export.
+#
 # Registrations. Each gate is one line `run_gate NAME python3 -I -B "<this directory>/SCRIPT" ARGS`,
 # starting in the first column, before `report_gates`; a bash gate runs through tools/run_bash_gate.py
 # so its line has that shape too. The imported OPF registration self-tests (tools/_opf_pack_manifest.py,
 # tools/check_opf_init_p0.py and tools/_opf_adopt_observe.py) read every line that starts with
 # run_gate as the roster of a local run and run this runner with a python3 fixture first on PATH: in a
-# local run the recorded python3 calls must be exactly that roster, once each and in order, so the gate
+# local run the recorded python3 calls must be exactly that roster (minus private_only_gates when
+# .opf-tree-profile reads public), once each and in order, so the gate
 # that only --ci runs is registered by run_ci_gate instead, and a local run dispatches its gates one
 # at a time unless OPFILES_CHECK_JOBS says otherwise. The same self-tests mutate the dispatch block of
 # gate_process and the FAILED GATES line below, so those keep the imported runner's text, and a failing
@@ -103,6 +117,64 @@ dir=$(dirname -- "$0") || exit 2
 [ -n "$dir" ] || exit 2
 here="$(CDPATH= cd -- "$dir/." && pwd)" || exit 2
 root="$(CDPATH= cd -- "$here" && cd .. && pwd)" || exit 2
+
+# The tree profile (see Profiles above): the single line of .opf-tree-profile decides whether this
+# tree is the private development repository or a public export. The read fails closed, before the
+# arguments are parsed and before any gate: a missing, unreadable or unexpected profile exits 2.
+# Only a regular file is read (cat would follow a symlink, so a link could present bytes from
+# outside the tree), and only the exact bytes the export writes ("public" with its final newline)
+# or the private tree's exact bytes ("private" with its final newline) are accepted: the trailing
+# printf keeps the final newline through the command substitution, so a file without it is refused.
+# The bytes are read from a descriptor opened before the checks that follow it (bash picks a free
+# descriptor, so no descriptor the caller passed in is replaced): the path must still be a regular
+# file (never a symlink) that is the very file open on that descriptor (-ef against /dev/fd/N), so
+# a link swapped in before the open, or after the checks, cannot present bytes from elsewhere. The
+# first test keeps the open from blocking on a FIFO.
+profile_fd=""
+if [ -L "$root/.opf-tree-profile" ] || [ ! -f "$root/.opf-tree-profile" ] ||
+    ! { exec {profile_fd}<"$root/.opf-tree-profile"; } 2>/dev/null || [ -z "$profile_fd" ] ||
+    [ -L "$root/.opf-tree-profile" ] || [ ! -f "$root/.opf-tree-profile" ] ||
+    ! [ "$root/.opf-tree-profile" -ef "/dev/fd/$profile_fd" ]; then
+  echo "CANNOT EVALUATE: $root/.opf-tree-profile must be a regular file (never a symlink) holding"
+  echo "exactly the single newline-terminated line private or public; no gate was run."
+  exit 2
+fi
+profile_raw="$(cat <&"$profile_fd" 2>/dev/null && printf .)" || profile_raw=""
+exec {profile_fd}<&-
+profile_raw="${profile_raw%.}"
+case "$profile_raw" in
+  private$'\n') profile=private ;;
+  public$'\n') profile=public ;;
+  *)
+    echo "CANNOT EVALUATE: $root/.opf-tree-profile must hold exactly the single line private or"
+    echo "public, with its final newline; it holds something else or cannot be read, so no gate"
+    echo "was run."
+    exit 2 ;;
+esac
+
+# The public profile is trusted only when the tree is actually the public export: a private tree
+# mislabelled public would silently skip every gate of private_only_gates below. The exclusion set
+# of tools/public_export/export_public.py (EXCLUDE_DIR_PREFIXES and EXCLUDE_FILES) must be wholly
+# absent, so the public profile is refused, before any gate, while any excluded path is still
+# present in the tree. The list cannot be read from that tool here: the tool is itself excluded,
+# so the genuine public tree, the one tree where this list is consulted, does not hold it.
+# tools/test_run_all_checks.sh therefore pins this list, in the private tree, to exactly the
+# tool's directory prefixes (without their final slash) plus its excluded files.
+public_excluded_paths=".aiqt .baseline .claude site tools/public_export \
+AGENTS.md CLAUDE.md PROVENANCE-addendum.SHA256SUMS PROVENANCE-addendum.json \
+PROVENANCE-inventory.json PROVENANCE.md RELEASING.md tools/check_agents_parity.py \
+tools/check_aiqt_vendored.py tools/check_baseline_pin.py tools/check_provenance_addendum.py \
+tools/check_provenance_deviations.py tools/check_public_export.py tools/gen_draft_site.py"
+if [ "$profile" = public ]; then
+  for rel in $public_excluded_paths; do
+    if [ -e "$root/$rel" ] || [ -L "$root/$rel" ]; then
+      echo "CANNOT EVALUATE: .opf-tree-profile reads public, but the excluded path $rel is still"
+      echo "present in this tree; a private tree mislabelled public would skip every private-only"
+      echo "gate, so no gate was run. Restore the private profile, or rebuild the public export."
+      exit 2
+    fi
+  done
+fi
 
 mode=local
 case "$#:${1:-}" in
@@ -206,6 +278,51 @@ skipped_names=()
 skipped_reasons=()
 running=0
 
+# The private-only gates: in the public profile each is listed as NOT RUN (see Profiles above);
+# in the private profile each still runs and stays enforced. Per-gate accounting, each unreachable
+# in the public tree because its script or inputs are absent from the export:
+#   aiqt-vendored, aiqt-vendored-self-test: tools/check_aiqt_vendored.py and its subjects
+#     (.claude/rules/aiqt, .claude/rules/security, .claude/RULES-INDEX.md, .aiqt/pin.toml) are
+#     excluded.
+#   agents-parity, agents-parity-self-test: tools/check_agents_parity.py, CLAUDE.md and AGENTS.md
+#     are excluded.
+#   provenance-deviations, provenance-deviations-self-test: tools/check_provenance_deviations.py,
+#     PROVENANCE-inventory.json and PROVENANCE.md are excluded.
+#   provenance-addendum, provenance-addendum-self-test: tools/check_provenance_addendum.py,
+#     PROVENANCE-addendum.json and PROVENANCE-addendum.SHA256SUMS are excluded.
+#   draft-site-self-test, draft-site-drift: tools/gen_draft_site.py and site/ are excluded.
+#   opf-homes-selftest, opf-homes-contract: tools/check_opf_homes.py ships, but it binds four
+#     site/ surfaces (site/disclosure/index.html, site/adopt/index.html, site/adopt.md and
+#     site/core-files/index.html), which are excluded.
+#   opf-selftest-registry: the registry row baseline-pin-selftest of tools/selftest_checks.toml
+#     names the excluded runner tools/check_baseline_pin.py, and the --registry run of
+#     tools/check_opf_selftest_execution.py requires every registered runner present. The
+#     per-suite executions of shipped rows (the --suite gates) still run.
+#   commonmark-headings-selftest, commonmark-conformance: both anchor the vendored-marko manifest
+#     and the CommonMark spec fixture to the import record PROVENANCE-inventory.json
+#     (tools/_commonmark_headings.py verify_manifest_import), which is excluded.
+#   baseline-pin, baseline-pin-selftest, baseline-pin-selftest-execution, baseline-palette:
+#     tools/check_baseline_pin.py, .baseline/ and the pinned site template copy under
+#     site/draft/assets/baseline/ are excluded.
+#   opf-declaration, opf-declaration-selftest, opf-declaration-selftest-execution: the
+#     declaration surface RELEASING.md (DOC_SURFACES in tools/check_opf_declaration.py) is
+#     excluded, and the self-test checks the live tree's restating documents against that list
+#     (the scope review's break list did not name this gate; the dependency surfaced when the
+#     built tree's --ci run was verified).
+#   public-export, public-export-ci-subset, public-export-self-test:
+#     tools/check_public_export.py and tools/public_export/ are excluded.
+# The registration self-tests (tools/_opf_pack_manifest.py and tools/check_opf_init_p0.py) read
+# this assignment and .opf-tree-profile, so a public-profile local run reconciles its recorded
+# python3 calls against the run_gate roster minus this set; any other registration edit still
+# fails them. Keep the assignment one double-quoted value with backslash-newline continuations.
+private_only_gates="aiqt-vendored aiqt-vendored-self-test agents-parity agents-parity-self-test \
+provenance-deviations provenance-deviations-self-test provenance-addendum \
+provenance-addendum-self-test draft-site-self-test draft-site-drift opf-homes-selftest \
+opf-homes-contract opf-selftest-registry commonmark-headings-selftest commonmark-conformance \
+baseline-pin baseline-pin-selftest baseline-pin-selftest-execution baseline-palette \
+opf-declaration opf-declaration-selftest opf-declaration-selftest-execution \
+public-export public-export-ci-subset public-export-self-test"
+
 # gate_settings NAME: set gate_bound, the gate's wall-clock bound in seconds, and gate_skip, the reason
 # this mode does not run the gate (empty when it runs). A raised bound is a floor: an
 # OPFILES_GATE_TIMEOUT above it applies to that gate as well. The two largest suites get 6000 s: the
@@ -231,6 +348,13 @@ gate_settings() {
     public-export-self-test) [ "$gate_bound" -ge 9000 ] || gate_bound=9000 ;;
   esac
   gate_skip=""
+  if [ "${profile:-private}" = public ]; then
+    case " ${private_only_gates:-} " in
+      *" $1 "*)
+        gate_skip="private-only: its inputs stay in the development repository"
+        return 0 ;;
+    esac
+  fi
   [ "$mode" = ci ] || return 0
   case "$1" in
     names)

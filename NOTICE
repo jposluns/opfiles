@@ -5,13 +5,47 @@ not state a licence for the repository's own files.
 
 ==================================================================================================
 
-Vendored AIQT rules
--------------------
+Vendored marko Markdown parser
+------------------------------
+
+Covered paths:
+  - tools/_vendor/marko/ (25 files, the marko package tree)
+  - tools/_vendor/licenses/marko-MIT.txt (the vendored licence text)
+
+Source: the marko project, release 2.2.4 (pkg:pypi/marko@2.2.4), vendored unchanged from the
+checksum-verified wheel, as pinned by tools/_vendor/marko-2.2.4.provenance.toml and the per-file
+manifest tools/_vendor/marko-2.2.4.manifest.sha256.
+
+Licence: MIT. The full text, with its upstream copyright notice, is in
+tools/_vendor/licenses/marko-MIT.txt.
+
+==================================================================================================
+
+Vendored CommonMark specification examples
+------------------------------------------
+
+Covered paths:
+  - tools/_vendor/commonmark-spec-0.31.2/spec-0.31.2-examples.json
+
+Source: the example suite of the CommonMark specification, version 0.31.2, vendored as a test
+fixture for the conformance replay (tools/selftest_commonmark_conformance.py).
+
+Licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/), the CommonMark
+specification's licence; the examples are used unchanged as test inputs and expected outputs.
+
+==================================================================================================
+
+Vendored AIQT rules (development repository only)
+-------------------------------------------------
 
 Covered paths:
   - .claude/rules/aiqt/ (84 files)
   - .claude/rules/security/ (49 files)
   - .claude/RULES-INDEX.md
+
+These covered paths are tracked only in the private development repository: the public tree
+export excludes them together with .aiqt/pin.toml, so a public copy of this repository does not
+hold them, and this section pertains to the development repository alone.
 
 Source: the guardrails repository at commit 5a68ed609c60c5b536135ed542c88b5b8a6c922b, pack
 version 1.0.5, as recorded in .aiqt/pin.toml. The files are copied unchanged
