@@ -33,15 +33,26 @@ for fn in descendants stop_gates gate_settings watch_gate run_gate run_ci_gate g
   FUNCS="${FUNCS}${body}"$'\n'
 done
 export FUNCS
+# The private-only gate list, extracted as the one multi-line private_only_gates assignment (from
+# its opening line to the first line ending with the closing quote), so the profile checks below
+# read the runner's own set.
+PRIVATE_ONLY="$(sed -n '/^private_only_gates="/,/"$/p' "$RUNNER")"
+if [ -z "$PRIVATE_ONLY" ]; then
+  printf 'FAIL: cannot extract private_only_gates from %s\n' "$RUNNER"
+  exit 1
+fi
+export PRIVATE_ONLY
 
 # The small runner: the runner's globals and TERM trap, the extracted functions, then the gates of
 # the case (its fourth argument), then the failure variables. Arguments: DIR GATE_TIMEOUT JOBS SCRIPT
-# [MODE]. The KILL that follows a TERM comes 1 second later here (10 in the runner).
+# [MODE] [PROFILE]. The KILL that follows a TERM comes 1 second later here (10 in the runner).
 cat >"$WORK/mini.sh" <<'EOF'
 set -uo pipefail
 root="$1"; work="$1/work"; gate_timeout="$2"; jobs="$3"; mode="${5:-local}"; kill_grace=1
+profile="${6:-private}"
 mkdir -p "$work" && mkfifo -m 600 "$work/never" || exit 2
 failed=0; failed_names=""; gate_names=(); gate_bounds=(); skipped_names=(); skipped_reasons=(); running=0
+eval "$PRIVATE_ONLY"
 eval "$FUNCS"
 trap 'stop_gates; exit 143' TERM
 eval "$4"
@@ -148,8 +159,9 @@ check "$gone" "a gate stopped at its bound loses its grandchildren too" "pid=${b
 [ -z "$bound_grandchild" ] || kill -KILL "$bound_grandchild" 2>/dev/null
 
 printf '== per-gate bounds and the --ci split ==\n'
-settings() { # MODE GATE_TIMEOUT NAME: print the gate's bound and NOT RUN reason
-  bash -c 'mode="$1"; gate_timeout="$2"; eval "$FUNCS"; gate_settings "$3"; printf "%s|%s" "$gate_bound" "$gate_skip"' _ "$@"
+settings() { # MODE GATE_TIMEOUT NAME [PROFILE]: print the gate's bound and NOT RUN reason
+  bash -c 'mode="$1"; gate_timeout="$2"; profile="${4:-private}"; eval "$PRIVATE_ONLY";
+    eval "$FUNCS"; gate_settings "$3"; printf "%s|%s" "$gate_bound" "$gate_skip"' _ "$@"
 }
 [ "$(settings local 900 opf-tooling-selftest)" = "6000|" ] &&
   [ "$(settings local 900 opf-adopt-apply-selftest)" = "6000|" ] &&
@@ -204,6 +216,157 @@ check $? "--ci lists a local-only gate as NOT RUN, not a failure, and runs a run
 out="$(bash "$WORK/mini.sh" "$WORK/local" 30 4 'run_ci_gate ci-only false; report_gates')"
 ! grep -q 'ci-only' <<<"$out" && grep -qx 'failed=0 failed_names=' <<<"$out"
 check $? "a local run does not run a run_ci_gate gate" "out=<<$out>>"
+
+printf '== the tree profile ==\n'
+reason="private-only: its inputs stay in the development repository"
+# Every private-only gate is registered (run_gate, or run_ci_gate for the --ci replacement
+# public-export-ci-subset), is listed as NOT RUN with the exact reason in the public profile in
+# both modes, and is never given that reason in the private profile. This list is compared with
+# the runner's private_only_gates set below, so a gate added to one alone fails the test.
+EXPECTED_PRIVATE_ONLY="aiqt-vendored aiqt-vendored-self-test agents-parity agents-parity-self-test \
+provenance-deviations provenance-deviations-self-test provenance-addendum \
+provenance-addendum-self-test draft-site-self-test draft-site-drift opf-homes-selftest \
+opf-homes-contract opf-selftest-registry commonmark-headings-selftest commonmark-conformance \
+baseline-pin baseline-pin-selftest baseline-pin-selftest-execution baseline-palette \
+opf-declaration opf-declaration-selftest opf-declaration-selftest-execution \
+public-export public-export-ci-subset public-export-self-test"
+listed="$(bash -c 'set -f; eval "$PRIVATE_ONLY"; printf "%s\n" $private_only_gates' | LC_ALL=C sort)"
+expected="$(set -f; printf '%s\n' $EXPECTED_PRIVATE_ONLY | LC_ALL=C sort)"
+[ -n "$listed" ] && [ "$listed" = "$expected" ]
+check $? "the tested private-only list is exactly the runner's private_only_gates set" \
+  "runner=<<$listed>> tested=<<$expected>>"
+for name in $EXPECTED_PRIVATE_ONLY; do
+  grep -Eq "^run_(ci_)?gate \"$name\" " "$RUNNER" &&
+    case "$(settings local 900 "$name" public)" in *"|$reason") true ;; *) false ;; esac &&
+    case "$(settings ci 90 "$name" public)" in *"|$reason") true ;; *) false ;; esac &&
+    case "$(settings local 900 "$name" private)" in *"|$reason") false ;; *) true ;; esac
+  check $? "$name is registered and NOT RUN as private-only in the public profile only" \
+    "public=$(settings local 900 "$name" public) private=$(settings local 900 "$name" private)"
+done
+# A sample of the kept gates still runs in a public-profile local run.
+for name in secrets names dashes links workflow-contract ci-python-pin gate-tests runner-test \
+    child-status opf-init-contract-check opf-prompt-pack opf-enforce-residuals \
+    line-width line-width-self-test; do
+  case "$(settings local 900 "$name" public)" in *"|") true ;; *) false ;; esac
+  check $? "$name still runs in a public-profile local run" \
+    "settings=$(settings local 900 "$name" public)"
+done
+out="$(bash "$WORK/mini.sh" "$WORK/pubprof" 30 4 \
+  'run_gate kept true; run_gate baseline-pin false; report_gates' local public)"
+grep -Eq "^  baseline-pin +NOT RUN: $reason\$" <<<"$out" && grep -Eq '^  kept +PASS ' <<<"$out" &&
+  grep -qx 'failed=0 failed_names=' <<<"$out"
+check $? "a public-profile local run lists a private-only gate as NOT RUN, not a failure" \
+  "out=<<$out>>"
+out="$(bash "$WORK/mini.sh" "$WORK/pubprofci" 30 4 \
+  'run_gate kept true; run_ci_gate public-export-ci-subset false; report_gates' ci public)"
+grep -Eq "^  public-export-ci-subset +NOT RUN: $reason\$" <<<"$out" &&
+  grep -qx 'failed=0 failed_names=' <<<"$out"
+check $? "a public-profile --ci run lists the private-only run_ci_gate gate as NOT RUN" \
+  "out=<<$out>>"
+out="$(bash "$WORK/mini.sh" "$WORK/privprof" 30 4 'run_gate baseline-pin true; report_gates')"
+grep -Eq '^  baseline-pin +PASS ' <<<"$out"
+check $? "the private profile still runs a private-only gate" "out=<<$out>>"
+# The runner's own profile read fails closed: a copy of the runner beside an absent, unreadable
+# or unexpected profile exits 2 with CANNOT EVALUATE before the usage check and before any gate;
+# a valid profile reaches the usage check (--bogus keeps the copy from running real gates).
+mkdir -p "$WORK/profrepo/tools"
+cp -- "$RUNNER" "$WORK/profrepo/tools/run_all_checks.sh"
+PROF_RUNNER="$WORK/profrepo/tools/run_all_checks.sh"
+PROF_FILE="$WORK/profrepo/.opf-tree-profile"
+expect_profile_refusal() { # LABEL
+  out="$(bash "$PROF_RUNNER" --bogus 2>&1)"; rc=$?
+  [ "$rc" = 2 ] && grep -q 'CANNOT EVALUATE' <<<"$out" && ! grep -q '^usage:' <<<"$out" &&
+    ! grep -q '^finished ' <<<"$out"
+  check $? "$1" "rc=$rc out=<<$out>>"
+}
+expect_profile_refusal "a missing .opf-tree-profile is CANNOT EVALUATE (exit 2) before any gate"
+printf 'Private\n' >"$PROF_FILE"
+expect_profile_refusal "a profile in another letter case is refused"
+printf 'public\nextra\n' >"$PROF_FILE"
+expect_profile_refusal "a profile with a second line is refused"
+: >"$PROF_FILE"
+expect_profile_refusal "an empty profile is refused"
+rm -f -- "$PROF_FILE" && mkdir -- "$PROF_FILE"
+expect_profile_refusal "an unreadable profile (a directory) is refused"
+rmdir -- "$PROF_FILE"
+printf 'private\n' >"$PROF_FILE"
+out="$(bash "$PROF_RUNNER" --bogus 2>&1)"; rc=$?
+[ "$rc" = 2 ] && grep -q '^usage: tools/run_all_checks.sh' <<<"$out" &&
+  ! grep -q 'CANNOT EVALUATE' <<<"$out"
+check $? "the single line private is accepted (the usage check is reached)" "rc=$rc out=<<$out>>"
+printf 'public' >"$PROF_FILE"
+expect_profile_refusal "a profile holding public without its final newline is refused"
+printf 'private' >"$PROF_FILE"
+expect_profile_refusal "a profile holding private without its final newline is refused"
+printf 'public\n' >"$WORK/profrepo/profile-target"
+rm -f -- "$PROF_FILE" && ln -s profile-target "$PROF_FILE"
+expect_profile_refusal "a symlink profile is refused even when its target holds public"
+rm -f -- "$PROF_FILE" "$WORK/profrepo/profile-target" && mkfifo -m 600 "$PROF_FILE"
+expect_profile_refusal "a non-regular profile (a FIFO) is refused"
+rm -f -- "$PROF_FILE"
+printf 'public\n' >"$PROF_FILE"
+out="$(bash "$PROF_RUNNER" --bogus 2>&1)"; rc=$?
+[ "$rc" = 2 ] && grep -q '^usage: tools/run_all_checks.sh' <<<"$out" &&
+  ! grep -q 'CANNOT EVALUATE' <<<"$out"
+check $? "the newline-terminated line public is accepted with no excluded path present" \
+  "rc=$rc out=<<$out>>"
+# A private tree mislabelled public is refused: while any path of the export's exclusion set is
+# still present beside a public profile, the runner exits 2 (fail closed) before any gate; the
+# private profile keeps running such a tree.
+printf 'governance\n' >"$WORK/profrepo/CLAUDE.md"
+expect_profile_refusal "a public profile is refused while an excluded file (CLAUDE.md) is present"
+printf 'private\n' >"$PROF_FILE"
+out="$(bash "$PROF_RUNNER" --bogus 2>&1)"; rc=$?
+[ "$rc" = 2 ] && grep -q '^usage: tools/run_all_checks.sh' <<<"$out" &&
+  ! grep -q 'CANNOT EVALUATE' <<<"$out"
+check $? "the private profile still runs a tree that holds excluded paths" "rc=$rc out=<<$out>>"
+printf 'public\n' >"$PROF_FILE"
+rm -f -- "$WORK/profrepo/CLAUDE.md" && mkdir -p "$WORK/profrepo/site"
+expect_profile_refusal "a public profile is refused while an excluded directory (site) is present"
+rmdir -- "$WORK/profrepo/site"
+ln -s missing-target "$WORK/profrepo/.baseline"
+expect_profile_refusal "a public profile is refused while an excluded path is a dangling symlink"
+rm -f -- "$WORK/profrepo/.baseline"
+# The profile bytes come from the file the checks approved, not from the path read again: a cat
+# first on PATH swaps the private profile for a symlink to public bytes when it is started, after
+# the checks. Read through the path again, the swapped bytes would mislabel this tree (which holds
+# CLAUDE.md) public and be refused; read from the approved file, the private bytes reach usage.
+printf 'private\n' >"$PROF_FILE"
+printf 'public\n' >"$WORK/profrepo/profile-target"
+printf 'governance\n' >"$WORK/profrepo/CLAUDE.md"
+mkdir -p "$WORK/swapbin"
+printf '#!/bin/sh\nrm -f -- "$SWAP_PROFILE" && ln -s profile-target "$SWAP_PROFILE" || exit 3\nexec %s "$@"\n' \
+  "$(command -v cat)" >"$WORK/swapbin/cat"
+chmod 755 "$WORK/swapbin/cat"
+out="$(SWAP_PROFILE="$PROF_FILE" PATH="$WORK/swapbin:$PATH" bash "$PROF_RUNNER" --bogus 2>&1)"; rc=$?
+[ -L "$PROF_FILE" ] && [ "$rc" = 2 ] && grep -q '^usage: tools/run_all_checks.sh' <<<"$out" &&
+  ! grep -q 'CANNOT EVALUATE' <<<"$out"
+check $? "a profile swapped for a symlink after the checks does not change the bytes read" \
+  "rc=$rc out=<<$out>>"
+rm -f -- "$PROF_FILE" "$WORK/profrepo/profile-target" "$WORK/profrepo/CLAUDE.md"
+# The runner's public_excluded_paths cannot be read from the exporter in the public tree, where
+# the exporter is itself excluded, so it is pinned here, in the private tree, to exactly the
+# exporter's EXCLUDE_DIR_PREFIXES (without their final slash) plus its EXCLUDE_FILES: a path
+# added to either alone fails. In the public tree the exporter is absent by design.
+EXPORTER="$(dirname -- "$RUNNER")/public_export/export_public.py"
+tree_profile="$(cat -- "$(dirname -- "$RUNNER")/../.opf-tree-profile" 2>/dev/null && printf .)"
+case "$tree_profile" in
+  public$'\n.')
+    printf '  note  the public tree holds no exporter, so the exclusion list pin does not apply\n' ;;
+  private$'\n.')
+    excluded_line="$(sed -n '/^public_excluded_paths="/,/"$/p' "$RUNNER")"
+    runner_set="$(bash -c 'set -f; eval "$1"; printf "%s\n" $public_excluded_paths' _ \
+      "$excluded_line" | LC_ALL=C sort)"
+    exporter_set="$(python3 -I -B -c 'import runpy, sys
+names = runpy.run_path(sys.argv[1])
+for item in {p.rstrip("/") for p in names["EXCLUDE_DIR_PREFIXES"]} | set(names["EXCLUDE_FILES"]):
+    print(item)' "$EXPORTER" | LC_ALL=C sort)"
+    [ -n "$runner_set" ] && [ "$runner_set" = "$exporter_set" ]
+    check $? "the runner's public_excluded_paths is exactly the exporter's exclusion set" \
+      "runner=<<$runner_set>> exporter=<<$exporter_set>>" ;;
+  *)
+    failc "the tree profile beside the runner reads private or public (got <<$tree_profile>>)" ;;
+esac
 
 printf '== TERM to the runner stops a running gate and its children ==\n'
 # The gate starts a background sleep (a grandchild of the gate's subshell), records its pid, and
